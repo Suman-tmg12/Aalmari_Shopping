@@ -1,0 +1,284 @@
+/* ==========================================================================
+   Aalmari — Header & Navigation Styles (FIXED)
+   ========================================================================== */
+
+/* 1. CRITICAL: Color Variables */
+:root {
+    --color-bg-top: #CEEAD6;
+    --color-bg-mid1: #F5F1E9;
+    --color-bg-mid2: #F4D3C3;
+    --color-bg-bottom: #E8A88A;
+    --color-text: #2E2E2E;
+    --color-text-muted: #6B6B6B;
+    --gutter: clamp(16px, 4vw, 40px);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. CRITICAL: Global Resets (Was missing) */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* 3. CRITICAL: Body Styles (Was missing) */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* This ensures the background gradient renders correctly */
+    background: linear-gradient(180deg,
+    var(--color-bg-top) 0%,
+    var(--color-bg-mid1) 15%,
+    var(--color-bg-mid2) 50%,
+    var(--color-bg-bottom) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 4. CRITICAL: Main Wrapper (Prevents content from hiding behind fixed header) */
+.main-wrapper {
+    width: 100%;
+    /* This padding pushes content down below the 75px fixed header */
+    padding-top: 80px;
+}
+
+/* Mobile adjustment for wrapper padding */
+@media (max-width: 560px) {
+    .main-wrapper {
+        padding-top: 140px;
+    }
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button, input {
+    font-family: inherit;
+}
+
+/* ===== TOP NAVIGATION BAR ===== */
+.top-nav {
+    height: 75px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: clamp(22px, calc(2vw + 10px), 34px);
+    padding: 6px var(--gutter);
+    background: linear-gradient(90deg,
+    var(--color-bg-mid1) 15%,
+    var(--color-bg-mid2) 50%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    width: 100%;
+}
+
+.logo-container {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.logo-img {
+    height: 70px;
+    width: auto;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+/* ===== SEARCH BAR ===== */
+.search-container {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #F1F3F6;
+    border-radius: 60px;
+    padding: 0 15px 0 22px;
+    cursor: text;
+    transition: box-shadow 0.2s var(--ease);
+    height: 40px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.search-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 15px;
+    color: var(--color-text);
+}
+
+.search-input::placeholder {
+    color: #9A9A9A;
+}
+
+.search-icon {
+    margin-left: 10px;
+    font-size: 30px !important;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+}
+
+/* ===== NAV ICONS ===== */
+.nav-icons {
+    display: flex;
+    align-items: center;
+    gap: clamp(22px, calc(2vw + 10px), 30px);
+    flex-shrink: 0;
+    font-size: 24px;
+    color: var(--color-text);
+}
+
+.icon-item {
+    cursor: pointer;
+    font-size: 28px !important;
+    transition: transform 0.15s var(--ease);
+    line-height: 1;
+    color: white;
+}
+
+.icon-item:hover,
+.icon-item:focus-visible {
+    transform: translateY(-2px);
+}
+
+/* ===== MOBILE MENU OVERLAY ===== */
+.mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+.mobile-menu-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ===== MOBILE MENU PANEL ===== */
+.mobile-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 85%;
+    max-width: 360px;
+    height: 100%;
+    background: #fff;
+    z-index: 9999;
+    padding: 30px 24px;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.2);
+    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.mobile-menu.active {
+    right: 0;
+}
+
+.menu-close-btn {
+    align-self: flex-end;
+    background: #f1f1f1;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.menu-close-btn:hover {
+    background: #e0e0e0;
+    transform: rotate(90deg);
+}
+
+.menu-links {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    color: #222;
+    font-size: 1.05rem;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: background 0.25s, color 0.25s, transform 0.25s;
+}
+
+.menu-link .material-symbols-outlined {
+    font-size: 1.6rem;
+    color: #FF7B00;
+    transition: transform 0.25s;
+}
+
+.menu-link:hover {
+    background: #ffe5cf;
+    color: #FF7B00;
+    transform: translateX(6px);
+}
+
+.menu-link:hover .material-symbols-outlined {
+    transform: scale(1.15);
+}
+
+.menu-footer {
+    margin-top: auto;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+/* ===== MOBILE RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 560px) {
+    .top-nav {
+        height: auto;
+        min-height: 70px;
+        flex-wrap: wrap;
+        row-gap: 8px;
+        padding: 8px var(--gutter);
+    }
+    .logo-container { order: 1; }
+    .nav-icons { order: 2; margin-left: auto; }
+    .search-container { order: 3; flex: 1 1 100%; max-width: 100%; margin: 0; }
+}
