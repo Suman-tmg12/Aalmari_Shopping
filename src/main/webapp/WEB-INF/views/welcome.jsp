@@ -50,18 +50,27 @@
         <span class="section-title">Categories</span>
         <a href="${pageContext.request.contextPath}/category" class="section-more">more</a>
     </div>
-    <div class="categories-grid">
-        <%
-            String[] cats = {"Electronics", "Fashion", "Home & Living", "Groceries", "Beauty", "Toys"};
-            String[] catImages = {"Electronics.jpg", "fashion.jpg", "home&living.jpg", "grocories.jpg", "beauty.jpg", "toys.jpg"};
-            for(int i = 0; i < cats.length; i++) {
-        %>
-        <div class="cat-card">
-            <img src="${pageContext.request.contextPath}/HomePageImages/category/<%= catImages[i] %>" alt="<%= cats[i] %> Category">
-            <div class="cat-name"><%= cats[i] %></div>
-        </div>
-        <% } %>
-    </div>
+
+       <div class="categories-grid">
+           <%
+               // Just add your category names here. The code below handles the rest for ALL of them.
+               String[] cats = {"Electronics", "Fashion", "Home & Living", "Groceries", "Beauty & Personal Care", "Toys & Games"};
+               String[] catImages = {"Electronics.jpg", "fashion.jpg", "home&living.jpg", "grocories.jpg", "beauty.jpg", "toys.jpg"};
+
+               for(int i = 0; i < cats.length; i++) {
+                   // This single logic works for EVERY category in the list above
+                   String contextPath = request.getContextPath();
+                   String encodedCategory = java.net.URLEncoder.encode(cats[i], "UTF-8");
+                   String categoryUrl = contextPath + "/category?name=" + encodedCategory;
+           %>
+               <a href="<%= categoryUrl %>" class="cat-card-link" style="text-decoration: none; display: block;">
+                   <div class="cat-card">
+                       <img src="<%= contextPath %>/HomePageImages/category/<%= catImages[i] %>" alt="Category">
+                       <div class="cat-name"><%= cats[i] %></div>
+                   </div>
+               </a>
+           <% } %>
+       </div>
 
     <!-- Products Grid Section -->
     <div class="section-header">

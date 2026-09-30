@@ -1,0 +1,321 @@
+:root {
+    --color-bg-top: #CEEAD6;
+    --color-bg-mid1: #F5F1E9;
+    --color-bg-mid2: #F4D3C3;
+    --color-bg-bottom: #E8A88A;
+    --color-text: #2E2E2E;
+    --color-text-muted: #6B6B6B;
+    --accent: #FF7B00;
+    --color-price: #D35400;
+    --color-card: #FFFFFF;
+    --color-discount: #FF3B30;
+    --gutter: clamp(16px, 4vw, 40px);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(180deg,
+    var(--color-bg-top) 0%,
+    var(--color-bg-mid1) 15%,
+    var(--color-bg-mid2) 50%,
+    var(--color-bg-bottom) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--color-text);
+    margin-top: 50px;
+}
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+
+/* ===== PAGE WRAPPER ===== */
+.flash-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px var(--gutter) 60px;
+}
+
+/* ===== Mobile chip bar (Removed from HTML, styles kept for reference if needed later) ===== */
+.flash-chip-bar {
+    display: none;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+}
+.chip {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: #fff;
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.chip.active { background: var(--accent); color: #fff; }
+
+/* ===== Layout ===== */
+.flash-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 32px;
+    align-items: start;
+}
+
+/* ===== Sidebar (dropdown/accordion style) - UPDATED TO FLASH ===== */
+.flash-sidebar {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 0;
+    position: sticky;
+    top: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.sidebar-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 4px 20px 14px;
+    border-bottom: 1px solid #f2f2f2;
+    margin-bottom: 6px;
+    color: var(--color-text);
+}
+
+.flash-group {
+    border-bottom: 1px solid #f2f2f2;
+}
+.flash-group:last-child { border-bottom: none; }
+
+.flash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 20px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.flash-header:hover {
+    background: rgba(255,123,0,0.06);
+    color: var(--accent);
+}
+
+.flash-header.active-cat {
+    color: var(--accent);
+    font-weight: 600;
+    background: rgba(255,123,0,0.08);
+}
+
+.flash-header .chevron {
+    font-size: 1.2rem !important;
+    color: #999;
+    transition: transform 0.25s var(--ease);
+}
+
+.flash-group.open .flash-header .chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+.flash-sub-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s var(--ease);
+    background: #fafafa;
+}
+
+.flash-group.open .flash-sub-list {
+    max-height: 500px;
+}
+
+.flash-sub-link {
+    display: block;
+    padding: 10px 20px 10px 38px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.flash-sub-link:hover,
+.flash-sub-link.active-sub {
+    background: #ffe5cf;
+    color: var(--accent);
+}
+
+/* ===== Results header ===== */
+.results-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.results-title { font-size: 1.6rem; font-weight: 700; }
+.results-subtitle {
+    font-size: 13.5px;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+.sort-row { display: flex; align-items: center; gap: 8px; }
+.sort-label { font-size: 14px; color: var(--color-text-muted); }
+.sort-select {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    font-size: 13.5px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 10px;
+}
+
+/* ===== Product Grid (with heavy flash-sale discount badge) ===== */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.product-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--color-card);
+    border-radius: 14px;
+    padding: 10px 10px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+}
+
+.product-image-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.product-card .product-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 10px;
+    background: #F0F0F0;
+}
+
+/* Heavy flash-sale discount badge, top-left corner of image */
+.discount-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--color-discount);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.45);
+    z-index: 2;
+    text-transform: uppercase;
+}
+
+.product-meta {
+    margin-top: 8px;
+}
+
+.product-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.product-price {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--color-price);
+}
+
+.product-old-price {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #999;
+    text-decoration: line-through;
+}
+
+.product-tag {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .flash-layout { grid-template-columns: 1fr; }
+    .flash-sidebar { display: none; }
+    /* Mobile chips still hidden as per your request structure, but if you enable them later: */
+    .flash-chip-bar { display: flex; }
+    .product-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    .product-grid { gap: 12px; }
+    .results-header { flex-direction: column; align-items: flex-start; }
+    .discount-badge { font-size: 11px; padding: 3px 7px; }
+}
+
+
+/* ===== PAGINATION ===== */
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: clamp(32px, 5vw, 48px);
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.pagination span {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.pagination span:hover {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.pagination span.active {
+    font-weight: bold;
+    color: #FFFFFF;
+    background: var(--color-accent);
+}

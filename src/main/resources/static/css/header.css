@@ -1,8 +1,8 @@
 /* ==========================================================================
-   Aalmari — Header & Navigation Styles (FIXED)
+   Aalmari — Header & Navigation Styles
    ========================================================================== */
 
-/* 1. CRITICAL: Color Variables */
+/* 1. Color Variables */
 :root {
     --color-bg-top: #CEEAD6;
     --color-bg-mid1: #F5F1E9;
@@ -14,7 +14,7 @@
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. CRITICAL: Global Resets (Was missing) */
+/* 2. Global Resets */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -25,10 +25,9 @@ html {
     scroll-behavior: smooth;
 }
 
-/* 3. CRITICAL: Body Styles (Was missing) */
+/* 3. Body Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    /* This ensures the background gradient renders correctly */
     background: linear-gradient(180deg,
     var(--color-bg-top) 0%,
     var(--color-bg-mid1) 15%,
@@ -40,14 +39,12 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* 4. CRITICAL: Main Wrapper (Prevents content from hiding behind fixed header) */
+/* 4. Main Wrapper */
 .main-wrapper {
     width: 100%;
-    /* This padding pushes content down below the 75px fixed header */
     padding-top: 80px;
 }
 
-/* Mobile adjustment for wrapper padding */
 @media (max-width: 560px) {
     .main-wrapper {
         padding-top: 140px;
@@ -146,21 +143,54 @@ button, input {
     align-items: center;
     gap: clamp(22px, calc(2vw + 10px), 30px);
     flex-shrink: 0;
-    font-size: 24px;
     color: var(--color-text);
 }
 
+/* Wrapper link for cart icon */
+.icon-link {
+    position: relative; /* Anchor for absolute cart-badge */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    text-decoration: none;
+    line-height: 1;
+}
+
+/* Uniform styling for all navigation icons */
 .icon-item {
     cursor: pointer;
     font-size: 28px !important;
-    transition: transform 0.15s var(--ease);
     line-height: 1;
     color: white;
+    transition: transform 0.15s var(--ease);
 }
 
+.icon-link:hover .icon-item,
 .icon-item:hover,
 .icon-item:focus-visible {
     transform: translateY(-2px);
+}
+
+/* Cart badge overlay */
+.cart-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background-color: #FF3B30;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ===== MOBILE MENU OVERLAY ===== */
@@ -216,6 +246,16 @@ button, input {
     cursor: pointer;
     color: #333;
     transition: background 0.2s, transform 0.2s;
+    flex-shrink: 0;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-close-btn,
+.menu-footer {
+    flex-shrink: 0;
 }
 
 .menu-close-btn:hover {
@@ -281,4 +321,170 @@ button, input {
     .logo-container { order: 1; }
     .nav-icons { order: 2; margin-left: auto; }
     .search-container { order: 3; flex: 1 1 100%; max-width: 100%; margin: 0; }
+}
+
+/* ===== CATEGORIES TRIGGER + DESKTOP MEGA MENU ===== */
+.categories-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: #fff;
+    user-select: none;
+}
+
+.categories-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.mega-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    z-index: 1001;
+    min-width: 640px;
+    max-height: 480px;
+}
+
+.mega-menu.active,
+.categories-trigger:hover .mega-menu {
+    display: flex;
+}
+
+.mega-menu-list {
+    list-style: none;
+    width: 220px;
+    background: #FAF7F2;
+    padding: 8px 0;
+    overflow-y: auto;
+    border-right: 1px solid #eee;
+}
+
+.mega-cat {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.mega-cat.active,
+.mega-cat:hover {
+    background: #ffe5cf;
+    color: #FF7B00;
+}
+
+.mega-menu-panel {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    padding: 16px 24px;
+    align-content: start;
+    overflow-y: auto;
+}
+
+.mega-sub-link {
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--color-text-muted);
+    border-radius: 6px;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.mega-sub-link:hover {
+    background: #f5f5f5;
+    color: #FF7B00;
+}
+
+/* Hide the desktop categories trigger on small screens (mobile uses accordion instead) */
+@media (max-width: 560px) {
+    .categories-trigger { display: none; }
+}
+
+/* ===== MOBILE CATEGORIES ACCORDION (inside mobile-menu) ===== */
+.categories-accordion-toggle {
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.categories-accordion-toggle .chevron {
+    margin-left: auto;
+    color: #FF7B00;
+    transition: transform 0.25s var(--ease);
+}
+
+.categories-accordion-toggle.open .chevron {
+    transform: rotate(180deg);
+}
+
+.mobile-categories-accordion {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s var(--ease);
+}
+
+.mobile-categories-accordion.open {
+    max-height: 1000px; /* large enough to fit all categories */
+}
+
+.mobile-cat-group {
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.mobile-cat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    font-size: 0.98rem;
+    font-weight: 500;
+    color: #222;
+    cursor: pointer;
+}
+
+.mobile-cat-header .chevron {
+    color: #999;
+    transition: transform 0.25s var(--ease);
+}
+
+.mobile-cat-group.open .mobile-cat-header .chevron {
+    transform: rotate(180deg);
+    color: #FF7B00;
+}
+
+.mobile-sub-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s var(--ease);
+    padding-left: 12px;
+    background: #fafafa;
+}
+
+.mobile-cat-group.open .mobile-sub-list {
+    max-height: 600px;
+}
+
+.mobile-sub-link {
+    padding: 10px 18px !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    color: #555 !important;
+}
+
+.mobile-sub-link:hover {
+    background: #ffe5cf !important;
+    color: #FF7B00 !important;
+    transform: none !important;
 }

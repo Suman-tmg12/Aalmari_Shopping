@@ -26,10 +26,10 @@
             <div class="footer-col">
                 <h3>SHOP</h3>
                 <ul>
-                    <li><a href="${pageContext.request.contextPath}/shop/men">Men</a></li>
-                    <li><a href="${pageContext.request.contextPath}/shop/women">Women</a></li>
-                    <li><a href="${pageContext.request.contextPath}/shop/kids">Kids</a></li>
-                    <li><a href="${pageContext.request.contextPath}/shop/new">New Arrivals</a></li>
+                    <li><a href="${pageContext.request.contextPath}/category?name=Fashion&sub=Men">Men</a></li>
+                    <li><a href="${pageContext.request.contextPath}/category?name=Fashion&sub=Women">Women</a></li>
+                    <li><a href="${pageContext.request.contextPath}/category?name=Toys%20%26%20Games&sub=Toys">Kids</a></li>
+                    <li><a href="${pageContext.request.contextPath}/category?name=Electronics">New Arrivals</a></li>
                 </ul>
             </div>
             <div class="footer-col">
