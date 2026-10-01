@@ -48,7 +48,7 @@
     <!-- Categories Section -->
     <div class="section-header">
         <span class="section-title">Categories</span>
-        <a href="${pageContext.request.contextPath}/category" class="section-more">more</a>
+         <a href="${pageContext.request.contextPath}/category" class="section-more">more</a>
     </div>
 
        <div class="categories-grid">
@@ -73,29 +73,34 @@
        </div>
 
     <!-- Products Grid Section -->
+    <!-- Products Grid Section -->
     <div class="section-header">
         <span class="section-title">Products</span>
+
     </div>
     <div class="products-grid">
         <%
-            String[] prods = {"Hair Spray", "OLIPOP Cherry", "Nike Shoes", "Black Glasses", "White Spray", "Falcon Spray", "iPhone 15 Pro", "MacBook Pro M3", "AirPods Pro"};
+            String[] prodIds    = {"hair-spray","olipop-cherry","nike-shoes","black-glasses","white-spray","falcon-spray","iphone-15-pro","macbook-pro-m3","airpods-pro"};
+            String[] prods      = {"Hair Spray", "OLIPOP Cherry", "Nike Shoes", "Black Glasses", "White Spray", "Falcon Spray", "iPhone 15 Pro", "MacBook Pro M3", "AirPods Pro"};
             String[] prodImages = {"hairSpray.jpg", "olipop.jpg", "nikeShoe.jpg", "BlackGlass.jpg", "WhiteSpray.jpg", "FalconSpray.jpg", "iphone15pro.jpg", "MacBookProm3.jpg", "Airpods.jpg"};
             String[] prodPrices = {"Rs.70", "Rs.120", "Rs.200", "Rs.90", "Rs.80", "Rs.110", "Rs.1500", "Rs.2200", "Rs.250"};
-            String[] prodSold = {"4.5k sold", "3.2k sold", "8.1k sold", "2.3k sold", "1.8k sold", "5.6k sold", "12.4k sold", "9.7k sold", "15.2k sold"};
+            String[] prodSold   = {"4.5k sold", "3.2k sold", "8.1k sold", "2.3k sold", "1.8k sold", "5.6k sold", "12.4k sold", "9.7k sold", "15.2k sold"};
             for(int i = 0; i < prods.length; i++) {
         %>
-        <div class="product-card">
-            <div>
-                <img src="${pageContext.request.contextPath}/HomePageImages/Products/<%= prodImages[i] %>" alt="<%= prods[i] %>">
-                <div class="product-meta">
-                    <div class="product-name"><%= prods[i] %></div>
-                    <div class="product-price-row">
-                        <span class="product-price"><%= prodPrices[i] %></span>
-                        <span class="product-tag"><%= prodSold[i] %></span>
+        <a href="${pageContext.request.contextPath}/product?id=<%= prodIds[i] %>" class="product-card-link">
+            <div class="product-card">
+                <div>
+                    <img src="${pageContext.request.contextPath}/HomePageImages/Products/<%= prodImages[i] %>" alt="<%= prods[i] %>">
+                    <div class="product-meta">
+                        <div class="product-name"><%= prods[i] %></div>
+                        <div class="product-price-row">
+                            <span class="product-price"><%= prodPrices[i] %></span>
+                            <span class="product-tag"><%= prodSold[i] %></span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
         <% } %>
     </div>
 

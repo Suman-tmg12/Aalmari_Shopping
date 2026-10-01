@@ -1,0 +1,492 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+body {
+    background-color: #eeece7;
+    color: #1a1a1a;
+}
+
+.main-sidebar {
+    display: flex;
+    margin-top: 76px;
+    width: 100%;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: 258px;
+    background-color: #111111;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+    flex-shrink: 0;
+}
+
+.sidebar-top {
+    padding: 20px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.sidebar-header .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand .icon-box {
+    background-color: #e8832e;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+}
+
+.brand span {
+    color: #fff;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.sidebar-header .chevron {
+    color: #888;
+    font-size: 14px;
+}
+
+.apply-btn {
+    width: 100%;
+    background-color: #e8832e;
+    color: #fff;
+    border: none;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.sidebar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-top: 1px solid #222;
+}
+
+.sidebar-footer .store-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #7a4a2a;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.sidebar-footer span {
+    color: #fff;
+    font-size: 14px;
+}
+
+.sidebar-footer .logout-icon {
+    color: #999;
+    font-size: 16px;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 60px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.page-subtitle {
+    color: #5b6472;
+    font-size: 14px;
+    margin-bottom: 36px;
+    text-align: center;
+}
+
+/* ===== STEP INDICATOR ===== */
+.steps {
+    display: flex;
+    align-items: center;
+    margin-bottom: 36px;
+    width: 100%;
+    max-width: 760px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    background-color: #fff;
+    border: 2px solid #d8d8d8;
+    color: #999;
+    position: relative;
+}
+
+.step-check {
+    display: none;
+    width: 16px;
+    height: 16px;
+}
+
+.step.active .step-circle {
+    border-color: #e8832e;
+    color: #e8832e;
+}
+
+.step.completed .step-circle {
+    background-color: #e8832e;
+    border-color: #e8832e;
+    color: #fff;
+}
+
+.step.completed .step-number {
+    display: none;
+}
+
+.step.completed .step-check {
+    display: block;
+    color: #fff;
+}
+
+.step-label {
+    font-size: 14px;
+    color: #999;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.step.active .step-label,
+.step.completed .step-label {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.step-line {
+    flex: 1;
+    height: 1px;
+    background-color: #d8d8d8;
+    margin: 0 16px;
+}
+
+/* ===== FORM CARD ===== */
+.form-card {
+    background-color: #fff;
+    border-radius: 14px;
+    padding: 40px;
+    width: 100%;
+    max-width: 760px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.form-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.banner-upload {
+    border: 2px dashed #e8832e;
+    border-radius: 10px;
+    background-color: #faf7f2;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-bottom: 24px;
+    color: #4a5568;
+    gap: 10px;
+}
+
+.banner-upload svg {
+    width: 28px;
+    height: 28px;
+    color: #888;
+}
+
+.banner-upload span {
+    font-size: 14px;
+}
+
+.logo-field-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.logo-upload {
+    width: 76px;
+    height: 76px;
+    border: 1px dashed #c9c9c9;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background-color: #fafafa;
+    cursor: pointer;
+    color: #666;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.field-group {
+    flex: 1;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #333;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+label .required {
+    color: #e8832e;
+}
+
+/* ===== FORM INPUTS & SELECTS (scoped so header search bar is untouched) ===== */
+.main-sidebar input[type="text"],
+.main-sidebar select {
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #e9e9e4;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+}
+
+.main-sidebar input[type="text"]::placeholder {
+    color: #8a8a8a;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.main-sidebar select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    cursor: pointer;
+}
+
+.continue-btn {
+    width: 100%;
+    background-color: #efbd8e;
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.continue-btn:hover {
+    background-color: #e8832e;
+}
+
+/* ===== STEP 2: CONTACT & DOCS ===== */
+.two-col-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.verification-box {
+    border: 1px solid #e5e5e0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.verification-box h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.verification-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid #efefe9;
+}
+
+.verification-row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.verification-label {
+    font-size: 14px;
+    color: #333;
+}
+
+.upload-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #e8832e;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.upload-link svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== STEP 3: BANKING ===== */
+.info-notice {
+    background-color: #fdeedb;
+    border: 1px solid #f3d5ab;
+    color: #a85d1f;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 10px 0 24px;
+}
+
+.info-notice strong {
+    font-weight: 700;
+}
+
+.agreement-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.agreement-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #e8832e;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.agreement-label {
+    font-size: 14px;
+    font-weight: 400;
+    text-transform: none;
+    color: #333;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.terms-link {
+    color: #e8832e;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.terms-link:hover {
+    text-decoration: underline;
+}
+
+/* ===== STEP NAVIGATION BUTTONS ROW (used in Step 2 & Step 3) ===== */
+.step-buttons-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.step-buttons-row .back-btn {
+    flex: 1;
+    background-color: #fff;
+    color: #333;
+    border: 1px solid #d8d8d8;
+    padding: 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.step-buttons-row .back-btn:hover {
+    background-color: #f5f5f0;
+}
+
+.step-buttons-row .continue-btn {
+    flex: 1;
+    margin-top: 0;
+}
+
+.step-buttons-row .continue-btn:disabled {
+    background-color: #f3cda1;
+    cursor: not-allowed;
+}
+
+.step-buttons-row .continue-btn:disabled:hover {
+    background-color: #f3cda1;
+}

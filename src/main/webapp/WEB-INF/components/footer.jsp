@@ -21,6 +21,7 @@
                     <li><a href="${pageContext.request.contextPath}/stores">Our Stores</a></li>
                     <li><a href="${pageContext.request.contextPath}/contact">Contact Us</a></li>
                     <li><a href="${pageContext.request.contextPath}/careers">Careers</a></li>
+                    <li><a href="${pageContext.request.contextPath}/seller">Sell on Aalmari</a></li>
                 </ul>
             </div>
             <div class="footer-col">
@@ -35,8 +36,8 @@
             <div class="footer-col">
                 <h3>CUSTOMER</h3>
                 <ul>
-                    <li><a href="${pageContext.request.contextPath}/help">Help Center</a></li>
-                    <li><a href="${pageContext.request.contextPath}/faqs">FAQs</a></li>
+                    <li><a href="${pageContext.request.contextPath}/support">Help Center</a></li>
+                    <li><a href="${pageContext.request.contextPath}/support">FAQs</a></li>
                     <li><a href="${pageContext.request.contextPath}/shipping">Shipping</a></li>
                     <li><a href="${pageContext.request.contextPath}/returns">Returns</a></li>
                 </ul>
@@ -44,7 +45,7 @@
             <div class="footer-col">
                 <h3>MY ACCOUNT</h3>
                 <ul>
-                    <li><a href="${pageContext.request.contextPath}/profile">My Profile</a></li>
+                    <li><a href="${pageContext.request.contextPath}/myProfile">My Profile</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">My Orders</a></li>
                     <li><a href="${pageContext.request.contextPath}/wishlist">Wishlist</a></li>
                     <li><a href="${pageContext.request.contextPath}/cart">Cart</a></li>

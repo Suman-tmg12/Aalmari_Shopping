@@ -3,7 +3,7 @@
 <html>
 <head>
     <title>Create Account - Aalmari Store</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=4">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=5">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
