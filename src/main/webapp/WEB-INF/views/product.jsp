@@ -225,13 +225,16 @@
 
     <script>
         // Image Gallery
-        document.querySelectorAll('.thumb').forEach(thumb => {
-            thumb.addEventListener('click', function() {
-                document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById('mainImage').src = this.querySelector('img').src.replace('thumb', 'main');
-            });
-        });
+      document.querySelectorAll('.thumb').forEach(thumb => {
+          thumb.addEventListener('click', function() {
+              document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+              this.classList.add('active');
+
+              // Simply use the same image that is in the thumbnail
+              const newSrc = this.querySelector('img').src;
+              document.getElementById('mainImage').src = newSrc;
+          });
+      });
 
         // Color Selection
         document.querySelectorAll('.color-btn').forEach(btn => {

@@ -21,7 +21,7 @@ public class AccountController {
 
     @GetMapping("/signin")
     public String showSignInPage() {
-        return "signin"; // -> /WEB-INF/views/signin.jsp
+        return "auth/signin"; // -> /WEB-INF/views/signin.jsp
     }
 
     @PostMapping("/register")
@@ -37,22 +37,22 @@ public class AccountController {
         if (name.isBlank() || email.isBlank() || country.isBlank()
                 || phone.isBlank() || password.isBlank()) {
             model.addAttribute("error", "All fields are required.");
-            return "signin";
+            return "auth/signin";
         }
 
         if (terms == null) {
             model.addAttribute("error", "You must accept the Terms of Service.");
-            return "signin";
+            return "auth/signin";
         }
 
         if (password.length() < 8) {
             model.addAttribute("error", "Password must be at least 8 characters.");
-            return "signin";
+            return "auth/signin";
         }
 
         if (userService.emailExists(email)) {
             model.addAttribute("error", "An account with this email already exists.");
-            return "signin";
+            return "auth/signin";
         }
 
         userService.registerUser(name, email, country, phone, password);
@@ -70,7 +70,7 @@ public class AccountController {
         if (registered != null) {
             model.addAttribute("success", "Account created successfully! Please log in.");
         }
-        return "login"; // -> /WEB-INF/views/login.jsp
+        return "auth/login"; // -> /WEB-INF/views/login.jsp
     }
 
     @PostMapping("/login")
@@ -84,7 +84,7 @@ public class AccountController {
 
         if (user == null || !userService.checkLogin(email, password)) {
             model.addAttribute("error", "Invalid email or password. Please try again.");
-            return "login";
+            return "auth/login";
         }
 
         session.setAttribute("userId", user.getId());

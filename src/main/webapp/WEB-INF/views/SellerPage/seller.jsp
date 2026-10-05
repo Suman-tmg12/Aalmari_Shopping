@@ -1,10 +1,24 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+
+<%-- 1. Prevent browser caching so clicking "Back" after logout won't reveal this page --%>
+<%
+    response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response.setHeader("Pragma", "no-cache");
+    response.setDateHeader("Expires", 0);
+%>
+
+<%-- 2. Redirect to login page if session is empty --%>
+<c:if test="${empty sessionScope.userId}">
+    <c:redirect url="/login" />
+</c:if>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Apply to Sell - Seller Hub</title>
-  <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller.css?v=5">
+  <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/seller.css?v=5">
 </head>
 <body>
 
@@ -170,7 +184,7 @@
         </form>
 
         <!-- STEP 3: BANKING -->
-        <form class="form-card" id="step3" style="display:none;" method="post" action="submitBanking.jsp">
+        <form class="form-card" id="step3" style="display:none;" method="post" action="${pageContext.request.contextPath}/SellerDashboard">
             <h2>Banking &amp; payout details</h2>
 
             <div class="form-group">
