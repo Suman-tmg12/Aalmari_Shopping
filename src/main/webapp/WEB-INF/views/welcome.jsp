@@ -25,25 +25,30 @@
         <span class="section-title">Flash Sale</span>
         <a href="${pageContext.request.contextPath}/flash" class="section-more">more</a>
     </div>
-    <div class="flash-sale-wrapper">
-        <div class="flash-sale-box">
-            <div class="horizontal-scroll">
-                <%
-                    String[] flashImages = {"HimalayaFaceScrub.jpg","Wireless_headPhone.jpg","ClassicBlackShoes.jpg","SmartFitnessBand.jpg","skincare.jpg","Healthy.jpg","unhealthy-foods.jpg"};
-                    String[] flashTitles = {"Himalaya Face Scrub", "Wireless Headphone", "Classic Black Shoes", "Smart Fitness Band", "Skin Care Set", "Healthy", "Non-healthy"};
-                    String[] flashPrices = {"Rs.70", "Rs.70", "Rs.90", "Rs.120", "Rs.150", "Rs.300", "Rs.450"};
-                    String[] flashOldPrices = {"Rs.150", "Rs.120", "Rs.180", "Rs.240", "Rs.300", "Rs.500", "Rs.500"};
-                    for(int i = 0; i < flashTitles.length; i++) {
-                %>
-                <div class="card-sm">
-                    <img src="${pageContext.request.contextPath}/HomePageImages/FlashSaleImages/<%= flashImages[i] %>" alt="<%= flashTitles[i] %>">
-                    <div class="card-title"><%= flashTitles[i] %></div>
-                    <div class="card-price"><%= flashPrices[i] %> <span><%= flashOldPrices[i] %></span></div>
-                </div>
-                <% } %>
-            </div>
+<div class="flash-sale-wrapper">
+    <div class="flash-sale-box">
+        <div class="horizontal-scroll">
+            <%
+                String[] flashIds    = {"himalaya-face-scrub", "wireless-headphone", "classic-black-shoes", "smart-fitness-band", "skin-care-set", "healthy-food-pack", "unhealthy-foods"};
+                String[] flashImages = {"HimalayaFaceScrub.jpg","Wireless_headPhone.jpg","ClassicBlackShoes.jpg","SmartFitnessBand.jpg","skincare.jpg","Healthy.jpg","unhealthy-foods.jpg"};
+                String[] flashTitles = {"Himalaya Face Scrub", "Wireless Headphone", "Classic Black Shoes", "Smart Fitness Band", "Skin Care Set", "Healthy", "Non-healthy"};
+                String[] flashPrices = {"Rs.70", "Rs.70", "Rs.90", "Rs.120", "Rs.150", "Rs.300", "Rs.450"};
+                String[] flashOldPrices = {"Rs.150", "Rs.120", "Rs.180", "Rs.240", "Rs.300", "Rs.500", "Rs.500"};
+                for(int i = 0; i < flashTitles.length; i++) {
+            %>
+
+     <a href="${pageContext.request.contextPath}/flashsaleproduct?id=<%= flashIds[i] %>" style="text-decoration: none; color: inherit;">
+         <div class="card-sm">
+             <img src="${pageContext.request.contextPath}/HomePageImages/FlashSaleImages/<%= flashImages[i] %>" alt="<%= flashTitles[i] %>">
+             <div class="card-title"><%= flashTitles[i] %></div>
+             <div class="card-price"><%= flashPrices[i] %> <span><%= flashOldPrices[i] %></span></div>
+         </div>
+     </a>
+
+            <% } %>
         </div>
     </div>
+</div>
 
     <!-- Categories Section -->
     <div class="section-header">

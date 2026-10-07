@@ -8,7 +8,7 @@
     <title>Aalmari Store</title>
     <!-- Google Material Symbols for Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=6">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=7">
 </head>
 <body>
 
@@ -23,8 +23,6 @@
 
         <!-- Categories Trigger (Desktop Mega Menu) -->
         <div class="categories-trigger" id="categoriesTrigger">
-
-
             <!-- Mega Menu Panel -->
             <div class="mega-menu" id="megaMenu">
                 <ul class="mega-menu-list" id="megaMenuList"></ul>
@@ -32,11 +30,20 @@
             </div>
         </div>
 
-        <!-- Search Bar Container -->
-        <div class="search-container">
-            <input type="text" placeholder="Search for products, categories, brands..." class="search-input" aria-label="Search">
-            <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
-        </div>
+        <!-- Search Bar Container (Converted to GET Form for real-world functionality) -->
+        <form action="${pageContext.request.contextPath}/searchResult" method="GET" class="search-container" id="searchForm">
+            <input type="text"
+                   name="q"
+                   value="${param.q}"
+                   placeholder="Search for products, categories, brands..."
+                   class="search-input"
+                   aria-label="Search"
+                   required
+                   autocomplete="off">
+            <button type="submit" class="search-btn-submit" aria-label="Submit search">
+                <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
+            </button>
+        </form>
 
         <!-- Navigation Icons Container -->
         <div class="nav-icons">
@@ -54,7 +61,7 @@
         </div>
     </div>
 
-    <!-- ===== MOBILE FULL MENU (The Popup) ===== -->
+    <!-- ===== MOBILE FULL MENU ===== -->
     <div class="mobile-menu-overlay" id="mobileMenuOverlay">
         <div class="mobile-menu" id="mobileMenu">
             <!-- Close Button -->
@@ -111,164 +118,158 @@
     </div>
 
     <!-- JavaScript -->
-        <script>
-            const categories = {
-                "Electronics": ["Mobiles", "Laptops", "Tablets", "Headphones", "Cameras", "Smart Watches", "Accessories"],
-                "Fashion": ["Men", "Women", "Kids", "Shoes", "Bags", "Watches", "Clothing"],
-                "Beauty & Personal Care": ["Skincare", "Makeup", "Hair Care", "Fragrances", "Personal Care"],
-                "Home & Living": ["Furniture", "Kitchen", "Home Decor", "Bedding", "Lighting", "Storage"],
-                "Groceries": ["Fruits & Vegetables", "Snacks", "Beverages", "Dairy", "Rice & Grains", "Household Essentials"],
-                "Sports & Fitness": ["Sports Equipment", "Gym Equipment", "Fitness Accessories", "Outdoor Gear", "Sportswear"],
-                "Books & Stationery": ["Books", "Notebooks", "Pens & Pencils", "School Supplies", "Office Supplies"],
-                "Automotive": ["Car Accessories", "Bike Accessories", "Car Care", "Spare Parts", "Helmets"],
-                "Toys & Games": ["Toys", "Board Games", "Video Games", "Educational Toys", "Remote-Control Toys"],
-                "Health & Wellness": ["Vitamins & Supplements", "Fitness", "Healthcare Products", "Personal Wellness"]
-            };
+    <script>
+        const categories = {
+            "Electronics": ["Mobiles", "Laptops", "Tablets", "Headphones", "Cameras", "Smart Watches", "Accessories"],
+            "Fashion": ["Men", "Women", "Kids", "Shoes", "Bags", "Watches", "Clothing"],
+            "Beauty & Personal Care": ["Skincare", "Makeup", "Hair Care", "Fragrances", "Personal Care"],
+            "Home & Living": ["Furniture", "Kitchen", "Home Decor", "Bedding", "Lighting", "Storage"],
+            "Groceries": ["Fruits & Vegetables", "Snacks", "Beverages", "Dairy", "Rice & Grains", "Household Essentials"],
+            "Sports & Fitness": ["Sports Equipment", "Gym Equipment", "Fitness Accessories", "Outdoor Gear", "Sportswear"],
+            "Books & Stationery": ["Books", "Notebooks", "Pens & Pencils", "School Supplies", "Office Supplies"],
+            "Automotive": ["Car Accessories", "Bike Accessories", "Car Care", "Spare Parts", "Helmets"],
+            "Toys & Games": ["Toys", "Board Games", "Video Games", "Educational Toys", "Remote-Control Toys"],
+            "Health & Wellness": ["Vitamins & Supplements", "Fitness", "Healthcare Products", "Personal Wellness"]
+        };
 
-            function slugify(str) {
-                return str.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const CTX = '${pageContext.request.contextPath}';
+
+        document.addEventListener('DOMContentLoaded', function () {
+
+            /* Desktop Mega Menu */
+            const categoriesTrigger = document.getElementById('categoriesTrigger');
+            const megaMenu = document.getElementById('megaMenu');
+            const megaList = document.getElementById('megaMenuList');
+            const megaPanel = document.getElementById('megaMenuPanel');
+
+            const catNames = Object.keys(categories);
+
+            catNames.forEach((cat, idx) => {
+                const li = document.createElement('li');
+                li.className = 'mega-cat' + (idx === 0 ? ' active' : '');
+                li.textContent = cat;
+                li.dataset.cat = cat;
+                li.addEventListener('mouseenter', () => activateMegaCat(cat));
+                li.addEventListener('click', () => activateMegaCat(cat));
+                megaList.appendChild(li);
+            });
+
+            function activateMegaCat(cat) {
+                document.querySelectorAll('.mega-cat').forEach(el => {
+                    el.classList.toggle('active', el.dataset.cat === cat);
+                });
+                megaPanel.innerHTML = '';
+                categories[cat].forEach(sub => {
+                    const a = document.createElement('a');
+                    a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
+                    a.textContent = sub;
+                    a.className = 'mega-sub-link';
+                    megaPanel.appendChild(a);
+                });
             }
 
-            const CTX = '${pageContext.request.contextPath}';
+            if (catNames.length) activateMegaCat(catNames[0]);
 
-            document.addEventListener('DOMContentLoaded', function () {
+            if (categoriesTrigger) {
+                categoriesTrigger.addEventListener('click', function (e) {
+                    if (e.target.closest('.mega-menu')) return;
+                    megaMenu.classList.toggle('active');
+                });
+            }
+            document.addEventListener('click', function (e) {
+                if (!categoriesTrigger.contains(e.target)) {
+                    megaMenu.classList.remove('active');
+                }
+            });
 
-                /* Desktop Mega Menu */
-                const categoriesTrigger = document.getElementById('categoriesTrigger');
-                const megaMenu = document.getElementById('megaMenu');
-                const megaList = document.getElementById('megaMenuList');
-                const megaPanel = document.getElementById('megaMenuPanel');
+            /* Mobile Categories Accordion */
+            const mobileAccordion = document.getElementById('mobileCategoriesAccordion');
+            const mobileToggle = document.getElementById('mobileCategoriesToggle');
 
-                const catNames = Object.keys(categories);
+            catNames.forEach(cat => {
+                const wrap = document.createElement('div');
+                wrap.className = 'mobile-cat-group';
 
-                catNames.forEach((cat, idx) => {
-                    const li = document.createElement('li');
-                    li.className = 'mega-cat' + (idx === 0 ? ' active' : '');
-                    li.textContent = cat;
-                    li.dataset.cat = cat;
-                    li.addEventListener('mouseenter', () => activateMegaCat(cat));
-                    li.addEventListener('click', () => activateMegaCat(cat));
-                    megaList.appendChild(li);
+                const header = document.createElement('div');
+                header.className = 'mobile-cat-header';
+                header.innerHTML = '<span>' + cat + '</span><span class="material-symbols-outlined chevron">expand_more</span>';
+
+                const subList = document.createElement('div');
+                subList.className = 'mobile-sub-list';
+                categories[cat].forEach(sub => {
+                    const a = document.createElement('a');
+                    a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
+                    a.className = 'menu-link mobile-sub-link';
+                    a.textContent = sub;
+                    subList.appendChild(a);
                 });
 
-                function activateMegaCat(cat) {
-                    document.querySelectorAll('.mega-cat').forEach(el => {
-                        el.classList.toggle('active', el.dataset.cat === cat);
-                    });
-                    megaPanel.innerHTML = '';
-                    categories[cat].forEach(sub => {
-                        const a = document.createElement('a');
-                        // FIXED: Changed from /category/slug/slug to ?name=&sub= format
-                        a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
-                        a.textContent = sub;
-                        a.className = 'mega-sub-link';
-                        megaPanel.appendChild(a);
-                    });
-                }
-
-                if (catNames.length) activateMegaCat(catNames[0]);
-
-                if (categoriesTrigger) {
-                    categoriesTrigger.addEventListener('click', function (e) {
-                        if (e.target.closest('.mega-menu')) return;
-                        megaMenu.classList.toggle('active');
-                    });
-                }
-                document.addEventListener('click', function (e) {
-                    if (!categoriesTrigger.contains(e.target)) {
-                        megaMenu.classList.remove('active');
-                    }
+                header.addEventListener('click', () => {
+                    const isOpen = wrap.classList.contains('open');
+                    document.querySelectorAll('.mobile-cat-group.open').forEach(g => g.classList.remove('open'));
+                    if (!isOpen) wrap.classList.add('open');
                 });
 
-                /* Mobile Categories Accordion */
-                const mobileAccordion = document.getElementById('mobileCategoriesAccordion');
-                const mobileToggle = document.getElementById('mobileCategoriesToggle');
+                wrap.appendChild(header);
+                wrap.appendChild(subList);
+                mobileAccordion.appendChild(wrap);
+            });
 
-                catNames.forEach(cat => {
-                    const wrap = document.createElement('div');
-                    wrap.className = 'mobile-cat-group';
+            mobileToggle.addEventListener('click', () => {
+                mobileAccordion.classList.toggle('open');
+                mobileToggle.classList.toggle('open');
+            });
 
-                    const header = document.createElement('div');
-                    header.className = 'mobile-cat-header';
-                    header.innerHTML = '<span>' + cat + '</span><span class="material-symbols-outlined chevron">expand_more</span>';
+            /* Mobile Menu Toggle */
+            var overlay = document.getElementById('mobileMenuOverlay');
+            var menu = document.getElementById('mobileMenu');
+            var openBtn = document.querySelector('.menu-trigger');
+            var closeBtn = document.getElementById('menuCloseBtn');
 
-                    const subList = document.createElement('div');
-                    subList.className = 'mobile-sub-list';
-                    categories[cat].forEach(sub => {
-                        const a = document.createElement('a');
-                        // FIXED: Changed from /category/slug/slug to ?name=&sub= format
-                        a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
-                        a.className = 'menu-link mobile-sub-link';
-                        a.textContent = sub;
-                        subList.appendChild(a);
-                    });
+            function setMenu(open) {
+                overlay.classList.toggle('active', open);
+                menu.classList.toggle('active', open);
+            }
 
-                    header.addEventListener('click', () => {
-                        const isOpen = wrap.classList.contains('open');
-                        document.querySelectorAll('.mobile-cat-group.open').forEach(g => g.classList.remove('open'));
-                        if (!isOpen) wrap.classList.add('open');
-                    });
-
-                    wrap.appendChild(header);
-                    wrap.appendChild(subList);
-                    mobileAccordion.appendChild(wrap);
+            if (openBtn) {
+                openBtn.addEventListener('click', function () {
+                    setMenu(!menu.classList.contains('active'));
                 });
+            }
 
-                mobileToggle.addEventListener('click', () => {
-                    mobileAccordion.classList.toggle('open');
-                    mobileToggle.classList.toggle('open');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function () {
+                    setMenu(false);
                 });
+            }
 
-                /* Mobile Menu Toggle */
-                var overlay = document.getElementById('mobileMenuOverlay');
-                var menu = document.getElementById('mobileMenu');
-                var openBtn = document.querySelector('.menu-trigger');
-                var closeBtn = document.getElementById('menuCloseBtn');
-
-                function setMenu(open) {
-                    overlay.classList.toggle('active', open);
-                    menu.classList.toggle('active', open);
-                }
-
-                if (openBtn) {
-                    openBtn.addEventListener('click', function () {
-                        setMenu(!menu.classList.contains('active'));
-                    });
-                }
-
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', function () {
-                        setMenu(false);
-                    });
-                }
-
-                if (overlay) {
-                    overlay.addEventListener('click', function (e) {
-                        if (e.target === overlay) setMenu(false);
-                    });
-                }
-
-                document.addEventListener('keydown', function (e) {
-                    if (e.key === 'Escape') setMenu(false);
+            if (overlay) {
+                overlay.addEventListener('click', function (e) {
+                    if (e.target === overlay) setMenu(false);
                 });
+            }
 
-                document.querySelectorAll('.menu-link:not(.categories-accordion-toggle)').forEach(function (link) {
-                    link.addEventListener('click', function () {
-                        setMenu(false);
-                    });
-                });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') setMenu(false);
+            });
 
-                /* Smooth Scroll for Logo */
-                document.addEventListener('click', function(e) {
-                    const logoLink = e.target.closest('#logoLink');
-                    if (!logoLink) return;
-                    const isFlashPage = window.location.pathname.endsWith('/');
-                    if (isFlashPage) {
-                        e.preventDefault();
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
+            document.querySelectorAll('.menu-link:not(.categories-accordion-toggle)').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    setMenu(false);
                 });
             });
-        </script>
+
+            /* Smooth Scroll for Logo */
+            document.addEventListener('click', function(e) {
+                const logoLink = e.target.closest('#logoLink');
+                if (!logoLink) return;
+                const isFlashPage = window.location.pathname.endsWith('/');
+                if (isFlashPage) {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
