@@ -18,7 +18,6 @@
                 <h3>AALMARI</h3>
                 <ul>
                     <li><a href="${pageContext.request.contextPath}/about">About Us</a></li>
-                    <li><a href="${pageContext.request.contextPath}/stores">Our Stores</a></li>
                     <li><a href="${pageContext.request.contextPath}/contact">Contact Us</a></li>
                     <li><a href="${pageContext.request.contextPath}/careers">Careers</a></li>
                     <li><a href="${pageContext.request.contextPath}/seller">Sell on Aalmari</a></li>
@@ -30,7 +29,7 @@
                     <li><a href="${pageContext.request.contextPath}/category?name=Fashion&sub=Men">Men</a></li>
                     <li><a href="${pageContext.request.contextPath}/category?name=Fashion&sub=Women">Women</a></li>
                     <li><a href="${pageContext.request.contextPath}/category?name=Toys%20%26%20Games&sub=Toys">Kids</a></li>
-                    <li><a href="${pageContext.request.contextPath}/category?name=Electronics">New Arrivals</a></li>
+                    <li><a href="${pageContext.request.contextPath}/category?name=Fashion&sub=Shoes">Shoes</a></li>
                 </ul>
             </div>
             <div class="footer-col">
