@@ -13,6 +13,7 @@
     <c:redirect url="/login" />
 </c:if>
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +32,12 @@
     <div class="main-content">
         <h1 class="page-title">Apply to sell on the platform</h1>
         <p class="page-subtitle">Fill in your store details to submit an application. Our team reviews within 2 business days.</p>
-
+        <c:if test="${param.error == 'missing_required_files'}">
+            <div class="step-alert" style="display:block;">All required documents must be uploaded before submitting.</div>
+        </c:if>
+        <c:if test="${param.error == 'terms_not_accepted'}">
+            <div class="step-alert" style="display:block;">You must accept the Seller Terms of Service to submit.</div>
+        </c:if>
         <!-- STEP INDICATOR -->
         <div class="steps" id="stepsIndicator">
             <div class="step active" data-step="1">
@@ -177,9 +183,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="businessAddress">Business Address <span class="required">*</span></label>
+                    <label for="businessAddress">Business Reg No <span class="required">*</span></label>
                     <input type="text" id="businessAddress" name="businessAddress" maxlength="200" autocomplete="street-address"
-                           placeholder="Street, City, Country" aria-describedby="businessAddress-error">
+                           placeholder="e.g. REG-8841-KTM" aria-describedby="businessAddress-error">
                     <div class="field-error" id="businessAddress-error" role="alert"></div>
                 </div>
 
@@ -238,7 +244,7 @@
 
                     <div class="verification-item">
                         <div class="verification-row">
-                            <span class="verification-label">Proof of address (&lt; 3 months) <span class="required">*</span></span>
+                            <span class="verification-label">PAN/ Tax Clearance Card <span class="required">*</span></span>
                             <label class="upload-link" for="docAddressProof">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path>

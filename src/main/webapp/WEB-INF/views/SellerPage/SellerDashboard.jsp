@@ -1,13 +1,23 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.*" %>
+<%@ page import="java.util.*" %>
 <%
-    String storeName = "Artisan Supply Co.";
-    String status = "Under Review";
+    // Real data from the controller — no more hardcoding.
+    String rawStatus = (String) request.getAttribute("status");       // "pending" | "approved" | "rejected"
+    if (rawStatus == null) rawStatus = "pending";
+    String storeName = (String) request.getAttribute("storeName");
+    if (storeName == null) storeName = "";
+    String rejectionReason = (String) request.getAttribute("rejectionReason");
+
+    boolean isApproved   = "approved".equalsIgnoreCase(rawStatus);
+    boolean isRejected   = "rejected".equalsIgnoreCase(rawStatus);
+    boolean isUnderReview = "pending".equalsIgnoreCase(rawStatus);
+
+    // Label shown in the sidebar
+    String status = isApproved ? "Approved" : isRejected ? "Rejected" : "Under Review";
+
     int unreadMessages = 2;
     String activeMenu = "Dashboard";
-
-    // Check if store state restricts access
-    boolean isUnderReview = "Under Review".equalsIgnoreCase(status);
 
     // name, sku, category, price, discount %, stock, sold, status
     String[][] products = {
@@ -158,7 +168,7 @@
             <div class="view" id="view-dashboard">
 
                 <!-- Initial State: Application Under Review -->
-                <div class="review-card" id="reviewState">
+                <div class="review-card" id="reviewState" style="display:none;">
                     <div class="review-icon">⏱</div>
                     <h1>Application under review</h1>
                     <p>
@@ -180,6 +190,23 @@
                             <span class="label">Approved &amp; live</span>
                         </div>
                     </div>
+
+                </div>
+
+                <!-- Rejected State -->
+                <div class="review-card" id="rejectedState" style="display:none;">
+                    <div class="review-icon">✕</div>
+                    <h1>Application rejected</h1>
+                    <p>
+                        <% if (rejectionReason != null && !rejectionReason.isEmpty()) { %>
+                            Reason: <%= rejectionReason %>
+                        <% } else { %>
+                            Your seller application was not approved this time.
+                        <% } %>
+                    </p>
+                    <a href="${pageContext.request.contextPath}/seller" class="btn-primary" style="text-decoration:none;">
+                        Re-apply
+                    </a>
                 </div>
 
                 <!-- Active State: Approved Dashboard Layout -->
@@ -785,6 +812,9 @@
 
     <jsp:include page="/WEB-INF/components/footer.jsp" />
 
+<script>
+var SERVER_STATUS = "<%= rawStatus %>"; // "pending" | "approved" | "rejected"
+</script>
     <script>
 (function () {
 'use strict';
@@ -1177,20 +1207,31 @@ document.addEventListener('DOMContentLoaded', function () {
         Math.random() < 0.6 ? newOrder() : newMessage();
     }, 30000);
 
-    /* ============ Approval flow ============ */
-    function approve() {
-        approved = true; try { sessionStorage.setItem('sellerApproved', '1'); } catch (e) {}
-        $('#reviewState').style.display = 'none'; $('#approvedDashboard').style.display = 'block';
-        $('#statusText').textContent = 'Approved'; $('#sidebarStatus').classList.add('approved');
-        $$('#sidebarNav .nav-item').forEach(i => { i.classList.remove('disabled'); i.title = $('.nav-text', i).textContent.trim(); });
+    /* ============ Status flow (server-driven, no faking) ============ */
+    function applyServerStatus() {
+        $('#reviewState').style.display = 'none';
+        $('#rejectedState').style.display = 'none';
+        $('#approvedDashboard').style.display = 'none';
+
+        if (SERVER_STATUS === 'approved') {
+            approved = true;
+            $('#approvedDashboard').style.display = 'block';
+            $('#statusText').textContent = 'Approved';
+            $('#sidebarStatus').classList.add('approved');
+            $$('#sidebarNav .nav-item').forEach(i => { i.classList.remove('disabled'); i.title = $('.nav-text', i).textContent.trim(); });
+        } else if (SERVER_STATUS === 'rejected') {
+            approved = false;
+            $('#rejectedState').style.display = 'block';
+        } else {
+            approved = false;
+            $('#reviewState').style.display = 'block';
+        }
         show(location.hash.slice(1), false);
     }
     refresh();
-    let seen = false; try { seen = sessionStorage.getItem('sellerApproved') === '1'; } catch (e) {}
-    if (seen) approve(); else setTimeout(approve, 3000);
+    applyServerStatus();
 });
 })();
-
     </script>
 </body>
 </html>

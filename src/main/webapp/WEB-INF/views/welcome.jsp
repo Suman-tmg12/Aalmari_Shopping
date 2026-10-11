@@ -141,6 +141,7 @@
     });
 
     // ========== HERO SLIDER ==========
+// ========== HERO SLIDER ==========
     (function() {
         const slides = document.querySelectorAll('.hero-slide');
         const dots = document.querySelectorAll('.dot');
@@ -162,11 +163,13 @@
         }
 
         function startAutoSlide() {
-            autoSlideInterval = setInterval(nextSlide, 3000); // change 3000 to 1000 if you want 1 second
+            stopAutoSlide(); // <-- THIS PREVENTS STACKING TIMERS
+            autoSlideInterval = setInterval(nextSlide, 3000);
         }
 
         function stopAutoSlide() {
             clearInterval(autoSlideInterval);
+            autoSlideInterval = null;
         }
 
         // Dot click
