@@ -7,7 +7,7 @@
     <title>Aalmari Full Width E-commerce Design</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/welcome.css?v=3">
-    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/HomePageImages/logoImages/logo.png">
+    <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
 <div class="main-wrapper" id="top">

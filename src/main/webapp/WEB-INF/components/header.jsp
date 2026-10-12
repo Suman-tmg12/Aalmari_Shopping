@@ -111,8 +111,12 @@
 
             <!-- Footer inside menu -->
             <div class="menu-footer">
-                <span>📞 +971 4 XXX XXXX</span>
-                <span>📧 support@aalmari.com</span>
+                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">
+                      call
+                      </span> +971 4 XXX XXXX</div>
+                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">
+                      photo_camera
+                      </span> support@aalmari.com</div>
             </div>
         </div>
     </div>

@@ -21,6 +21,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apply to Sell - Seller Hub</title>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/seller.css?v=6">
+  <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
 

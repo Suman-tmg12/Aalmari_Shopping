@@ -1,10 +1,17 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+
+<%-- 2. Redirect to login page if session is empty --%>
+<c:if test="${empty sessionScope.userId}">
+    <c:redirect url="/login" />
+</c:if>
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Your Cart - Aalmari Store</title>
+    <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/cart.css?v=1">
 </head>
 <body>

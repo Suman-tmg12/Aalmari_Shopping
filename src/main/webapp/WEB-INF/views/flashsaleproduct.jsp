@@ -8,6 +8,7 @@
     <title>⚡ Flash Sale: ${product.title} — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/flashsaleproduct.css?v=1">
+    <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
     <jsp:include page="/WEB-INF/components/header.jsp" />

@@ -4,6 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Aalmari Help Center</title>
+<jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 <style>
     * {
         margin: 0;
@@ -356,9 +357,9 @@
     <div class="top-questions">
         <div class="section-title">Top Questions</div>
         <div class="questions-grid">
-            <a href="#">How do I place an order on Daraz?</a>
+            <a href="#">How do I place an order on Aalmari?</a>
             <a href="#">Can I change my order details after placing an order?</a>
-            <a href="#">What is Daraz collection point service and how to avail it?</a>
+            <a href="#">What is Aalmari collection point service and how to avail it?</a>
             <a href="#">Why am I unable to use my collectible vouchers?</a>
         </div>
     </div>
