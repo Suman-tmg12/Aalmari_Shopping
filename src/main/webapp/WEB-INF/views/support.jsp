@@ -137,6 +137,7 @@
     .section-title {
         font-size: 14px;
         color: #333;
+        font-weight: bold;
         margin-bottom: 20px;
     }
 
@@ -156,6 +157,9 @@
     }
 
     .tool-circle {
+        display: grid;
+        justify-content: center;
+        align-items: center;
         width: 55px;
         height: 55px;
         border-radius: 50%;
@@ -175,7 +179,7 @@
 
     /* Top Questions */
     .top-questions {
-        border: 2px solid #4aa8f0;
+
         border-radius: 14px;
         padding: 20px 30px;
         margin-bottom: 20px;
@@ -238,6 +242,9 @@
     }
 
     .contact-circle {
+        display: flex;
+        justify-content: center;
+        align-items: center;
         width: 50px;
         height: 50px;
         border-radius: 50%;
@@ -319,35 +326,51 @@
         <div class="section-title">Self Service Tools</div>
         <div class="tools-grid">
             <a class="tool-item" href="orders.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         orders
+                                         </span></div>
                 <span>My Orders</span>
             </a>
             <a class="tool-item" href="resetPassword.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         lock_reset
+                                         </span></div>
                 <span>Reset Password</span>
             </a>
             <a class="tool-item" href="vouchers.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         local_activity
+                                         </span></div>
                 <span>My Vouchers</span>
             </a>
             <a class="tool-item" href="cancellations.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         free_cancellation
+                                         </span></div>
                 <span>My Cancellations</span>
             </a>
             <a class="tool-item" href="returns.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         keyboard_return
+                                         </span></div>
                 <span>My Returns</span>
             </a>
             <a class="tool-item" href="paymentOptions.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         payments
+                                         </span></div>
                 <span>My payment Options</span>
             </a>
             <a class="tool-item" href="deliveryAddress.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         local_shipping
+                                         </span></div>
                 <span>Change Delivery Addresss</span>
             </a>
             <a class="tool-item" href="profile.jsp">
-                <div class="tool-circle"></div>
+                <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
+                                         account_circle
+                                         </span></div>
                 <span>My Profile</span>
             </a>
         </div>
@@ -373,14 +396,18 @@
     <div class="contact-card">
         <div class="contact-grid">
             <div class="contact-item">
-                <div class="contact-circle"></div>
+                <div class="contact-circle"><span class="material-symbols-outlined">
+                                            support_agent
+                                            </span></div>
                 <div class="contact-text">
                     <div class="title">Contact Customer Care</div>
                     <div class="subtitle">Live Chat: 9AM - 6PM [Mon-Sun]</div>
                 </div>
             </div>
             <div class="contact-item">
-                <div class="contact-circle"></div>
+                <div class="contact-circle"><span class="material-symbols-outlined">
+                                            call
+                                            </span></div>
                 <div class="contact-text">
                     <div class="title">Call us 01-5970597</div>
                     <div class="subtitle">9Am-6PM [Sun-Fri]</div>

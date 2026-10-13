@@ -117,8 +117,8 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="icon-box">🏬</div>
-                <span class="nav-text">Seller Hub</span>
+                <div class="icon-box"></div>
+                <span class="nav-text">Aalmari Seller Hub</span>
                 <span class="collapse" id="collapseBtn">
                     <span class="material-symbols-outlined">arrow_back_ios</span>
                 </span>

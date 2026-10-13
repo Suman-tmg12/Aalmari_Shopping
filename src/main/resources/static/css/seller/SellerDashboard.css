@@ -44,17 +44,18 @@ body {
     border-bottom: 1px solid #2a2a2e;
 }
 
-.sidebar-header .icon-box {
-    background: #e2691b;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-}
+/*.sidebar-header .icon-box {*/
+/*    background: #e2691b;*/
+/*    width: 32px;*/
+/*    height: 32px;*/
+/*    border-radius: 8px;*/
+/*    display: flex;*/
+/*    align-items: center;*/
+/*    justify-content: center;*/
+/*    flex-shrink: 0;*/
+/*    cursor: pointer;*/
+/*}*/
+
 
 .sidebar-header .collapse {
     margin-left: auto;

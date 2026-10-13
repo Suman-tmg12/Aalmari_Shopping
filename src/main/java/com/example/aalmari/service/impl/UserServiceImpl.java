@@ -11,7 +11,6 @@ import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
-
     @Autowired
     private UserRepository userRepository;
 
@@ -24,11 +23,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User registerUser(String name, String email, String country,
+    public User registerUser(String firstName, String lastName, String email, String country,
                              String phone, String rawPassword) {
 
         User user = new User();
-        user.setName(name);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
         user.setEmail(email);
         user.setCountry(country);
         user.setPhone(phone);

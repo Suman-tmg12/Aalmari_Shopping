@@ -9,21 +9,25 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(name = "last_name", nullable = false, length = 100)
+    private  String lastName;
+
+    @Column(name =  "email", nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "country",nullable = false, length = 100)
     private String country;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "phone_number", nullable = false, length = 20)
     private String phone;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -42,12 +46,20 @@ public class User {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public  void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getEmail() {

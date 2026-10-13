@@ -8,7 +8,7 @@
     <title>Aalmari Store</title>
     <!-- Google Material Symbols for Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=7">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=10">
 </head>
 <body>
 
@@ -21,16 +21,7 @@
             </a>
         </div>
 
-        <!-- Categories Trigger (Desktop Mega Menu) -->
-        <div class="categories-trigger" id="categoriesTrigger">
-            <!-- Mega Menu Panel -->
-            <div class="mega-menu" id="megaMenu">
-                <ul class="mega-menu-list" id="megaMenuList"></ul>
-                <div class="mega-menu-panel" id="megaMenuPanel"></div>
-            </div>
-        </div>
-
-        <!-- Search Bar Container (Converted to GET Form for real-world functionality) -->
+        <!-- Search Bar Container -->
         <form action="${pageContext.request.contextPath}/searchResult" method="GET" class="search-container" id="searchForm">
             <input type="text"
                    name="q"
@@ -45,8 +36,54 @@
             </button>
         </form>
 
-        <!-- Navigation Icons Container -->
+        <!-- Navigation Icons & User Section Container -->
         <div class="nav-icons">
+
+            <!-- Account Dropdown Section -->
+            <div class="account-dropdown-container">
+                <c:choose>
+                    <c:when test="${not empty sessionScope.userId}">
+                        <!-- Logged In Trigger Button -->
+                        <div class="account-trigger">
+                            <span class="material-symbols-outlined icon-item">account_circle</span>
+                            <span class="user-name">${sessionScope.userFirstName}</span>
+                            <span class="material-symbols-outlined dropdown-arrow" style="color: white">expand_more</span>
+                        </div>
+                        <!-- Dropdown Menu (Appears on Hover) -->
+                        <div class="account-dropdown-menu">
+                            <div class="dropdown-header">
+                                <span class="greeting">Hello,</span>
+                                <strong class="user-display-name">
+                                  <c:choose>
+                                    <c:when test="${not empty sessionScope.userFirstName or not empty sessionScope.userLastName}">
+                                      <c:out value="${sessionScope.userFirstName}" /> <c:out value="${sessionScope.userLastName}" />
+                                    </c:when>
+                                    <c:otherwise>
+                                      Guest
+                                    </c:otherwise>
+                                  </c:choose>
+                                </strong>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a href="${pageContext.request.contextPath}/myprofile" class="dropdown-item">
+                                <span class="material-symbols-outlined">person</span>
+                                My Profile
+                            </a>
+                            <a href="${pageContext.request.contextPath}/logout" class="dropdown-item logout-item">
+                                <span class="material-symbols-outlined">logout</span>
+                                Log Out
+                            </a>
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <!-- Not Logged In Button -->
+                        <a href="${pageContext.request.contextPath}/login" class="account-trigger guest-trigger" title="Log In / Sign Up">
+                            <span class="material-symbols-outlined icon-item">account_circle</span>
+                            <span class="login-label">Login</span>
+                        </a>
+                    </c:otherwise>
+                </c:choose>
+            </div>
 
             <!-- Cart Icon with Badge -->
             <a href="${pageContext.request.contextPath}/cart" class="icon-link" aria-label="Shopping cart">
@@ -69,6 +106,33 @@
 
             <!-- Menu Links -->
             <nav class="menu-links">
+                <!-- User Profile Header inside Mobile Menu -->
+                <c:choose>
+                    <c:when test="${not empty sessionScope.userId}">
+                        <a href="${pageContext.request.contextPath}/myprofile" class="menu-link user-mobile-card">
+                            <span class="material-symbols-outlined">account_circle</span>
+                            <div>
+                                <span class="mobile-user-greeting">Welcome back,</span>
+                                <strong class="user-display-name">
+                                  <c:choose>
+                                    <c:when test="${not empty sessionScope.userFirstName or not empty sessionScope.userLastName}">
+                                      <c:out value="${sessionScope.userFirstName}" /> <c:out value="${sessionScope.userLastName}" />
+                                    </c:when>
+                                    <c:otherwise>
+                                      Guest
+                                    </c:otherwise>
+                                  </c:choose>
+                                </strong>
+                            </div>
+                        </a>
+                    </c:when>
+                    <c:otherwise>
+                        <a href="${pageContext.request.contextPath}/login" class="menu-link">
+                            <span class="material-symbols-outlined">account_circle</span>
+                            Login / Register
+                        </a>
+                    </c:otherwise>
+                </c:choose>
 
                 <!-- Categories accordion trigger -->
                 <div class="menu-link categories-accordion-toggle" id="mobileCategoriesToggle">
@@ -84,39 +148,23 @@
                     Cart
                 </a>
 
-                <c:choose>
-                    <c:when test="${not empty sessionScope.userId}">
-                        <a href="${pageContext.request.contextPath}/profile" class="menu-link">
-                            <span class="material-symbols-outlined">person</span>
-                            <span class="user-email">${sessionScope.userName}</span>
-                        </a>
-                        <a href="${pageContext.request.contextPath}/logout" class="menu-link">
-                            <span class="material-symbols-outlined">logout</span>
-                            Log Out
-                        </a>
-                    </c:when>
-                    <c:otherwise>
-                        <a href="${pageContext.request.contextPath}/login" class="menu-link">
-                            <span class="material-symbols-outlined">account_circle</span>
-                            My Account
-                        </a>
-                    </c:otherwise>
-                </c:choose>
-
                 <a href="${pageContext.request.contextPath}/support" class="menu-link">
                     <span class="material-symbols-outlined">headset_mic</span>
                     Support
                 </a>
+
+                <c:if test="${not empty sessionScope.userId}" >
+                    <a href="${pageContext.request.contextPath}/logout" class="menu-link mobile-logout-link" style="color: #FF7B00">
+                        <span class="material-symbols-outlined" style="color: #FF7B00">logout</span>
+                        Log Out
+                    </a>
+                </c:if>
             </nav>
 
             <!-- Footer inside menu -->
             <div class="menu-footer">
-                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">
-                      call
-                      </span> +971 4 XXX XXXX</div>
-                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">
-                      photo_camera
-                      </span> support@aalmari.com</div>
+                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">call</span> +971 4 XXX XXXX</div>
+                <div style="display: flex; gap: 10px"><span class="material-symbols-outlined">mail</span> support@aalmari.com</div>
             </div>
         </div>
     </div>
@@ -139,90 +187,49 @@
         const CTX = '${pageContext.request.contextPath}';
 
         document.addEventListener('DOMContentLoaded', function () {
-
-            /* Desktop Mega Menu */
-            const categoriesTrigger = document.getElementById('categoriesTrigger');
-            const megaMenu = document.getElementById('megaMenu');
-            const megaList = document.getElementById('megaMenuList');
-            const megaPanel = document.getElementById('megaMenuPanel');
-
             const catNames = Object.keys(categories);
-
-            catNames.forEach((cat, idx) => {
-                const li = document.createElement('li');
-                li.className = 'mega-cat' + (idx === 0 ? ' active' : '');
-                li.textContent = cat;
-                li.dataset.cat = cat;
-                li.addEventListener('mouseenter', () => activateMegaCat(cat));
-                li.addEventListener('click', () => activateMegaCat(cat));
-                megaList.appendChild(li);
-            });
-
-            function activateMegaCat(cat) {
-                document.querySelectorAll('.mega-cat').forEach(el => {
-                    el.classList.toggle('active', el.dataset.cat === cat);
-                });
-                megaPanel.innerHTML = '';
-                categories[cat].forEach(sub => {
-                    const a = document.createElement('a');
-                    a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
-                    a.textContent = sub;
-                    a.className = 'mega-sub-link';
-                    megaPanel.appendChild(a);
-                });
-            }
-
-            if (catNames.length) activateMegaCat(catNames[0]);
-
-            if (categoriesTrigger) {
-                categoriesTrigger.addEventListener('click', function (e) {
-                    if (e.target.closest('.mega-menu')) return;
-                    megaMenu.classList.toggle('active');
-                });
-            }
-            document.addEventListener('click', function (e) {
-                if (!categoriesTrigger.contains(e.target)) {
-                    megaMenu.classList.remove('active');
-                }
-            });
 
             /* Mobile Categories Accordion */
             const mobileAccordion = document.getElementById('mobileCategoriesAccordion');
             const mobileToggle = document.getElementById('mobileCategoriesToggle');
 
-            catNames.forEach(cat => {
-                const wrap = document.createElement('div');
-                wrap.className = 'mobile-cat-group';
+            if (mobileAccordion) {
+                catNames.forEach(cat => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'mobile-cat-group';
 
-                const header = document.createElement('div');
-                header.className = 'mobile-cat-header';
-                header.innerHTML = '<span>' + cat + '</span><span class="material-symbols-outlined chevron">expand_more</span>';
+                    const header = document.createElement('div');
+                    header.className = 'mobile-cat-header';
+                    header.innerHTML = '<span>' + cat + '</span><span class="material-symbols-outlined chevron">expand_more</span>';
 
-                const subList = document.createElement('div');
-                subList.className = 'mobile-sub-list';
-                categories[cat].forEach(sub => {
-                    const a = document.createElement('a');
-                    a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
-                    a.className = 'menu-link mobile-sub-link';
-                    a.textContent = sub;
-                    subList.appendChild(a);
+                    const subList = document.createElement('div');
+                    subList.className = 'mobile-sub-list';
+                    categories[cat].forEach(sub => {
+                        const a = document.createElement('a');
+                        a.href = CTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
+                        a.className = 'menu-link mobile-sub-link';
+                        a.textContent = sub;
+                        subList.appendChild(a);
+                    });
+
+                    header.addEventListener('click', () => {
+                        const isOpen = wrap.classList.contains('open');
+                        document.querySelectorAll('.mobile-cat-group.open').forEach(g => g.classList.remove('open'));
+                        if (!isOpen) wrap.classList.add('open');
+                    });
+
+                    wrap.appendChild(header);
+                    wrap.appendChild(subList);
+                    mobileAccordion.appendChild(wrap);
                 });
+            }
 
-                header.addEventListener('click', () => {
-                    const isOpen = wrap.classList.contains('open');
-                    document.querySelectorAll('.mobile-cat-group.open').forEach(g => g.classList.remove('open'));
-                    if (!isOpen) wrap.classList.add('open');
+            if (mobileToggle && mobileAccordion) {
+                mobileToggle.addEventListener('click', () => {
+                    mobileAccordion.classList.toggle('open');
+                    mobileToggle.classList.toggle('open');
                 });
-
-                wrap.appendChild(header);
-                wrap.appendChild(subList);
-                mobileAccordion.appendChild(wrap);
-            });
-
-            mobileToggle.addEventListener('click', () => {
-                mobileAccordion.classList.toggle('open');
-                mobileToggle.classList.toggle('open');
-            });
+            }
 
             /* Mobile Menu Toggle */
             var overlay = document.getElementById('mobileMenuOverlay');
@@ -231,13 +238,13 @@
             var closeBtn = document.getElementById('menuCloseBtn');
 
             function setMenu(open) {
-                overlay.classList.toggle('active', open);
-                menu.classList.toggle('active', open);
+                if (overlay) overlay.classList.toggle('active', open);
+                if (menu) menu.classList.toggle('active', open);
             }
 
             if (openBtn) {
                 openBtn.addEventListener('click', function () {
-                    setMenu(!menu.classList.contains('active'));
+                    if (menu) setMenu(!menu.classList.contains('active'));
                 });
             }
 

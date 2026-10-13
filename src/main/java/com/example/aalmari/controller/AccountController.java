@@ -33,7 +33,8 @@ public class AccountController {
 
     @PostMapping("/register")
     public String registerUser(
-            @RequestParam String name,
+            @RequestParam String firstName,
+            @RequestParam String lastName,
             @RequestParam String email,
             @RequestParam String country,
             @RequestParam String phone,
@@ -41,7 +42,7 @@ public class AccountController {
             @RequestParam(required = false) String terms,
             Model model) {
 
-        if (name.isBlank() || email.isBlank() || country.isBlank()
+        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || country.isBlank()
                 || phone.isBlank() || password.isBlank()) {
             model.addAttribute("error", "All fields are required.");
             return "auth/signin";
@@ -62,7 +63,7 @@ public class AccountController {
             return "auth/signin";
         }
 
-        userService.registerUser(name, email, country, phone, password);
+        userService.registerUser(firstName, lastName, email, country, phone, password);
 
         return "redirect:/login?registered=true";
     }
@@ -95,8 +96,10 @@ public class AccountController {
         }
 
         session.setAttribute("userId", user.getId());
-        session.setAttribute("userName", user.getName());
+        session.setAttribute("userFirstName", user.getFirstName());
+        session.setAttribute("userLastName", user.getLastName());
         session.setAttribute("userEmail", user.getEmail());
+        session.setAttribute("userPhone", user.getPhone());
 
         return "redirect:/";
     }

@@ -43,7 +43,7 @@
             <div class="footer-col">
                 <h3>MY ACCOUNT</h3>
                 <ul>
-                    <li><a href="${pageContext.request.contextPath}/myProfile">My Profile</a></li>
+                    <li><a href="${pageContext.request.contextPath}/myprofile">My Profile</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">My Orders</a></li>
                     <li><a href="${pageContext.request.contextPath}/wishlist">Wishlist</a></li>
                     <li><a href="${pageContext.request.contextPath}/cart">Cart</a></li>
