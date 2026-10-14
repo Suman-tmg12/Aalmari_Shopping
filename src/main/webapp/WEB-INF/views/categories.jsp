@@ -9,6 +9,23 @@
                     .replace("\"", "&quot;")
                     .replace("'", "&#39;");
     }
+
+    // "12.4k sold" -> 12400
+    private double parseSold(String sold) {
+        try {
+            String s = sold.toLowerCase().replace("sold", "").trim();
+            double mult = 1;
+            if (s.endsWith("k")) { mult = 1000; s = s.substring(0, s.length() - 1); }
+            return Double.parseDouble(s.trim()) * mult;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // "Hair Spray" -> "hair-spray"
+    private String slug(String name) {
+        return name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
+    }
 %>
 <%
     String category = request.getParameter("name");
@@ -109,7 +126,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %> — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=4">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=5">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -157,9 +174,12 @@
                     </div>
                 </div>
 
-                <div class="product-grid" id="productGrid">
+                <!-- Product Grid (3 per row) -->
+                <div class="ar-page">
+                    <div class="ar-grid" id="productGrid">
                     <%
                         boolean anyRendered = false;
+                        int idx = 0;
                         for (String[] p : categoryData) {
                             String pName = p[0], pImage = p[1], pFolder = p[2];
                             long pPrice = Long.parseLong(p[3]);
@@ -169,37 +189,49 @@
                             if (sub != null && !sub.equalsIgnoreCase(pSub)) continue;
                             anyRendered = true;
 
-                            int discount = (int) Math.round(((double)(pOldPrice - pPrice) / pOldPrice) * 100);
-
-                            // Extract raw sold count for sorting (e.g. "12.4k sold" -> 12400)
-                            double numericSold = 0;
-                            try {
-                                String cleanSold = pSold.toLowerCase().replace("sold", "").replace("k", "000").trim();
-                                numericSold = Double.parseDouble(cleanSold);
-                            } catch (Exception ignored) {}
+                            int discount = pOldPrice > 0 ? (int) Math.round(((double) (pOldPrice - pPrice) / pOldPrice) * 100) : 0;
+                            long numericSold = (long) parseSold(pSold);
                     %>
-                    <a href="#" class="product-card" data-price="<%= pPrice %>" data-sold="<%= numericSold %>" data-name="<%= escapeHtml(pName) %>">
-                        <div class="product-image-wrap">
-                            <img src="${pageContext.request.contextPath}/HomePageImages/<%= pFolder %>/<%= pImage %>"
-                                 alt="<%= escapeHtml(pName) %>"
-                                 class="product-image"
-                                 loading="lazy">
-                            <span class="discount-badge">-<%= discount %>%</span>
-                        </div>
-                        <div class="product-meta">
-                            <div class="product-name"><%= escapeHtml(pName) %></div>
-                            <div class="product-price-row">
-                                <span class="product-price">Rs.<%= pPrice %></span>
-                                <span class="product-old-price">Rs.<%= pOldPrice %></span>
-                            </div>
-                            <div class="product-tag"><%= escapeHtml(pSold) %></div>
-                        </div>
-                    </a>
+                        <article class="ar-card"
+                                 data-index="<%= idx++ %>"
+                                 data-price="<%= pPrice %>"
+                                 data-sold="<%= numericSold %>"
+                                 data-name="<%= escapeHtml(pName) %>">
+                            <button type="button" class="ar-wish" aria-label="Save to wishlist">
+                                <span class="material-symbols-outlined ar-ic-sm">favorite</span>
+                            </button>
+                            <a href="${pageContext.request.contextPath}/product?id=<%= slug(pName) %>" class="ar-card-link">
+                                <div class="ar-card-img">
+                                    <img src="${pageContext.request.contextPath}/HomePageImages/<%= pFolder %>/<%= pImage %>"
+                                         alt="<%= escapeHtml(pName) %>"
+                                         loading="lazy">
+                                    <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
+                                </div>
+                                <div class="ar-card-body">
+                                    <div>
+                                        <div class="ar-card-top">
+                                            <span class="ar-brand"><%= escapeHtml(category) %></span>
+                                            <span class="ar-sold"><%= escapeHtml(pSold) %></span>
+                                        </div>
+                                        <h3 class="ar-p-title"><%= escapeHtml(pName) %></h3>
+                                    </div>
+                                    <div class="ar-price-row">
+                                        <div>
+                                            <div class="ar-price">Rs.<%= pPrice %></div>
+                                            <% if (pOldPrice > pPrice) { %><div class="ar-old">Rs.<%= pOldPrice %></div><% } %>
+                                            <div class="ar-sub-muted"><%= escapeHtml(pSub) %></div>
+                                        </div>
+                                        <span class="ar-view">Add to cart</span>
+                                    </div>
+                                </div>
+                            </a>
+                        </article>
                     <% }
                        if (!anyRendered) {
                     %>
-                    <p class="no-products-msg">No products found in this sub-category yet.</p>
+                        <p class="no-products-msg">No products found in this sub-category yet.</p>
                     <% } %>
+                    </div>
                 </div>
             </section>
         </div>
@@ -231,6 +263,15 @@
                 const pageCTX = pageRoot.dataset.ctx || '';
                 const currentCategory = pageRoot.dataset.category || 'Electronics';
                 const currentSub = pageRoot.dataset.sub || null;
+
+                // Wishlist heart toggle
+                document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        btn.classList.toggle('ar-wished');
+                    });
+                });
 
                 // Auto-scroll active mobile chip into view on load
                 const activeChip = document.querySelector('.category-chip-bar .chip.active');
@@ -312,7 +353,7 @@
 
                 if (sortSelect && productGrid) {
                     sortSelect.addEventListener('change', function () {
-                        const cards = Array.from(productGrid.querySelectorAll('.product-card'));
+                        const cards = Array.from(productGrid.querySelectorAll('.ar-card'));
                         if (cards.length === 0) return;
 
                         const val = this.value;
@@ -326,7 +367,8 @@
                             if (val === 'low-high') return priceA - priceB;
                             if (val === 'high-low') return priceB - priceA;
                             if (val === 'popular') return soldB - soldA;
-                            return 0; // Default/Best match original order
+                            // Best match: original order
+                            return (parseInt(a.dataset.index) || 0) - (parseInt(b.dataset.index) || 0);
                         });
 
                         cards.forEach(card => productGrid.appendChild(card));

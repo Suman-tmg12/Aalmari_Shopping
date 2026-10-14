@@ -30,7 +30,7 @@
 
                     <div class="profile-badge">
                         <div class="profile-avatar">
-                            <img id="sidebar-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Avatar">
+                            <img id="sidebar-avatar" src="${not empty profilePicUrl ? profilePicUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="Avatar">
                             <span class="online-dot"></span>
                         </div>
                         <div class="profile-info">
@@ -420,29 +420,30 @@
                             </div>
                         </div>
 
-                        <div class="avatar-upload">
-                            <img id="settings-avatar-preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Avatar">
-                            <div>
-                                <div class="avatar-actions">
-                                    <label class="file-label">
-                                        <span>Change Photo</span>
-                                        <input type="file" accept="image/*" onchange="previewImage(event)">
-                                    </label>
-                                    <button class="link-muted" onclick="showToast('Avatar reset to default')">Remove</button>
-                                </div>
-                                <p class="avatar-hint">JPG, PNG or GIF. Max size 2MB.</p>
-                            </div>
-                        </div>
+                        <form class="form" action="${pageContext.request.contextPath}/myprofile/update" method="post" enctype="multipart/form-data">
 
-                        <form class="form" onsubmit="handleProfileSave(event)">
+                            <div class="avatar-upload">
+                                <img id="settings-avatar-preview" src="${not empty profilePicUrl ? profilePicUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="Avatar">
+                                <div>
+                                    <div class="avatar-actions">
+                                        <label class="file-label">
+                                            <span>Change Photo</span>
+                                            <input type="file" name="profilePic" accept="image/*" onchange="previewImage(event)">
+                                        </label>
+                                        <button type="button" class="link-muted" onclick="showToast('Avatar reset to default')">Remove</button>
+                                    </div>
+                                    <p class="avatar-hint">JPG, PNG or GIF. Max size 2MB.</p>
+                                </div>
+                            </div>
+
                             <div class="form-grid">
                                 <div>
                                     <label class="label">First Name</label>
-                                    <input type="text" id="input-first-name" class="input" value="${sessionScope.userFirstName}" required>
+                                    <input type="text" name="firstName" id="input-first-name" class="input" value="${sessionScope.userFirstName}" required>
                                 </div>
                                 <div>
                                     <label class="label">Last Name</label>
-                                    <input type="text" id="input-last-name" class="input" value="${sessionScope.userLastName}" required>
+                                    <input type="text" name="lastName" id="input-last-name" class="input" value="${sessionScope.userLastName}" required>
                                 </div>
                             </div>
 
@@ -450,7 +451,7 @@
                                 <div>
                                     <label class="label">Email Address</label>
                                     <div class="input-wrap">
-                                        <input type="email" class="input pad-right" value="${sessionScope.userEmail}" required>
+                                        <input type="email" class="input pad-right" value="${sessionScope.userEmail}" readonly required>
                                         <span class="verified"><i data-lucide="check"></i> Verified</span>
                                     </div>
                                 </div>
@@ -458,13 +459,13 @@
                                     <label class="label">Phone Number</label>
                                     <div class="phone-row">
                                         <select class="country-select">
+                                            <option value="+977">🇳🇵 +977</option>
                                             <option value="+1">🇺🇸 +1</option>
                                             <option value="+44">🇬🇧 +44</option>
                                             <option value="+91">🇮🇳 +91</option>
-                                            <option value="+977">🇳🇵 +977</option>
                                         </select>
                                         <div class="input-wrap">
-                                            <input type="tel" class="input pad-right" value="${sessionScope.userPhone}">
+                                            <input type="tel" name="phone" class="input pad-right" value="${sessionScope.userPhone}">
                                             <span class="verified"><i data-lucide="shield-check"></i> Verified</span>
                                         </div>
                                     </div>
@@ -711,6 +712,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             lucide.createIcons();
+
+            // Show a success toast after redirect back from the profile-save POST
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('saved') === 'true') {
+                showToast('Personal profile saved successfully!');
+            }
         });
 
         // NOTE: In JSP, a dollar sign followed by braces is parsed as EL even inside <script>.
@@ -769,20 +776,6 @@
             }
         }
 
-        // ===== Profile =====
-        function handleProfileSave(event) {
-            event.preventDefault();
-            var fullName = document.getElementById('input-first-name').value + ' ' +
-                           document.getElementById('input-last-name').value;
-
-            // header-user-name does not exist on this page, so guard against null
-            var headerName = document.getElementById('header-user-name');
-            if (headerName) headerName.innerText = fullName;
-            document.getElementById('sidebar-name').innerText = fullName;
-
-            showToast('Personal profile saved successfully!');
-        }
-
         function handlePasswordChange(event) {
             event.preventDefault();
             var newPass = document.getElementById('pass-new').value;
@@ -811,7 +804,6 @@
                 var headerAvatar = document.getElementById('header-avatar');
                 if (headerAvatar) headerAvatar.src = src;
                 document.getElementById('sidebar-avatar').src = src;
-                showToast('Profile photo updated');
             };
             reader.readAsDataURL(file);
         }

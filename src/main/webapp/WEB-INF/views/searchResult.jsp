@@ -230,7 +230,7 @@
                 <aside id="arFilterPanel" class="ar-sidebar" aria-label="Refine search">
                     <div class="ar-panel">
                         <div class="ar-panel-head">
-                            <h2><span class="material-symbols-outlined ar-ic-sm" aria-hidden="true">filter_alt</span> Filters</h2>
+                            <h2><span class="material-symbols-outlined ar-ic-sm" style="color: #FF7B00" aria-hidden="true">filter_alt</span> Filters</h2>
                             <div class="ar-panel-actions">
                                 <button type="button" class="ar-reset" id="arResetFilters">Reset</button>
                                 <button type="button" class="ar-close-panel" id="arCloseFilters" aria-label="Close filters">
@@ -244,9 +244,9 @@
                             <h3 class="ar-section-title">Categories</h3>
                             <ul class="ar-cat-list">
                                 <li>
-                                    <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>"
+                                    <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>" style="background: #ffe5cf"
                                        class="ar-cat-btn<%= hasCategoryFilter ? "" : " ar-active" %>">
-                                        <span>All Categories</span>
+                                        <span style="color: #FF7B00">All Categories</span>
                                         <small><%= totalSearchCount %></small>
                                     </a>
                                 </li>
@@ -368,7 +368,7 @@
                                             <div class="ar-old">Rs.<%= pOldPrice %></div>
                                             <div class="ar-sub-muted"><%= escapeHtml(pSub) %></div>
                                         </div>
-                                        <span class="ar-view">View</span>
+                                        <span class="ar-view">Add to cart</span>
                                     </div>
                                 </div>
                             </a>

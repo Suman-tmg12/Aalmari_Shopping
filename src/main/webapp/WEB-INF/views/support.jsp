@@ -367,7 +367,7 @@
                                          </span></div>
                 <span>Change Delivery Addresss</span>
             </a>
-            <a class="tool-item" href="profile.jsp">
+            <a class="tool-item" href="${pageContext.request.contextPath}/myprofile">
                 <div class="tool-circle"><span class="material-symbols-outlined" style="font-size: 30px">
                                          account_circle
                                          </span></div>

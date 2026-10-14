@@ -33,6 +33,17 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "profile_pic_path", length = 255)
+    private String profilePicPath;
+
+    public String getProfilePicPath() {
+        return profilePicPath;
+    }
+
+    public void setProfilePicPath(String profilePicPath) {
+        this.profilePicPath = profilePicPath;
+    }
+
     // Required by JPA — plain no-arg constructor, no stray annotations
     public User() {}
 

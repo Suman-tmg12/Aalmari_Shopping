@@ -6,6 +6,7 @@ import com.example.aalmari.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -16,6 +17,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private S3Service s3Service;
 
     @Override
     public boolean emailExists(String email) {
@@ -47,5 +51,27 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public Optional<User> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    @Override
+    public User updateProfile(Long userId, String firstName, String lastName, String phone, MultipartFile profilePic) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setPhone(phone);
+
+        if (profilePic != null && !profilePic.isEmpty()) {
+            String key = s3Service.uploadProfilePic(profilePic, userId);
+            user.setProfilePicPath(key);
+        }
+
+        return userRepository.save(user);
     }
 }
