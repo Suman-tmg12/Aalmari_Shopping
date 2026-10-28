@@ -610,7 +610,6 @@ button, input {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s var(--ease);
-    padding-left: 12px;
     background: #fafafa;
 }
 

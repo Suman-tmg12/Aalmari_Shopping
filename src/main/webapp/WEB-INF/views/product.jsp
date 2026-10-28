@@ -86,6 +86,18 @@
                     </div>
                 </c:if>
 
+                <!-- RAM Options -->
+                <c:if test="${not empty product.rams}">
+                    <div class="product-option">
+                        <label>RAM: <span class="selected-value" id="selectedRam">${product.rams[0]}</span></label>
+                        <div class="size-options">
+                            <c:forEach var="ram" items="${product.rams}" varStatus="status">
+                                <button type="button" class="size-btn ${status.first ? 'active' : ''}" data-ram="${ram}">${ram}</button>
+                            </c:forEach>
+                        </div>
+                    </div>
+                </c:if>
+
                 <!-- Size Options -->
                 <c:if test="${not empty product.sizes}">
                     <div class="product-option">
@@ -111,9 +123,9 @@
                             Buy Now
                         </button>
                         <button type="button" class="add-to-cart-btn">
-                                                    <span class="material-symbols-outlined">shopping_bag</span>
-                                                    Add to Cart
-                                                </button>
+                            <span class="material-symbols-outlined">shopping_bag</span>
+                            Add to Cart
+                        </button>
                     </div>
                 </div>
             </div>

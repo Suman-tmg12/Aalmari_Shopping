@@ -410,7 +410,7 @@
                                             </span></div>
                 <div class="contact-text">
                     <div class="title">Call us 01-5970597</div>
-                    <div class="subtitle">9Am-6PM [Sun-Fri]</div>
+                    <div class="subtitle">9AM-6PM [Sun-Fri]</div>
                 </div>
             </div>
         </div>

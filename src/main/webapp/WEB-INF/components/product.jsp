@@ -1,4 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%!
     private static String esc(String s) {
         if (s == null) return "";
@@ -16,49 +18,78 @@
 <div class="ar-page">
     <div class="ar-grid" id="productGrid">
     <%
-        String[] prodIds       = {"hair-spray","olipop-cherry","nike-shoes","black-glasses","white-spray","falcon-spray","iphone-15-pro","macbook-pro-m3","airpods-pro"};
-        String[] prods         = {"Hair Spray", "OLIPOP Cherry", "Nike Shoes", "Black Glasses", "White Spray", "Falcon Spray", "iPhone 15 Pro", "MacBook Pro M3", "AirPods Pro"};
-        String[] prodImages    = {"hairSpray.jpg", "olipop.jpg", "nikeShoe.jpg", "BlackGlass.jpg", "WhiteSpray.jpg", "FalconSpray.jpg", "iphone15pro.jpg", "MacBookProm3.jpg", "Airpods.jpg"};
-        long[]   prodPrices    = {70, 120, 200, 90, 80, 110, 1500, 2200, 250};
-        long[]   prodOldPrices = {100, 150, 260, 120, 100, 140, 1800, 2600, 300};   // adjust to real values
-        String[] prodSold      = {"4.5k sold", "3.2k sold", "8.1k sold", "2.3k sold", "1.8k sold", "5.6k sold", "12.4k sold", "9.7k sold", "15.2k sold"};
-        String[] prodBrands    = {"Beauty", "Beverages", "Fashion", "Fashion", "Beauty", "Beauty", "Electronics", "Electronics", "Electronics"}; // adjust
-        String[] prodSubs      = {"Hair Care", "Soft Drinks", "Footwear", "Eyewear", "Body Spray", "Body Spray", "Smartphones", "Laptops", "Audio"}; // adjust
+        // S3 Base URL
+        String s3Base = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
 
-        for (int i = 0; i < prods.length; i++) {
-            long price = prodPrices[i];
-            long oldPrice = prodOldPrices[i];
-            int discount = oldPrice > 0 ? (int) Math.round(((double) (oldPrice - price) / oldPrice) * 100) : 0;
+        // Get the list from Model (passed by HomeController)
+        List<com.example.aalmari.model.SellerProduct> products = (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("sellerProducts");
+
+        if (products != null && !products.isEmpty()) {
+            for (com.example.aalmari.model.SellerProduct p : products) {
+                // Skip if not active (safety check)
+                if (!p.getActive()) continue;
+
+                int price = p.getPrice();
+                int discount = p.getDiscount();
+
+                // Calculate old price for display (strikethrough)
+                long oldPrice = 0;
+                if (discount > 0) {
+                    oldPrice = Math.round(price / ((100.0 - discount) / 100.0));
+                }
+
+                // Get Main Image (Info Image or first gallery image)
+                String mainImg = "";
+                if (p.getInfoImageUrl() != null && !p.getInfoImageUrl().isEmpty()) {
+                    mainImg = p.getInfoImageUrl();
+                    if (!mainImg.startsWith("http")) {
+                        mainImg = s3Base + mainImg;
+                    }
+                } else {
+                    // Fallback: Try to get first image from gallery if info image is missing
+                    // Note: Parsing JSON in JSP is messy, better to ensure InfoImage exists in DB
+                    // For now, we skip if no main image
+                    mainImg = "${pageContext.request.contextPath}/placeholder.jpg";
+                }
+
+                String soldText = p.getSold() + " sold";
     %>
-        <article class="ar-card" data-index="<%= i %>" data-price="<%= price %>" data-name="<%= esc(prods[i]) %>">
+        <article class="ar-card" data-price="<%= price %>" data-name="<%= esc(p.getName()) %>">
             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
             </button>
-            <a href="${pageContext.request.contextPath}/product?id=<%= prodIds[i] %>" class="ar-card-link">
+            <!-- Link to the new dynamic product detail page -->
+            <a href="${pageContext.request.contextPath}/product/<%= p.getId() %>" class="ar-card-link">
                 <div class="ar-card-img">
-                    <img src="${pageContext.request.contextPath}/HomePageImages/Products/<%= prodImages[i] %>"
-                         alt="<%= esc(prods[i]) %>" loading="lazy">
+                    <img src="<%= mainImg %>" alt="<%= esc(p.getName()) %>" loading="lazy">
                     <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
                 </div>
                 <div class="ar-card-body">
                     <div>
                         <div class="ar-card-top">
-                            <span class="ar-brand"><%= esc(prodBrands[i]) %></span>
-                            <span class="ar-sold"><%= esc(prodSold[i]) %></span>
+                            <span class="ar-brand"><%= esc(p.getCategory()) %></span>
+                            <span class="ar-sold"><%= soldText %></span>
                         </div>
-                        <h3 class="ar-p-title"><%= esc(prods[i]) %></h3>
+                        <h3 class="ar-p-title"><%= esc(p.getName()) %></h3>
                     </div>
                     <div class="ar-price-row">
                         <div>
                             <div class="ar-price">Rs.<%= price %></div>
-                            <% if (oldPrice > price) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
-                            <div class="ar-sub-muted"><%= esc(prodSubs[i]) %></div>
+                            <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
+                            <div class="ar-sub-muted"><%= esc(p.getSubCategory()) %></div>
                         </div>
                         <span class="ar-view">Add to cart</span>
                     </div>
                 </div>
             </a>
         </article>
+    <%
+            }
+        } else {
+    %>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #666;">
+            <h2>No products available at this time.</h2>
+        </div>
     <% } %>
     </div>
 </div>

@@ -18,6 +18,7 @@ public class Product {
     private String description;
     private List<String> colors;
     private List<String> sizes;
+    private List<String> rams;
     private Map<String, String> specs;
 
     public Product() {}
@@ -25,7 +26,7 @@ public class Product {
     public Product(String id, String title, String category, String subCategory, String mainImage,
                    List<String> galleryImages, String currentPrice, String originalPrice,
                    String discount, double rating, int reviewCount, String description,
-                   List<String> colors, List<String> sizes, Map<String, String> specs) {
+                   List<String> colors, List<String> sizes, List<String> rams, Map<String, String> specs) {
         this.id = id;
         this.title = title;
         this.category = category;
@@ -40,6 +41,7 @@ public class Product {
         this.description = description;
         this.colors = colors;
         this.sizes = sizes;
+        this.rams = rams;
         this.specs = specs;
     }
 
@@ -57,5 +59,6 @@ public class Product {
     public String getDescription() { return description; }
     public List<String> getColors() { return colors; }
     public List<String> getSizes() { return sizes; }
+    public List<String> getRams() {return rams; }
     public Map<String, String> getSpecs() { return specs; }
 }

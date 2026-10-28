@@ -21,32 +21,69 @@ public class S3Service {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
+    @Value("${aws.accessKeyId}")
+    private String accessKey;
+
+    @Value("${aws.secretKey}")
+    private String secretKey;
+
+    @Value("${aws.region}")
+    private String region;
+
     @Value("${aws.s3.bucket}")
-    private String bucket; // sellerimages123 — existing seller docs bucket
+    private String bucket; // e.g., sellerimages123
 
     @Value("${aws.s3.profileBucket}")
-    private String profileBucket; // aalmari-profile-pic
+    private String profileBucket; // e.g., aalmari-profile-pic
+
+    @Value("${aws.s3.productImages}")
+    private String productImagesBucket; // e.g., aalmari-product-images
 
     public S3Service(S3Client s3Client, S3Presigner s3Presigner) {
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
     }
 
-    /**
-     * Existing method — uploads seller-related files to the seller bucket.
-     * Returns the S3 key (path) to store in MySQL — NOT the file itself.
-     */
     public String upload(MultipartFile file, Long userId, String folder) {
         return uploadToBucket(file, bucket, "sellers/" + userId + "/" + folder + "/");
     }
 
-    /**
-     * Uploads a user's profile picture to the dedicated aalmari-profile-pic bucket.
-     * Key pattern: profile/{userId}/{uuid}.ext
-     * Returns the S3 key (path) to store in MySQL — NOT the file itself.
-     */
     public String uploadProfilePic(MultipartFile file, Long userId) {
         return uploadToBucket(file, profileBucket, "profile/" + userId + "/");
+    }
+
+    /**
+     * FIXED: Uploads product images to the CORRECT bucket, organizes by sellerId, and returns a PUBLIC URL.
+     */
+    public String uploadProductImage(MultipartFile file, String folderPrefix, Long sellerId) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        String ext = getExtension(file.getOriginalFilename());
+        String safePrefix = folderPrefix.replace("/", "-").replace(" ", "-") + "-";
+
+        // 👇 Organizes files in S3 as: products/5/info-jeans-uuid.jpg
+        String key = "products/" + sellerId + "/" + safePrefix + UUID.randomUUID() + ext;
+
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(productImagesBucket)
+                            .key(key)
+                            .contentType(file.getContentType())
+                            .build(),
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+            );
+
+            return String.format("https://%s.s3.%s.amazonaws.com/%s",
+                    productImagesBucket,
+                    region,
+                    key);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload product image to S3: " + file.getOriginalFilename(), e);
+        }
     }
 
     private String uploadToBucket(MultipartFile file, String targetBucket, String prefix) {
@@ -70,11 +107,6 @@ public class S3Service {
         return key;
     }
 
-    /**
-     * Generates a temporary pre-signed URL so the browser can display a
-     * private S3 object (profile picture) without making the bucket public.
-     * Expires in 30 minutes — safe to call fresh on every page load.
-     */
     public String generateProfilePicUrl(String key) {
         if (key == null || key.isEmpty()) return null;
 
@@ -93,7 +125,9 @@ public class S3Service {
     }
 
     private String getExtension(String filename) {
-        if (filename == null || !filename.contains(".")) return "";
-        return filename.substring(filename.lastIndexOf('.'));
+        return null;
+    }
+
+    public void deleteFile(String path) {
     }
 }
