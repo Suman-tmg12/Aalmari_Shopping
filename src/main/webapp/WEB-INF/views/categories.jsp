@@ -1,120 +1,44 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List" %>
 <%!
-    // Utility method to safely escape HTML attributes and prevent XSS
+    private static final String S3_BASE = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    // Escapes HTML to prevent XSS
     private String escapeHtml(String input) {
         if (input == null) return "";
-        return input.replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
-                    .replace("\"", "&quot;")
-                    .replace("'", "&#39;");
+        return input.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
-    // "12.4k sold" -> 12400
-    private double parseSold(String sold) {
+    // Returns the full URL of the first gallery image, or null if none
+    private static String firstGalleryImage(String json) {
+        if (json == null || json.isEmpty() || json.equals("[]")) return null;
         try {
-            String s = sold.toLowerCase().replace("sold", "").trim();
-            double mult = 1;
-            if (s.endsWith("k")) { mult = 1000; s = s.substring(0, s.length() - 1); }
-            return Double.parseDouble(s.trim()) * mult;
+            List<String> paths = MAPPER.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            for (String path : paths) {
+                if (path != null && !path.isEmpty()) {
+                    return path.startsWith("http") ? path : S3_BASE + path;
+                }
+            }
         } catch (Exception e) {
-            return 0;
+            e.printStackTrace();
         }
-    }
-
-    // "Hair Spray" -> "hair-spray"
-    private String slug(String name) {
-        return name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
+        return null;
     }
 %>
 <%
     String category = request.getParameter("name");
-    if (category == null || category.trim().isEmpty()) {
-        category = "Electronics";
-    }
+    if (category == null || category.trim().isEmpty()) category = "Electronics";
     String sub = request.getParameter("sub");
-    if (sub != null && sub.trim().isEmpty()) {
-        sub = null;
-    }
+    if (sub != null && sub.trim().isEmpty()) sub = null;
 
-    // Mock Data Sets
-    String[][] electronicsData = {
-        {"iPhone 15 Pro", "iphone15pro.jpg", "Products", "1500", "2300", "12.4k sold", "Mobiles"},
-        {"Samsung Galaxy S24", "iphone15pro.jpg", "Products", "1400", "2100", "9.8k sold", "Mobiles"},
-        {"MacBook Pro M3", "MacBookProm3.jpg", "Products", "2200", "3200", "9.7k sold", "Laptops"},
-        {"Dell XPS 15", "MacBookProm3.jpg", "Products", "1900", "2800", "6.3k sold", "Laptops"},
-        {"AirPods Pro", "Airpods.jpg", "Products", "250", "400", "15.2k sold", "Headphones"},
-        {"Wireless Headphone", "Wireless_headPhone.jpg", "FlashSaleImages", "70", "120", "4.5k sold", "Headphones"},
-        {"Smart Fitness Band", "SmartFitnessBand.jpg", "FlashSaleImages", "120", "200", "2.3k sold", "Smart Watches"},
-        {"Bluetooth Speaker", "hairSpray.jpg", "Products", "180", "300", "1.1k sold", "Accessories"}
-    };
-    String[][] fashionData = {
-        {"Nike Shoes", "nikeShoe.jpg", "Products", "200", "320", "8.1k sold", "Shoes"},
-        {"Classic Black Shoes", "ClassicBlackShoes.jpg", "FlashSaleImages", "90", "180", "2.3k sold", "Shoes"},
-        {"Black Glasses", "BlackGlass.jpg", "Products", "90", "150", "2.3k sold", "Men"},
-        {"White T-Shirt", "WhiteSpray.jpg", "Products", "25", "50", "5.2k sold", "Men"},
-        {"Summer Dress", "skincare.jpg", "Products", "45", "80", "3.1k sold", "Women"},
-        {"Leather Handbag", "hairSpray.jpg", "Products", "120", "200", "1.8k sold", "Bags"}
-    };
-    String[][] beautyData = {
-        {"Himalaya Face Scrub", "HimalayaFaceScrub.jpg", "FlashSaleImages", "70", "150", "4.5k sold", "Skincare"},
-        {"Skin Care Set", "skincare.jpg", "FlashSaleImages", "150", "300", "1.8k sold", "Skincare"},
-        {"White Spray", "WhiteSpray.jpg", "Products", "80", "140", "1.8k sold", "Fragrances"},
-        {"Falcon Spray", "FalconSpray.jpg", "Products", "110", "200", "5.6k sold", "Fragrances"},
-        {"Hair Spray", "hairSpray.jpg", "Products", "70", "150", "4.5k sold", "Hair Care"},
-        {"Lipstick Set", "olipop.jpg", "Products", "35", "60", "8.2k sold", "Makeup"}
-    };
-    String[][] homeData = {
-        {"Wooden Table", "home&living.jpg", "Products", "250", "400", "2.1k sold", "Furniture"},
-        {"LED Lamp", "SmartFitnessBand.jpg", "Products", "45", "80", "5.6k sold", "Lighting"},
-        {"Storage Box", "hairSpray.jpg", "Products", "15", "30", "9.3k sold", "Storage"},
-        {"Kitchen Knife Set", "HimalayaFaceScrub.jpg", "Products", "35", "60", "4.2k sold", "Kitchen"}
-    };
-    String[][] groceriesData = {
-        {"Organic Rice", "Healthy.jpg", "FlashSaleImages", "25", "40", "12.4k sold", "Rice & Grains"},
-        {"Fresh Apples", "Healthy.jpg", "FlashSaleImages", "15", "25", "8.7k sold", "Fruits & Vegetables"},
-        {"Snack Pack", "unhealthy-foods.jpg", "FlashSaleImages", "10", "20", "15.2k sold", "Snacks"},
-        {"Milk Carton", "olipop.jpg", "Products", "8", "12", "6.3k sold", "Dairy"}
-    };
-    String[][] sportsData = {
-        {"Yoga Mat", "SmartFitnessBand.jpg", "Products", "30", "50", "7.4k sold", "Fitness Accessories"},
-        {"Dumbbell Set", "hairSpray.jpg", "Products", "85", "140", "3.2k sold", "Gym Equipment"},
-        {"Running Shoes", "nikeShoe.jpg", "Products", "120", "200", "5.8k sold", "Sportswear"}
-    };
-    String[][] booksData = {
-        {"Novel Collection", "hairSpray.jpg", "Products", "20", "35", "4.1k sold", "Books"},
-        {"Pen Set", "WhiteSpray.jpg", "Products", "8", "15", "9.5k sold", "Pens & Pencils"},
-        {"Notebook Pack", "skincare.jpg", "Products", "12", "20", "6.7k sold", "Notebooks"}
-    };
-    String[][] automotiveData = {
-        {"Car Phone Holder", "hairSpray.jpg", "Products", "25", "45", "5.3k sold", "Car Accessories"},
-        {"Bike Helmet", "SmartFitnessBand.jpg", "Products", "60", "100", "3.8k sold", "Helmets"},
-        {"Car Wash Kit", "HimalayaFaceScrub.jpg", "Products", "35", "60", "2.9k sold", "Car Care"}
-    };
-    String[][] toysData = {
-        {"Building Blocks", "hairSpray.jpg", "Products", "40", "70", "8.4k sold", "Toys"},
-        {"Board Game", "skincare.jpg", "Products", "25", "45", "4.6k sold", "Board Games"},
-        {"RC Car", "SmartFitnessBand.jpg", "Products", "55", "90", "3.1k sold", "Remote-Control Toys"}
-    };
-    String[][] healthData = {
-        {"Vitamin C Tablets", "Healthy.jpg", "FlashSaleImages", "20", "35", "7.2k sold", "Vitamins & Supplements"},
-        {"First Aid Kit", "hairSpray.jpg", "Products", "30", "55", "4.8k sold", "Healthcare Products"},
-        {"Massage Roller", "SmartFitnessBand.jpg", "Products", "25", "40", "5.5k sold", "Fitness"}
-    };
-
-    String[][] categoryData;
-    switch (category) {
-        case "Fashion": categoryData = fashionData; break;
-        case "Beauty & Personal Care": categoryData = beautyData; break;
-        case "Home & Living": categoryData = homeData; break;
-        case "Groceries": categoryData = groceriesData; break;
-        case "Sports & Fitness": categoryData = sportsData; break;
-        case "Books & Stationery": categoryData = booksData; break;
-        case "Automotive": categoryData = automotiveData; break;
-        case "Toys & Games": categoryData = toysData; break;
-        case "Health & Wellness": categoryData = healthData; break;
-        default: categoryData = electronicsData; category = "Electronics"; break;
-    }
+    // Passed by CategoriesController
+    @SuppressWarnings("unchecked")
+    List<com.example.aalmari.model.SellerProduct> products =
+            (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("sellerProducts");
 
     String pageTitle = escapeHtml(category);
     String pageSubtitle = "Showing results for " + pageTitle + (sub != null ? " › " + escapeHtml(sub) : "");
@@ -126,7 +50,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %> — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=5">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=6">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -174,65 +98,73 @@
                     </div>
                 </div>
 
-                <!-- Product Grid (3 per row) -->
+                <!-- Product Grid -->
                 <div class="ar-page">
                     <div class="ar-grid" id="productGrid">
                     <%
-                        boolean anyRendered = false;
                         int idx = 0;
-                        for (String[] p : categoryData) {
-                            String pName = p[0], pImage = p[1], pFolder = p[2];
-                            long pPrice = Long.parseLong(p[3]);
-                            long pOldPrice = Long.parseLong(p[4]);
-                            String pSold = p[5], pSub = p[6];
+                        if (products != null && !products.isEmpty()) {
+                            for (com.example.aalmari.model.SellerProduct p : products) {
+                                if (!p.getActive()) continue;
 
-                            if (sub != null && !sub.equalsIgnoreCase(pSub)) continue;
-                            anyRendered = true;
+                                int price = p.getPrice();
+                                int discount = p.getDiscount();
+                                long oldPrice = 0;
+                                if (discount > 0 && discount < 100) {
+                                    oldPrice = Math.round(price / ((100.0 - discount) / 100.0));
+                                }
 
-                            int discount = pOldPrice > 0 ? (int) Math.round(((double) (pOldPrice - pPrice) / pOldPrice) * 100) : 0;
-                            long numericSold = (long) parseSold(pSold);
+                                String cardImg = firstGalleryImage(p.getImageUrlsJson());
+                                if (cardImg == null) cardImg = request.getContextPath() + "/placeholder.jpg";
                     %>
                         <article class="ar-card"
-                                 data-index="<%= idx++ %>"
-                                 data-price="<%= pPrice %>"
-                                 data-sold="<%= numericSold %>"
-                                 data-name="<%= escapeHtml(pName) %>">
+                                 data-index="<%= idx %>"
+                                 data-price="<%= price %>"
+                                 data-sold="<%= p.getSold() %>"
+                                 data-name="<%= escapeHtml(p.getName()) %>"<%= idx >= 8 ? " style=\"display:none\"" : "" %>>
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                             </button>
-                            <a href="${pageContext.request.contextPath}/product?id=<%= slug(pName) %>" class="ar-card-link">
+                            <a href="${pageContext.request.contextPath}/product/<%= p.getId() %>" class="ar-card-link">
                                 <div class="ar-card-img">
-                                    <img src="${pageContext.request.contextPath}/HomePageImages/<%= pFolder %>/<%= pImage %>"
-                                         alt="<%= escapeHtml(pName) %>"
-                                         loading="lazy">
+                                    <img src="<%= escapeHtml(cardImg) %>"
+                                         alt="<%= escapeHtml(p.getName()) %>"
+                                         loading="lazy"
+                                         onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/placeholder.jpg'">
                                     <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
                                 </div>
                                 <div class="ar-card-body">
                                     <div>
                                         <div class="ar-card-top">
-                                            <span class="ar-brand"><%= escapeHtml(category) %></span>
-                                            <span class="ar-sold"><%= escapeHtml(pSold) %></span>
+                                            <span class="ar-brand"><%= escapeHtml(p.getCategory()) %></span>
+                                            <span class="ar-sold"><%= p.getSold() %> sold</span>
                                         </div>
-                                        <h3 class="ar-p-title"><%= escapeHtml(pName) %></h3>
+                                        <h3 class="ar-p-title"><%= escapeHtml(p.getName()) %></h3>
                                     </div>
                                     <div class="ar-price-row">
                                         <div>
-                                            <div class="ar-price">Rs.<%= pPrice %></div>
-                                            <% if (pOldPrice > pPrice) { %><div class="ar-old">Rs.<%= pOldPrice %></div><% } %>
-                                            <div class="ar-sub-muted"><%= escapeHtml(pSub) %></div>
+                                            <div class="ar-price">Rs.<%= price %></div>
+                                            <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
+                                            <div class="ar-sub-muted"><%= escapeHtml(p.getSubCategory()) %></div>
                                         </div>
                                         <span class="ar-view">Add to cart</span>
                                     </div>
                                 </div>
                             </a>
                         </article>
-                    <% }
-                       if (!anyRendered) {
+                    <%
+                                idx++;
+                            }
+                        }
+                        if (idx == 0) {
                     %>
-                        <p class="no-products-msg">No products found in this sub-category yet.</p>
+                        <p class="no-products-msg">No products found<%= sub != null ? " in this sub-category" : "" %> yet.</p>
                     <% } %>
                     </div>
                 </div>
+
+                <!-- Pagination (built by JavaScript) -->
+                <div class="pagination" id="pagination"></div>
             </section>
         </div>
     </div>
@@ -276,11 +208,7 @@
                 // Auto-scroll active mobile chip into view on load
                 const activeChip = document.querySelector('.category-chip-bar .chip.active');
                 if (activeChip) {
-                    activeChip.scrollIntoView({
-                        behavior: 'smooth',
-                        inline: 'center',
-                        block: 'nearest'
-                    });
+                    activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }
 
                 // Build Sidebar Accordion
@@ -310,10 +238,8 @@
                         header.appendChild(catLink);
                         header.appendChild(chevron);
 
-                        // Toggle accordion expand state on header click (except direct text link)
                         header.addEventListener('click', function (e) {
                             if (e.target.classList.contains('cat-header-text')) return;
-
                             e.preventDefault();
                             const isOpen = wrap.classList.contains('open');
 
@@ -347,13 +273,120 @@
                     accordion.appendChild(fragment);
                 }
 
-                // Client-side Product Sorting
-                const sortSelect = document.getElementById('sortBy');
-                const productGrid = document.getElementById('productGrid');
+                // ---------- Pagination (8 per page) ----------
+                const PER_PAGE = 6;
+                const HEADER_OFFSET = 100; // change to your sticky header height in px
+                const grid = document.getElementById('productGrid');
+                const nav = document.getElementById('pagination');
+                const totalCards = grid ? grid.querySelectorAll('.ar-card').length : 0;
+                const total = Math.ceil(totalCards / PER_PAGE);
+                let current = 1;
 
-                if (sortSelect && productGrid) {
+                // Always read the cards in their current DOM order (it changes after sorting)
+                function getCards() {
+                    return Array.from(grid.querySelectorAll('.ar-card'));
+                }
+
+                function getPageFromUrl() {
+                    const p = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+                    return (p >= 1 && p <= total) ? p : 1;
+                }
+
+                // Builds [1, '...', 4, 5, 6, '...', 20]
+                function pageItems() {
+                    if (total <= 7) {
+                        return Array.from({ length: total }, (_, i) => i + 1);
+                    }
+                    const items = [1];
+                    const start = Math.max(2, current - 1);
+                    const end = Math.min(total - 1, current + 1);
+                    if (start > 2) items.push('...');
+                    for (let i = start; i <= end; i++) items.push(i);
+                    if (end < total - 1) items.push('...');
+                    items.push(total);
+                    return items;
+                }
+
+                function makeItem(label, page, opts) {
+                    opts = opts || {};
+                    const s = document.createElement('span');
+                    s.innerHTML = label;
+                    if (opts.active) {
+                        s.className = 'active';
+                        s.setAttribute('aria-current', 'page');
+                    } else if (opts.disabled) {
+                        s.className = 'disabled';
+                        s.setAttribute('aria-disabled', 'true');
+                    } else {
+                        s.setAttribute('role', 'button');
+                        s.tabIndex = 0;
+                        s.addEventListener('click', () => goTo(page, true));
+                        s.addEventListener('keydown', function (e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                goTo(page, true);
+                            }
+                        });
+                    }
+                    return s;
+                }
+
+                function renderNav() {
+                    nav.innerHTML = '';
+                    nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
+                    pageItems().forEach(function (item) {
+                        if (item === '...') {
+                            const dots = document.createElement('span');
+                            dots.className = 'pg-dots';
+                            dots.textContent = '...';
+                            nav.appendChild(dots);
+                        } else {
+                            nav.appendChild(makeItem(item, item, { active: item === current }));
+                        }
+                    });
+                    nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
+                }
+
+                function showPage(page) {
+                    current = page;
+                    const start = (page - 1) * PER_PAGE;
+                    const end = start + PER_PAGE;
+                    getCards().forEach(function (card, i) {
+                        card.style.display = (i >= start && i < end) ? '' : 'none';
+                    });
+                    renderNav();
+                }
+
+                function goTo(page, userClicked) {
+                    if (page < 1 || page > total) return;
+                    showPage(page);
+                    if (userClicked) {
+                        const url = new URL(window.location);
+                        url.searchParams.set('page', page);
+                        history.pushState({ page: page }, '', url);
+
+                        // Scroll only if the top of the grid is out of view
+                        const top = grid.getBoundingClientRect().top;
+                        if (top < HEADER_OFFSET) {
+                            window.scrollTo({ top: top + window.pageYOffset - HEADER_OFFSET, behavior: 'smooth' });
+                        }
+                    }
+                }
+
+                const paginationOn = nav && total > 1;
+                if (nav && !paginationOn) nav.style.display = 'none';
+
+                if (paginationOn) {
+                    window.addEventListener('popstate', () => showPage(getPageFromUrl()));
+                    showPage(getPageFromUrl());
+                }
+
+                // ---------- Client-side Product Sorting ----------
+                const sortSelect = document.getElementById('sortBy');
+
+                if (sortSelect && grid) {
                     sortSelect.addEventListener('change', function () {
-                        const cards = Array.from(productGrid.querySelectorAll('.ar-card'));
+                        const cards = getCards();
                         if (cards.length === 0) return;
 
                         const val = this.value;
@@ -367,11 +400,18 @@
                             if (val === 'low-high') return priceA - priceB;
                             if (val === 'high-low') return priceB - priceA;
                             if (val === 'popular') return soldB - soldA;
-                            // Best match: original order
                             return (parseInt(a.dataset.index) || 0) - (parseInt(b.dataset.index) || 0);
                         });
 
-                        cards.forEach(card => productGrid.appendChild(card));
+                        cards.forEach(card => grid.appendChild(card));
+
+                        // Sorting changes the order, so go back to page 1
+                        if (paginationOn) {
+                            const url = new URL(window.location);
+                            url.searchParams.delete('page');
+                            history.replaceState(null, '', url);
+                            showPage(1);
+                        }
                     });
                 }
             });

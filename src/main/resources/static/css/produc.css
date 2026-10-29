@@ -119,3 +119,38 @@
     .ar-grid.ar-list .ar-price-row { flex-direction: column; align-items: flex-end; gap: .75rem; border-left: 1px solid #f1f5f9; padding-left: 1.5rem; }
     .ar-grid.ar-list .ar-price-row > div { text-align: right; }
 }
+
+/* ---------- Pagination ---------- */
+
+/* ===== PAGINATION ===== */
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: clamp(32px, 5vw, 48px);
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.pagination span {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.pagination span:hover {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.pagination span.active {
+    font-weight: bold;
+    color: #FFFFFF;
+    background: var(--color-accent);
+}
+
+.pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+.pagination span.pg-dots { cursor: default; }
+.pagination span.pg-dots:hover { background: none; }

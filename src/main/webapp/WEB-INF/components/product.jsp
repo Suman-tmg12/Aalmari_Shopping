@@ -105,6 +105,9 @@
     </div>
 </div>
 
+ <!-- Pagination (built by JavaScript) -->
+ <div class="pagination" id="pagination"></div>
+
 <script>
     // Wishlist heart toggle
     document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
@@ -114,4 +117,112 @@
             btn.classList.toggle('ar-wished');
         });
     });
+
+    // Pagination: 8 products per page
+    (function () {
+        var PER_PAGE = 8;
+        var HEADER_OFFSET = 100; // change to your sticky header height in px
+        var grid  = document.getElementById('productGrid');
+        var nav   = document.getElementById('pagination');
+        var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
+        var total = Math.ceil(cards.length / PER_PAGE);
+        var current = 1;
+
+        // Hide pagination when everything fits on one page
+        if (total <= 1) { nav.style.display = 'none'; return; }
+
+        function getPageFromUrl() {
+            var p = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+            return (p >= 1 && p <= total) ? p : 1;
+        }
+
+        // Builds [1, '...', 4, 5, 6, '...', 20]
+        function pageItems() {
+            if (total <= 7) {
+                return Array.from({ length: total }, function (_, i) { return i + 1; });
+            }
+            var items = [1];
+            var start = Math.max(2, current - 1);
+            var end   = Math.min(total - 1, current + 1);
+            if (start > 2) items.push('...');
+            for (var i = start; i <= end; i++) items.push(i);
+            if (end < total - 1) items.push('...');
+            items.push(total);
+            return items;
+        }
+
+        function makeItem(label, page, opts) {
+            opts = opts || {};
+            var s = document.createElement('span');
+            s.innerHTML = label;
+            if (opts.active) {
+                s.className = 'active';
+                s.setAttribute('aria-current', 'page');
+            } else if (opts.disabled) {
+                s.className = 'disabled';
+                s.setAttribute('aria-disabled', 'true');
+            } else {
+                s.setAttribute('role', 'button');
+                s.tabIndex = 0;
+                s.addEventListener('click', function () { goTo(page, true); });
+                s.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        goTo(page, true);
+                    }
+                });
+            }
+            return s;
+        }
+
+        function renderNav() {
+            nav.innerHTML = '';
+            nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
+            pageItems().forEach(function (item) {
+                if (item === '...') {
+                    var dots = document.createElement('span');
+                    dots.className = 'pg-dots';
+                    dots.textContent = '...';
+                    nav.appendChild(dots);
+                } else {
+                    nav.appendChild(makeItem(item, item, { active: item === current }));
+                }
+            });
+            nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
+        }
+
+        function showPage(page) {
+            current = page;
+            var start = (page - 1) * PER_PAGE;
+            var end   = start + PER_PAGE;
+            cards.forEach(function (card, i) {
+                card.style.display = (i >= start && i < end) ? '' : 'none';
+            });
+            renderNav();
+        }
+
+        function goTo(page, userClicked) {
+            if (page < 1 || page > total) return;
+            showPage(page);
+            if (userClicked) {
+                var url = new URL(window.location);
+                url.searchParams.set('page', page);
+                history.pushState({ page: page }, '', url);
+
+                // Scroll only if the top of the grid is out of view
+                var top = grid.getBoundingClientRect().top;
+                if (top < HEADER_OFFSET) {
+                    window.scrollTo({
+                        top: top + window.pageYOffset - HEADER_OFFSET,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+
+        // Browser back/forward buttons
+        window.addEventListener('popstate', function () { showPage(getPageFromUrl()); });
+
+        showPage(getPageFromUrl());
+    })();
 </script>

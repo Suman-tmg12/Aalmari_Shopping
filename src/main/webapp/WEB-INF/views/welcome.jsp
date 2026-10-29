@@ -80,16 +80,7 @@
    <jsp:include page="/WEB-INF/components/product.jsp" />
 
 
-    <!-- Pagination -->
-    <div class="pagination">
-        <span>&lt; Previous</span>
-        <span class="active">1</span>
-        <span>2</span>
-        <span>3</span>
-        <span>...</span>
-        <span>7</span>
-        <span>Next &gt;</span>
-    </div>
+
 
     <!-- Footer Section -->
     <jsp:include page="/WEB-INF/components/footer.jsp" />

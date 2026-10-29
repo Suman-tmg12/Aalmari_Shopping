@@ -1,5 +1,7 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.*" %>
+<%@ page import="com.fasterxml.jackson.databind.ObjectMapper" %>
 <%
     // ✅ EXISTING declarations FIRST (from your original code)
     String rawStatus = (String) request.getAttribute("status");
@@ -92,31 +94,45 @@
        (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("products");
    if (realProducts == null) realProducts = new ArrayList<>();
 
-   // UPDATED: INCLUDES FULL DATA (14 columns now)
-   String[][] products = new String[realProducts.size()][14];
-   int i = 0;
-   for (com.example.aalmari.model.SellerProduct p : realProducts) {
-       products[i][0] = p.getName();
-       products[i][1] = p.getSku();
-       products[i][2] = p.getCategory();
-       products[i][3] = String.valueOf(p.getPrice());
-       products[i][4] = String.valueOf(p.getDiscount());
-       products[i][5] = String.valueOf(p.getStock());
-       products[i][6] = String.valueOf(p.getSold());
-       products[i][7] = p.getActive() ? "Active" : "Inactive";
-       products[i][8] = p.getSubCategory();
-       products[i][9] = (p.getInfoImageUrl() != null) ? p.getInfoImageUrl() : "";
-       products[i][10] = (p.getImageUrlsJson() != null) ? p.getImageUrlsJson() : "[]";
-       products[i][11] = String.valueOf(p.getId());
+  // UPDATED: INCLUDES FULL DATA (15 columns now)
+  String[][] products = new String[realProducts.size()][15];
+  int i = 0;
+  for (com.example.aalmari.model.SellerProduct p : realProducts) {
+      products[i][0] = p.getName();
+      products[i][1] = p.getSku();
+      products[i][2] = p.getCategory();
+      products[i][3] = String.valueOf(p.getPrice());
+      products[i][4] = String.valueOf(p.getDiscount());
+      products[i][5] = String.valueOf(p.getStock());
+      products[i][6] = String.valueOf(p.getSold());
+      products[i][7] = p.getActive() ? "Active" : "Inactive";
+      products[i][8] = p.getSubCategory();
+      products[i][9] = (p.getInfoImageUrl() != null) ? p.getInfoImageUrl() : "";
+      products[i][10] = (p.getImageUrlsJson() != null) ? p.getImageUrlsJson() : "[]";
+      products[i][11] = String.valueOf(p.getId());
 
-       // NEW: Store Description and Attributes (escaped for JSON)
-       String desc = (p.getDescription() != null) ? p.getDescription().replace("\"", "\\\"").replace("\n", "\\n") : "";
-       String attrs = (p.getAttributesJson() != null) ? p.getAttributesJson() : "{}";
-       products[i][12] = desc;
-       products[i][13] = attrs;
+      String desc = (p.getDescription() != null) ? p.getDescription().replace("\"", "\\\"").replace("\n", "\\n") : "";
+      String attrs = (p.getAttributesJson() != null) ? p.getAttributesJson() : "{}";
+      products[i][12] = desc;
+      products[i][13] = attrs;
 
-       i++;
-   }
+      // NEW (col 14): THUMBNAIL = galleryImages[0], fallback to info image
+      // (mirrors ProductController's mainImage logic)
+      String thumb = "";
+      String galleryJson = products[i][10];
+      if (galleryJson != null && !galleryJson.trim().equals("[]")) {
+          try {
+              List<String> galleryList = new ObjectMapper().readValue(galleryJson, List.class);
+              if (!galleryList.isEmpty() && galleryList.get(0) != null && !galleryList.get(0).isEmpty()) {
+                  thumb = galleryList.get(0);
+              }
+          } catch (Exception ex) { }
+      }
+      if (thumb.isEmpty()) thumb = products[i][9];
+      products[i][14] = thumb;
+
+      i++;
+  }
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -509,8 +525,8 @@
                               <td>
                                   <div class="prod-cell">
                                       <div class="prod-thumb">
-                                          <% if (!p[9].isEmpty()) { %>
-                                              <img src="<%= p[9] %>" alt="Product Image" style="width:100%; height:100%; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:#666; font-weight:bold; border-radius:4px;\'><%= p[0].substring(0, 1) %></div>'">
+                                          <% if (!p[14].isEmpty()) { %>
+                                              <img src="<%= p[14] %>" alt="Product Image" style="width:100%; height:100%; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:#666; font-weight:bold; border-radius:4px;\'><%= p[0].substring(0, 1) %></div>'">
                                           <% } else { %>
                                               <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:#666; font-weight:bold; border-radius:4px;">
                                                   <%= p[0].substring(0, 1) %>

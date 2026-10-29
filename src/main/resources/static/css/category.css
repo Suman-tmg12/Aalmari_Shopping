@@ -396,3 +396,26 @@ img {
     .flash-page { padding-top: 16px; }
     .results-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* ===== PAGINATION ===== */
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 24px 0 clamp(32px, 5vw, 48px);
+    font-size: 13px;
+    color: var(--color-text-muted, #64748b);
+}
+.pagination span {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm, 8px);
+    transition: background .15s ease, color .15s ease;
+}
+.pagination span:hover { background: rgba(0, 0, 0, .06); }
+.pagination span.active { font-weight: bold; color: #fff; background: var(--color-accent, #FF7B00); cursor: default; }
+.pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+.pagination span.pg-dots { cursor: default; }
+.pagination span.pg-dots:hover { background: none; }

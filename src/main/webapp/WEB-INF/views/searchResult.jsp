@@ -1,26 +1,37 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.*" %>
 <%!
-    // Utility method to safely escape HTML attributes and prevent XSS
+    private static final String S3_BASE = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
     private String escapeHtml(String input) {
         if (input == null) return "";
-        return input.replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
-                    .replace("\"", "&quot;")
-                    .replace("'", "&#39;");
+        return input.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
-    // "12.4k sold" -> 12400, "800 sold" -> 800
-    private double parseSold(String sold) {
+    // Same formula as ProductController: price = original price
+    private static int effectivePrice(int price, int discount) {
+        if (price <= 0) return 0;
+        if (discount > 0 && discount < 100) return (int) (price * (100 - discount) / 100.0);
+        return price;
+    }
+
+    private static String firstGalleryImage(String json) {
+        if (json == null || json.isEmpty() || json.equals("[]")) return null;
         try {
-            String s = sold.toLowerCase().replace("sold", "").trim();
-            double mult = 1;
-            if (s.endsWith("k")) { mult = 1000; s = s.substring(0, s.length() - 1); }
-            return Double.parseDouble(s) * mult;
+            List<String> paths = MAPPER.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            for (String path : paths) {
+                if (path != null && !path.isEmpty()) {
+                    return path.startsWith("http") ? path : S3_BASE + path;
+                }
+            }
         } catch (Exception e) {
-            return 0;
+            e.printStackTrace();
         }
+        return null;
     }
 %>
 <%
@@ -29,104 +40,43 @@
     String filterCategory = request.getParameter("cat");
     boolean hasCategoryFilter = filterCategory != null && !filterCategory.trim().isEmpty();
 
-    // Master Product Catalog (Aggregated across store sections)
-    String[][] allProductsData = {
-        // Name, Image, Folder, Price, OldPrice, Sold, SubCategory, MainCategory
-        {"iPhone 15 Pro", "iphone15pro.jpg", "Products", "1500", "2300", "12.4k sold", "Mobiles", "Electronics"},
-        {"Samsung Galaxy S24", "iphone15pro.jpg", "Products", "1400", "2100", "9.8k sold", "Mobiles", "Electronics"},
-        {"MacBook Pro M3", "MacBookProm3.jpg", "Products", "2200", "3200", "9.7k sold", "Laptops", "Electronics"},
-        {"Dell XPS 15", "MacBookProm3.jpg", "Products", "1900", "2800", "6.3k sold", "Laptops", "Electronics"},
-        {"AirPods Pro", "Airpods.jpg", "Products", "250", "400", "15.2k sold", "Headphones", "Electronics"},
-        {"Wireless Headphone", "Wireless_headPhone.jpg", "FlashSaleImages", "70", "120", "4.5k sold", "Headphones", "Electronics"},
-        {"Smart Fitness Band", "SmartFitnessBand.jpg", "FlashSaleImages", "120", "200", "2.3k sold", "Smart Watches", "Electronics"},
-        {"Bluetooth Speaker", "hairSpray.jpg", "Products", "180", "300", "1.1k sold", "Accessories", "Electronics"},
-
-        {"Nike Shoes", "nikeShoe.jpg", "Products", "200", "320", "8.1k sold", "Shoes", "Fashion"},
-        {"Classic Black Shoes", "ClassicBlackShoes.jpg", "FlashSaleImages", "90", "180", "2.3k sold", "Shoes", "Fashion"},
-        {"Black Glasses", "BlackGlass.jpg", "Products", "90", "150", "2.3k sold", "Men", "Fashion"},
-        {"White T-Shirt", "WhiteSpray.jpg", "Products", "25", "50", "5.2k sold", "Men", "Fashion"},
-        {"Summer Dress", "skincare.jpg", "Products", "45", "80", "3.1k sold", "Women", "Fashion"},
-        {"Leather Handbag", "hairSpray.jpg", "Products", "120", "200", "1.8k sold", "Bags", "Fashion"},
-
-        {"Himalaya Face Scrub", "HimalayaFaceScrub.jpg", "FlashSaleImages", "70", "150", "4.5k sold", "Skincare", "Beauty & Personal Care"},
-        {"Skin Care Set", "skincare.jpg", "FlashSaleImages", "150", "300", "1.8k sold", "Skincare", "Beauty & Personal Care"},
-        {"White Spray", "WhiteSpray.jpg", "Products", "80", "140", "1.8k sold", "Fragrances", "Beauty & Personal Care"},
-        {"Falcon Spray", "FalconSpray.jpg", "Products", "110", "200", "5.6k sold", "Fragrances", "Beauty & Personal Care"},
-        {"Hair Spray", "hairSpray.jpg", "Products", "70", "150", "4.5k sold", "Hair Care", "Beauty & Personal Care"},
-        {"Lipstick Set", "olipop.jpg", "Products", "35", "60", "8.2k sold", "Makeup", "Beauty & Personal Care"},
-
-        {"Wooden Table", "home&living.jpg", "Products", "250", "400", "2.1k sold", "Furniture", "Home & Living"},
-        {"LED Lamp", "SmartFitnessBand.jpg", "Products", "45", "80", "5.6k sold", "Lighting", "Home & Living"},
-        {"Storage Box", "hairSpray.jpg", "Products", "15", "30", "9.3k sold", "Storage", "Home & Living"},
-        {"Kitchen Knife Set", "HimalayaFaceScrub.jpg", "Products", "35", "60", "4.2k sold", "Kitchen", "Home & Living"},
-
-        {"Organic Rice", "Healthy.jpg", "FlashSaleImages", "25", "40", "12.4k sold", "Rice & Grains", "Groceries"},
-        {"Fresh Apples", "Healthy.jpg", "FlashSaleImages", "15", "25", "8.7k sold", "Fruits & Vegetables", "Groceries"},
-        {"Snack Pack", "unhealthy-foods.jpg", "FlashSaleImages", "10", "20", "15.2k sold", "Snacks", "Groceries"},
-        {"Milk Carton", "olipop.jpg", "Products", "8", "12", "6.3k sold", "Dairy", "Groceries"},
-
-        {"Yoga Mat", "SmartFitnessBand.jpg", "Products", "30", "50", "7.4k sold", "Fitness Accessories", "Sports & Fitness"},
-        {"Dumbbell Set", "hairSpray.jpg", "Products", "85", "140", "3.2k sold", "Gym Equipment", "Sports & Fitness"},
-        {"Running Shoes", "nikeShoe.jpg", "Products", "120", "200", "5.8k sold", "Sportswear", "Sports & Fitness"},
-
-        {"Novel Collection", "hairSpray.jpg", "Products", "20", "35", "4.1k sold", "Books", "Books & Stationery"},
-        {"Pen Set", "WhiteSpray.jpg", "Products", "8", "15", "9.5k sold", "Pens & Pencils", "Books & Stationery"},
-        {"Notebook Pack", "skincare.jpg", "Products", "12", "20", "6.7k sold", "Notebooks", "Books & Stationery"},
-
-        {"Car Phone Holder", "hairSpray.jpg", "Products", "25", "45", "5.3k sold", "Car Accessories", "Automotive"},
-        {"Bike Helmet", "SmartFitnessBand.jpg", "Products", "60", "100", "3.8k sold", "Helmets", "Automotive"},
-        {"Car Wash Kit", "HimalayaFaceScrub.jpg", "Products", "35", "60", "2.9k sold", "Car Care", "Automotive"},
-
-        {"Building Blocks", "hairSpray.jpg", "Products", "40", "70", "8.4k sold", "Toys", "Toys & Games"},
-        {"Board Game", "skincare.jpg", "Products", "25", "45", "4.6k sold", "Board Games", "Toys & Games"},
-        {"RC Car", "SmartFitnessBand.jpg", "Products", "55", "90", "3.1k sold", "Remote-Control Toys", "Toys & Games"},
-
-        {"Vitamin C Tablets", "Healthy.jpg", "FlashSaleImages", "20", "35", "7.2k sold", "Vitamins & Supplements", "Health & Wellness"},
-        {"First Aid Kit", "hairSpray.jpg", "Products", "30", "55", "4.8k sold", "Healthcare Products", "Health & Wellness"},
-        {"Massage Roller", "SmartFitnessBand.jpg", "Products", "25", "40", "5.5k sold", "Fitness", "Health & Wellness"}
-    };
+    // Passed by SearchResultController (already matched against the search text)
+    @SuppressWarnings("unchecked")
+    List<com.example.aalmari.model.SellerProduct> found =
+            (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("searchProducts");
+    if (found == null) found = new ArrayList<>();
 
     String[] categoriesList = {"Electronics", "Fashion", "Beauty & Personal Care", "Home & Living", "Groceries", "Sports & Fitness", "Books & Stationery", "Automotive", "Toys & Games", "Health & Wellness"};
 
-    // Filter results matching the search query
-    List<String[]> matchingProducts = new ArrayList<>();
-    Map<String, Integer> catCounts = new HashMap<>();   // counts for the sidebar (search only, ignoring category filter)
+    List<com.example.aalmari.model.SellerProduct> matchingProducts = new ArrayList<>();
+    Map<String, Integer> catCounts = new HashMap<>();   // keyed by lower-case category
     int totalSearchCount = 0;
-    String lowerQuery = searchQuery.toLowerCase();
 
-    for (String[] p : allProductsData) {
-        String pName = p[0].toLowerCase();
-        String pSub = p[6].toLowerCase();
-        String pMainCat = p[7].toLowerCase();
+    for (com.example.aalmari.model.SellerProduct p : found) {
+        if (!Boolean.TRUE.equals(p.getActive())) continue;
+        totalSearchCount++;
 
-        boolean matchesSearch = lowerQuery.isEmpty()
-            || pName.contains(lowerQuery)
-            || pSub.contains(lowerQuery)
-            || pMainCat.contains(lowerQuery);
+        String catKey = p.getCategory() == null ? "" : p.getCategory().toLowerCase();
+        catCounts.put(catKey, catCounts.containsKey(catKey) ? catCounts.get(catKey) + 1 : 1);
 
-        boolean matchesCategoryFilter = !hasCategoryFilter
-            || p[7].equalsIgnoreCase(filterCategory);
-
-        if (matchesSearch) {
-            totalSearchCount++;
-            catCounts.put(p[7], catCounts.containsKey(p[7]) ? catCounts.get(p[7]) + 1 : 1);
-        }
-        if (matchesSearch && matchesCategoryFilter) {
+        if (!hasCategoryFilter || (p.getCategory() != null && p.getCategory().equalsIgnoreCase(filterCategory))) {
             matchingProducts.add(p);
         }
     }
 
-    // Sub-category counts + price ceiling for the filter panel
+    // Product-type counts + price ceiling for the filter panel
     Map<String, Integer> subCounts = new TreeMap<>();
     long highestPrice = 0;
-    for (String[] p : matchingProducts) {
-        subCounts.put(p[6], subCounts.containsKey(p[6]) ? subCounts.get(p[6]) + 1 : 1);
-        highestPrice = Math.max(highestPrice, Long.parseLong(p[3]));
+    for (com.example.aalmari.model.SellerProduct p : matchingProducts) {
+        String s = p.getSubCategory();
+        if (s != null && !s.trim().isEmpty()) {
+            subCounts.put(s, subCounts.containsKey(s) ? subCounts.get(s) + 1 : 1);
+        }
+        highestPrice = Math.max(highestPrice, effectivePrice(p.getPrice(), p.getDiscount()));
     }
     long priceCeiling = Math.max(100, ((highestPrice + 99) / 100) * 100);
 
     String qEnc = java.net.URLEncoder.encode(searchQuery, "UTF-8");
-    String catEnc = hasCategoryFilter ? java.net.URLEncoder.encode(filterCategory, "UTF-8") : "";
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -138,7 +88,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=4">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -148,85 +98,83 @@
          data-ctx="${pageContext.request.contextPath}"
          data-query="<%= escapeHtml(searchQuery) %>">
 
-
-
-        <!-- ===== Main ===== -->
         <main class="ar-container ar-main">
-             <!-- ===== Summary bar ===== -->
-                <section class="ar-summary">
-                    <div class="ar-container">
-                        <nav class="ar-crumbs" aria-label="Breadcrumb">
-                            <a href="${pageContext.request.contextPath}/">Home</a>
+            <!-- ===== Summary bar ===== -->
+            <section class="ar-summary">
+                <div class="ar-container">
+                    <nav class="ar-crumbs" aria-label="Breadcrumb">
+                        <a href="${pageContext.request.contextPath}/">Home</a>
+                        <span class="material-symbols-outlined ar-ic-xs" aria-hidden="true">chevron_right</span>
+                        <% if (hasCategoryFilter) { %>
+                            <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>"><%= escapeHtml(filterCategory) %></a>
                             <span class="material-symbols-outlined ar-ic-xs" aria-hidden="true">chevron_right</span>
-                            <% if (hasCategoryFilter) { %>
-                                <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>"><%= escapeHtml(filterCategory) %></a>
-                                <span class="material-symbols-outlined ar-ic-xs" aria-hidden="true">chevron_right</span>
-                            <% } %>
-                            <span class="ar-cur">Search Results</span>
-                        </nav>
+                        <% } %>
+                        <span class="ar-cur">Search Results</span>
+                    </nav>
 
-                        <div class="ar-title-row">
-                            <div>
-                                <h1 class="ar-h1">
-                                    <% if (searchQuery.isEmpty()) { %>All Products<% } else { %>Results for <span>"<%= escapeHtml(searchQuery) %>"</span><% } %>
-                                </h1>
-                                <p class="ar-sub">Showing <b id="arMatchCount"><%= matchingProducts.size() %></b> item<%= matchingProducts.size() == 1 ? "" : "s" %> matching your search</p>
-                            </div>
+                    <div class="ar-title-row">
+                        <div>
+                            <h1 class="ar-h1">
+                                <% if (searchQuery.isEmpty()) { %>All Products<% } else { %>Results for <span>"<%= escapeHtml(searchQuery) %>"</span><% } %>
+                            </h1>
+                            <p class="ar-sub">Showing <b id="arMatchCount"><%= matchingProducts.size() %></b> item<%= matchingProducts.size() == 1 ? "" : "s" %> matching your search</p>
+                        </div>
 
-                            <div class="ar-controls">
-                                <button type="button" id="arOpenFilters" class="ar-filter-btn" aria-controls="arFilterPanel">
-                                    <span class="material-symbols-outlined ar-ic-sm" aria-hidden="true">tune</span>
-                                    <span>Filters</span>
-                                    <span id="arFilterBadge" class="ar-filter-badge ar-hidden">0</span>
-                                </button>
+                        <div class="ar-controls">
+                            <button type="button" id="arOpenFilters" class="ar-filter-btn" aria-controls="arFilterPanel">
+                                <span class="material-symbols-outlined ar-ic-sm" aria-hidden="true">tune</span>
+                                <span>Filters</span>
+                                <span id="arFilterBadge" class="ar-filter-badge ar-hidden">0</span>
+                            </button>
 
-                                <div class="ar-controls-right">
-                                    <div class="ar-sort">
-                                        <label for="sortBy">Sort by:</label>
-                                        <select id="sortBy" aria-label="Sort search results">
-                                            <option value="best">Relevance / Best Match</option>
-                                            <option value="low-high">Price: Low to High</option>
-                                            <option value="high-low">Price: High to Low</option>
-                                            <option value="popular">Most Popular</option>
-                                        </select>
-                                    </div>
-                                    <div class="ar-view-switch">
-                                        <button type="button" id="arGridView" class="ar-active" aria-label="Grid view">
-                                            <span class="material-symbols-outlined ar-ic-sm">grid_view</span>
-                                        </button>
-                                        <button type="button" id="arListView" aria-label="List view">
-                                            <span class="material-symbols-outlined ar-ic-sm">view_list</span>
-                                        </button>
-                                    </div>
+                            <div class="ar-controls-right">
+                                <div class="ar-sort">
+                                    <label for="sortBy">Sort by:</label>
+                                    <select id="sortBy" aria-label="Sort search results">
+                                        <option value="best">Relevance / Best Match</option>
+                                        <option value="low-high">Price: Low to High</option>
+                                        <option value="high-low">Price: High to Low</option>
+                                        <option value="popular">Most Popular</option>
+                                    </select>
+                                </div>
+                                <div class="ar-view-switch">
+                                    <button type="button" id="arGridView" class="ar-active" aria-label="Grid view">
+                                        <span class="material-symbols-outlined ar-ic-sm">grid_view</span>
+                                    </button>
+                                    <button type="button" id="arListView" aria-label="List view">
+                                        <span class="material-symbols-outlined ar-ic-sm">view_list</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Active filters (server-side category + client-side filters) -->
-                        <div id="arActiveFilters" class="ar-active-filters<%= hasCategoryFilter ? "" : " ar-hidden" %>" data-has-cat="<%= hasCategoryFilter %>">
-                            <span class="ar-af-label">Active Filters:</span>
-                            <div class="ar-chips">
-                                <% if (hasCategoryFilter) { %>
-                                <span class="ar-chip">
-                                    <%= escapeHtml(filterCategory) %>
-                                    <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>" aria-label="Remove category filter">
-                                        <span class="material-symbols-outlined ar-ic-xs">close</span>
-                                    </a>
-                                </span>
-                                <% } %>
-                                <span id="arClientChips" class="ar-chips"></span>
-                            </div>
-                            <% if (hasCategoryFilter) { %>
-                                <a class="ar-clear-all" href="${pageContext.request.contextPath}/search?q=<%= qEnc %>">Clear All</a>
-                            <% } else { %>
-                                <button type="button" class="ar-clear-all" id="arClearAll">Clear All</button>
-                            <% } %>
-                        </div>
                     </div>
-                </section>
+
+                    <!-- Active filters -->
+                    <div id="arActiveFilters" class="ar-active-filters<%= hasCategoryFilter ? "" : " ar-hidden" %>" data-has-cat="<%= hasCategoryFilter %>">
+                        <span class="ar-af-label">Active Filters:</span>
+                        <div class="ar-chips">
+                            <% if (hasCategoryFilter) { %>
+                            <span class="ar-chip">
+                                <%= escapeHtml(filterCategory) %>
+                                <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>" aria-label="Remove category filter">
+                                    <span class="material-symbols-outlined ar-ic-xs">close</span>
+                                </a>
+                            </span>
+                            <% } %>
+                            <span id="arClientChips" class="ar-chips"></span>
+                        </div>
+                        <% if (hasCategoryFilter) { %>
+                            <a class="ar-clear-all" href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>">Clear All</a>
+                        <% } else { %>
+                            <button type="button" class="ar-clear-all" id="arClearAll">Clear All</button>
+                        <% } %>
+                    </div>
+                </div>
+            </section>
+
             <div class="ar-layout">
 
-                <!-- Filter panel (sidebar on desktop, slide-in drawer on mobile) -->
+                <!-- Filter panel -->
                 <aside id="arFilterPanel" class="ar-sidebar" aria-label="Refine search">
                     <div class="ar-panel">
                         <div class="ar-panel-head">
@@ -244,7 +192,7 @@
                             <h3 class="ar-section-title">Categories</h3>
                             <ul class="ar-cat-list">
                                 <li>
-                                    <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>" style="background: #ffe5cf"
+                                    <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>" style="background: #ffe5cf"
                                        class="ar-cat-btn<%= hasCategoryFilter ? "" : " ar-active" %>">
                                         <span style="color: #FF7B00">All Categories</span>
                                         <small><%= totalSearchCount %></small>
@@ -252,10 +200,10 @@
                                 </li>
                                 <% for (String cat : categoriesList) {
                                        boolean isActive = cat.equalsIgnoreCase(filterCategory);
-                                       int c = catCounts.containsKey(cat) ? catCounts.get(cat) : 0;
+                                       int c = catCounts.containsKey(cat.toLowerCase()) ? catCounts.get(cat.toLowerCase()) : 0;
                                 %>
                                 <li>
-                                    <a href="${pageContext.request.contextPath}/search?q=<%= qEnc %>&cat=<%= java.net.URLEncoder.encode(cat, "UTF-8") %>"
+                                    <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>&cat=<%= java.net.URLEncoder.encode(cat, "UTF-8") %>"
                                        class="ar-cat-btn<%= isActive ? " ar-active" : "" %>">
                                         <span><%= escapeHtml(cat) %></span>
                                         <small><%= c %></small>
@@ -305,7 +253,6 @@
                             </div>
                         </div>
 
-                        <!-- Mobile-only buttons -->
                         <div class="ar-apply-wrap">
                             <button type="button" class="ar-btn-outline" id="arMobileReset">Reset</button>
                             <button type="button" class="ar-btn-dark" id="arMobileApply">Apply</button>
@@ -326,54 +273,56 @@
                     <% } else { %>
 
                     <div class="ar-grid" id="productGrid">
-                        <%
-                            int idx = 0;
-                            for (String[] p : matchingProducts) {
-                                String pName = p[0], pImage = p[1], pFolder = p[2];
-                                long pPrice = Long.parseLong(p[3]);
-                                long pOldPrice = Long.parseLong(p[4]);
-                                String pSold = p[5], pSub = p[6], pMain = p[7];
+                    <%
+                        int idx = 0;
+                        for (com.example.aalmari.model.SellerProduct p : matchingProducts) {
+                            int basePrice = p.getPrice();
+                            int discount = p.getDiscount();
+                            int price = effectivePrice(basePrice, discount);
+                            long oldPrice = (discount > 0 && discount < 100) ? basePrice : 0;
+                            String sub = p.getSubCategory() == null ? "" : p.getSubCategory();
 
-                                int discount = pOldPrice > 0 ? (int) Math.round(((double)(pOldPrice - pPrice) / pOldPrice) * 100) : 0;
-                                double numericSold = parseSold(pSold);
-                        %>
+                            String cardImg = firstGalleryImage(p.getImageUrlsJson());
+                            if (cardImg == null) cardImg = request.getContextPath() + "/placeholder.jpg";
+                    %>
                         <article class="ar-card"
                                  data-index="<%= idx++ %>"
-                                 data-price="<%= pPrice %>"
-                                 data-sold="<%= (long) numericSold %>"
+                                 data-price="<%= price %>"
+                                 data-sold="<%= p.getSold() %>"
                                  data-discount="<%= discount %>"
-                                 data-sub="<%= escapeHtml(pSub) %>"
-                                 data-name="<%= escapeHtml(pName) %>">
+                                 data-sub="<%= escapeHtml(sub) %>"
+                                 data-name="<%= escapeHtml(p.getName()) %>">
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                             </button>
-                            <a href="#" class="ar-card-link">
+                            <a href="${pageContext.request.contextPath}/product/<%= p.getId() %>" class="ar-card-link">
                                 <div class="ar-card-img">
-                                    <img src="${pageContext.request.contextPath}/HomePageImages/<%= pFolder %>/<%= pImage %>"
-                                         alt="<%= escapeHtml(pName) %>"
-                                         loading="lazy">
+                                    <img src="<%= escapeHtml(cardImg) %>"
+                                         alt="<%= escapeHtml(p.getName()) %>"
+                                         loading="lazy"
+                                         onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/placeholder.jpg'">
                                     <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
                                 </div>
                                 <div class="ar-card-body">
                                     <div>
                                         <div class="ar-card-top">
-                                            <span class="ar-brand"><%= escapeHtml(pMain) %></span>
-                                            <span class="ar-sold"><%= escapeHtml(pSold) %></span>
+                                            <span class="ar-brand"><%= escapeHtml(p.getCategory()) %></span>
+                                            <span class="ar-sold"><%= p.getSold() %> sold</span>
                                         </div>
-                                        <h3 class="ar-p-title"><%= escapeHtml(pName) %></h3>
+                                        <h3 class="ar-p-title"><%= escapeHtml(p.getName()) %></h3>
                                     </div>
                                     <div class="ar-price-row">
                                         <div>
-                                            <div class="ar-price">Rs.<%= pPrice %></div>
-                                            <div class="ar-old">Rs.<%= pOldPrice %></div>
-                                            <div class="ar-sub-muted"><%= escapeHtml(pSub) %></div>
+                                            <div class="ar-price">Rs.<%= price %></div>
+                                            <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
+                                            <div class="ar-sub-muted"><%= escapeHtml(sub) %></div>
                                         </div>
                                         <span class="ar-view">Add to cart</span>
                                     </div>
                                 </div>
                             </a>
                         </article>
-                        <% } %>
+                    <% } %>
                     </div>
 
                     <!-- Shown when client-side filters hide every product -->
@@ -412,7 +361,7 @@
 
                 var $ = function (id) { return document.getElementById(id); };
 
-                /* ---------- Mobile filter drawer (works even with no products) ---------- */
+                /* ---------- Mobile filter drawer ---------- */
                 var panel = $('arFilterPanel'), backdrop = $('arBackdrop');
                 function setDrawer(open) {
                     panel.classList.toggle('ar-open', open);
@@ -424,7 +373,7 @@
                 $('arMobileApply').addEventListener('click', function () { setDrawer(false); });
                 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setDrawer(false); });
 
-                if (!grid) return; // server-side "no results" page: nothing else to wire up
+                if (!grid) return; // "no results" page: nothing else to wire up
 
                 /* ---------- Toast ---------- */
                 var toastTimer;
@@ -454,7 +403,6 @@
                 function render() {
                     clampPrices();
 
-                    // sort
                     var sorted = cards.slice().sort(function (a, b) {
                         var pa = parseFloat(a.dataset.price) || 0, pb = parseFloat(b.dataset.price) || 0;
                         var sa = parseFloat(a.dataset.sold) || 0, sb = parseFloat(b.dataset.sold) || 0;
@@ -464,7 +412,6 @@
                         return (parseInt(a.dataset.index, 10) || 0) - (parseInt(b.dataset.index, 10) || 0);
                     });
 
-                    // filter + reorder
                     var visible = 0;
                     sorted.forEach(function (card) {
                         var price = parseFloat(card.dataset.price) || 0;

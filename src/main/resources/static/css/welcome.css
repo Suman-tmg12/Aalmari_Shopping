@@ -369,32 +369,3 @@ img {
     font-size: 10px;
     color: var(--color-text-muted);
 }
-
-/* ===== PAGINATION ===== */
-.pagination {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: clamp(32px, 5vw, 48px);
-    font-size: 13px;
-    color: var(--color-text-muted);
-}
-
-.pagination span {
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: background 0.15s var(--ease), color 0.15s var(--ease);
-}
-
-.pagination span:hover {
-    background: rgba(255, 255, 255, 0.6);
-}
-
-.pagination span.active {
-    font-weight: bold;
-    color: #FFFFFF;
-    background: var(--color-accent);
-}
