@@ -30,4 +30,12 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
            ORDER BY p.id DESC
            """)
     List<SellerProduct> searchActive(@Param("q") String q);
+
+    // Store page: all active products of one seller (newest first)
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true AND p.seller.id = :sellerId
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> findBySeller_IdAndActiveTrue(@Param("sellerId") Long sellerId);
 }

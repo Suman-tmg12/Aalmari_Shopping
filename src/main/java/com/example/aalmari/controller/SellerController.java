@@ -139,7 +139,7 @@ public class SellerController {
             return "redirect:/seller";
         }
 
-        // --- FIX: Construct full S3 URLs from relative paths ---
+        // --- Construct full S3 URLs from relative paths ---
         String storeLogoUrl = "";
         String storeBannerUrl = "";
 
@@ -166,7 +166,7 @@ public class SellerController {
         model.addAttribute("status", doc.getStatus());
         model.addAttribute("rejectionReason", doc.getRejectionReason());
 
-        // --- FIX: Filter products by user and convert image paths to URLs ---
+        // --- Filter products by user and convert image paths to URLs ---
         List<SellerProduct> allProducts = sellerProductRepository.findAll();
         List<SellerProduct> myProducts = new ArrayList<>();
 
@@ -277,7 +277,7 @@ public class SellerController {
         }
     }
 
-    // --- NEW: Update Product Endpoint ---
+    // --- Update Product Endpoint ---
     @PostMapping("/api/products/update")
     public ResponseEntity<?> updateProduct(
             @RequestParam("id") Long productId,
@@ -289,6 +289,8 @@ public class SellerController {
             @RequestParam("discount") String discountStr,
             @RequestParam("description") String description,
             @RequestParam("attributes") String attributesJson,
+            // FIXED: receive the "Listed as active" checkbox from the edit form
+            @RequestParam(value = "active", required = false) String activeStr,
             @RequestParam(value = "infoImage", required = false) MultipartFile infoImage,
             @RequestParam(value = "productImages", required = false) List<MultipartFile> productImages,
             @RequestParam(value = "deleteImages", required = false) List<String> deleteImages,
@@ -321,6 +323,11 @@ public class SellerController {
             product.setDiscount(Integer.parseInt(discountStr));
             product.setDescription(description);
             product.setAttributesJson(attributesJson);
+
+            // FIXED: persist the "Listed as active" checkbox to the database
+            if (activeStr != null) {
+                product.setActive(Boolean.parseBoolean(activeStr));
+            }
 
             // Handle info image update
             if (infoImage != null && !infoImage.isEmpty()) {
@@ -380,7 +387,40 @@ public class SellerController {
         }
     }
 
-    // --- NEW: Delete Product Endpoint ---
+    // --- NEW: Toggle Active/Inactive (pill button in the products table) ---
+    @PostMapping("/api/products/toggleActive")
+    public ResponseEntity<?> toggleActive(
+            @RequestParam("id") Long productId,
+            @RequestParam("active") boolean active,
+            HttpSession session
+    ) {
+        try {
+            Object userIdAttr = session.getAttribute("userId");
+            if (userIdAttr == null) {
+                return ResponseEntity.status(401).body("Unauthorized");
+            }
+            Long userId = Long.valueOf(userIdAttr.toString());
+
+            SellerProduct product = sellerProductRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+
+            // Security check: Ensure user owns this product
+            if (product.getSeller() != null && !product.getSeller().getId().equals(userId)) {
+                return ResponseEntity.status(403).body("Unauthorized access to product");
+            }
+
+            product.setActive(active);
+            sellerProductRepository.save(product);
+
+            return ResponseEntity.ok("ok");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    // --- Delete Product Endpoint ---
     @PostMapping("/api/products/delete")
     public ResponseEntity<?> deleteProduct(
             @RequestParam("id") Long productId,

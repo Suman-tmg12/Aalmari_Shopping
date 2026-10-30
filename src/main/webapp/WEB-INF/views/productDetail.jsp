@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${product.name} — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=9">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=10">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -100,6 +100,12 @@
                                 Add to Cart
                             </button>
                         </div>
+
+                        <!-- Go to Store: opens this product's seller store -->
+                        <a href="${pageContext.request.contextPath}/store/${product.sellerId}" class="go-to-store-btn">
+                            <span class="material-symbols-outlined">storefront</span>
+                            Go to Store
+                        </a>
                     </div>
                 </div>
             </div>
@@ -198,65 +204,59 @@
             buyNowBtn.addEventListener('click', function() { alert('Buy now feature coming soon!'); });
         }
 
-        // ==========================================
-        // VIEW MORE / VIEW LESS LOGIC (FIXED)
-        // ==========================================
-     // VIEW MORE / VIEW LESS
-     const viewMoreBtn = document.getElementById('viewMoreBtn');
-     const viewLessBtn = document.getElementById('viewLessBtn');
-     const restrictionOverlay = document.getElementById('restrictionOverlayUi');
-     const restrictedBody = document.getElementById('restrictedContentBody');
-     const viewLessContainer = document.getElementById('viewLessContainer');
+        // VIEW MORE / VIEW LESS
+        const viewMoreBtn = document.getElementById('viewMoreBtn');
+        const viewLessBtn = document.getElementById('viewLessBtn');
+        const restrictionOverlay = document.getElementById('restrictionOverlayUi');
+        const restrictedBody = document.getElementById('restrictedContentBody');
+        const viewLessContainer = document.getElementById('viewLessContainer');
 
-     if (viewMoreBtn && viewLessBtn && restrictionOverlay && restrictedBody && viewLessContainer) {
+        if (viewMoreBtn && viewLessBtn && restrictionOverlay && restrictedBody && viewLessContainer) {
 
-         const VISIBLE_IMAGE_PX = 260;   // how much of the image shows when collapsed
-         const MIN_COLLAPSED_PX = 300;   // never collapse smaller than this
-         let expanded = false;
+            const VISIBLE_IMAGE_PX = 260;   // how much of the image shows when collapsed
+            const MIN_COLLAPSED_PX = 300;   // never collapse smaller than this
+            let expanded = false;
 
-         function collapsedHeight() {
-             const img = document.getElementById('detailsMainImage');
-             if (!img) return 400;
-             // offsetTop is relative to restrictedBody (it is position: relative)
-             return Math.max(MIN_COLLAPSED_PX, img.offsetTop + VISIBLE_IMAGE_PX);
-         }
+            function collapsedHeight() {
+                const img = document.getElementById('detailsMainImage');
+                if (!img) return 400;
+                return Math.max(MIN_COLLAPSED_PX, img.offsetTop + VISIBLE_IMAGE_PX);
+            }
 
-         function applyCollapsed() {
-             const h = collapsedHeight();
-             // If everything already fits, no need for the button at all
-             if (restrictedBody.scrollHeight <= h + 40) {
-                 restrictedBody.style.maxHeight = 'none';
-                 restrictionOverlay.style.display = 'none';
-                 return;
-             }
-             restrictedBody.style.maxHeight = h + 'px';
-             restrictedBody.style.overflow = 'hidden';
-             restrictionOverlay.style.display = 'flex';
-             viewLessContainer.style.display = 'none';
-         }
+            function applyCollapsed() {
+                const h = collapsedHeight();
+                if (restrictedBody.scrollHeight <= h + 40) {
+                    restrictedBody.style.maxHeight = 'none';
+                    restrictionOverlay.style.display = 'none';
+                    return;
+                }
+                restrictedBody.style.maxHeight = h + 'px';
+                restrictedBody.style.overflow = 'hidden';
+                restrictionOverlay.style.display = 'flex';
+                viewLessContainer.style.display = 'none';
+            }
 
-         viewMoreBtn.addEventListener('click', function () {
-             expanded = true;
-             restrictionOverlay.style.display = 'none';
-             restrictedBody.style.maxHeight = 'none';
-             restrictedBody.style.overflow = 'visible';
-             viewLessContainer.style.display = 'flex';
-         });
+            viewMoreBtn.addEventListener('click', function () {
+                expanded = true;
+                restrictionOverlay.style.display = 'none';
+                restrictedBody.style.maxHeight = 'none';
+                restrictedBody.style.overflow = 'visible';
+                viewLessContainer.style.display = 'flex';
+            });
 
-         viewLessBtn.addEventListener('click', function () {
-             expanded = false;
-             applyCollapsed();
-             restrictedBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
-         });
+            viewLessBtn.addEventListener('click', function () {
+                expanded = false;
+                applyCollapsed();
+                restrictedBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
 
-         // Recalculate once the image has loaded (its height shifts the layout), and on resize
-         const detailImg = document.getElementById('detailsMainImage');
-         if (detailImg && !detailImg.complete) {
-             detailImg.addEventListener('load', () => { if (!expanded) applyCollapsed(); });
-         }
-         window.addEventListener('resize', () => { if (!expanded) applyCollapsed(); });
-         applyCollapsed();
-     }
+            const detailImg = document.getElementById('detailsMainImage');
+            if (detailImg && !detailImg.complete) {
+                detailImg.addEventListener('load', () => { if (!expanded) applyCollapsed(); });
+            }
+            window.addEventListener('resize', () => { if (!expanded) applyCollapsed(); });
+            applyCollapsed();
+        }
     </script>
 </body>
 </html>

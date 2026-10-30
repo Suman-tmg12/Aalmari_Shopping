@@ -564,6 +564,9 @@
                           <% } %>
                       </tbody>
                     </table>
+
+                     <!-- Pagination -->
+                     <div class="pagination" id="productsPagination" style="display:none;"></div>
                 </div>
             </div>
             <!-- ============ END VIEW: PRODUCTS ============ -->

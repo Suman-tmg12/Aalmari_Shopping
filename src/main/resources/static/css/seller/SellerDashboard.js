@@ -236,7 +236,10 @@
         const dashCards = $$('#approvedDashboard .stat-card');
         let revenue = num($('.stat-value', dashCards[0]).textContent);
         let orderCount = num($('.stat-value', dashCards[1]).textContent);
-        const ui = { pq: '', pf: 'all', sort: null, dir: 1, oq: '', of: 'all', mq: '' };
+
+        // PAGINATION: `page` = current products page, PAGE_SIZE = rows per page
+        const PAGE_SIZE = 5;
+        const ui = { pq: '', pf: 'all', sort: null, dir: 1, oq: '', of: 'all', mq: '', page: 1 };
         const FILTERS = { all: 'All products', active: 'Active', inactive: 'Inactive', low: 'Low stock (≤5)', out: 'Out of stock' };
 
         /* ============ Alerts (also feed the bell) ============ */
@@ -249,6 +252,35 @@
             if (ret) a.push({ cls: 'orange', icon: 'published_with_changes', title: 'Return request', body: ret.cust + ' — ' + ret.product + '.', go: 'orders' });
             if (unread) a.push({ cls: 'info', icon: 'inbox', title: unread + ' unread message' + (unread > 1 ? 's' : ''), body: 'Customer inquiries awaiting reply.', go: 'messages' });
             return a;
+        }
+
+        /* ============ Pagination helpers ============ */
+        // Builds e.g. [1, '…', 4, 5, 6, '…', 20]
+        function pageNumbers(cur, total) {
+            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+            const s = new Set([1, total, cur - 1, cur, cur + 1]);
+            if (cur <= 3) { s.add(2); s.add(3); s.add(4); }
+            if (cur >= total - 2) { s.add(total - 1); s.add(total - 2); s.add(total - 3); }
+            const arr = [...s].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+            const out = [];
+            arr.forEach((n, i) => { if (i && n - arr[i - 1] > 1) out.push('…'); out.push(n); });
+            return out;
+        }
+
+        function renderPager(total, pages, start, shown) {
+            const box = $('#productsPagination');
+            if (!box) return;
+            if (total <= PAGE_SIZE) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            box.style.display = 'flex';
+            box.innerHTML =
+                '<div class="pg-info">Showing <strong>' + (start + 1) + '–' + (start + shown) + '</strong> of <strong>' + total + '</strong> products</div>' +
+                '<div class="pg-controls">' +
+                '<button type="button" class="pg-btn pg-nav" data-page="' + (ui.page - 1) + '"' + (ui.page === 1 ? ' disabled' : '') + ' aria-label="Previous page"><span class="material-symbols-outlined">chevron_left</span></button>' +
+                pageNumbers(ui.page, pages).map(n => n === '…'
+                    ? '<span class="pg-dots">…</span>'
+                    : '<button type="button" class="pg-btn' + (n === ui.page ? ' active' : '') + '" data-page="' + n + '"' + (n === ui.page ? ' aria-current="page"' : '') + '>' + n + '</button>').join('') +
+                '<button type="button" class="pg-btn pg-nav" data-page="' + (ui.page + 1) + '"' + (ui.page === pages ? ' disabled' : '') + ' aria-label="Next page"><span class="material-symbols-outlined">chevron_right</span></button>' +
+                '</div>';
         }
 
         /* ============ Renderers ============ */
@@ -265,7 +297,15 @@
                 const x = a[ui.sort], y = b[ui.sort];
                 return (typeof x === 'string' ? x.localeCompare(y) : x - y) * ui.dir;
             });
-            $('#productsTable tbody').innerHTML = list.map(function (p) {
+
+            // PAGINATION: slice the filtered + sorted list to the current page
+            const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+            if (ui.page > totalPages) ui.page = totalPages;   // e.g. after deleting the last item on a page
+            if (ui.page < 1) ui.page = 1;
+            const start = (ui.page - 1) * PAGE_SIZE;
+            const pageList = list.slice(start, start + PAGE_SIZE);
+
+            $('#productsTable tbody').innerHTML = pageList.map(function (p) {
                 const attrTxt = Object.keys(p.attrs || {}).map(k => p.attrs[k]).join(' · ');
                 return '<tr data-sku="' + esc(p.sku) + '" data-id="' + esc(p.id) + '"><td><div class="prod-cell"><div class="prod-thumb">' +
                     (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">' : esc(p.name.charAt(0))) +
@@ -290,6 +330,8 @@
             const fb = $('#view-products .btn-filter');
             fb.innerHTML = '<span class="material-symbols-outlined">filter_alt</span> ' + (ui.pf === 'all' ? 'Filter' : FILTERS[ui.pf]);
             fb.classList.toggle('on', ui.pf !== 'all');
+
+            renderPager(list.length, totalPages, start, pageList.length);
         }
 
         function renderOrders() {
@@ -379,28 +421,63 @@
 
         /* ============ Products ============ */
         const pTable = $('#productsTable');
-        $('#productSearch').addEventListener('input', function () { ui.pq = this.value; renderProducts(); });
+        $('#productSearch').addEventListener('input', function () { ui.pq = this.value; ui.page = 1; renderProducts(); });
         $('#view-products .btn-filter').addEventListener('click', function (e) {
             const p = popover(this, Object.keys(FILTERS).map(k => '<button type="button" data-f="' + k + '" class="' + (ui.pf === k ? 'on' : '') + '">' + FILTERS[k] + '</button>').join(''));
-            if (p) p.onclick = ev => { const b = ev.target.closest('[data-f]'); if (b) { ui.pf = b.dataset.f; closePop(); renderProducts(); } };
+            if (p) p.onclick = ev => { const b = ev.target.closest('[data-f]'); if (b) { ui.pf = b.dataset.f; ui.page = 1; closePop(); renderProducts(); } };
         });
         $('#view-products .btn-primary').addEventListener('click', () => productForm(null));
         $('#productsTable thead').addEventListener('click', function (e) {
             const th = e.target.closest('th[data-key]'); if (!th) return;
-            ui.dir = ui.sort === th.dataset.key ? -ui.dir : 1; ui.sort = th.dataset.key; renderProducts();
+            ui.dir = ui.sort === th.dataset.key ? -ui.dir : 1; ui.sort = th.dataset.key; ui.page = 1; renderProducts();
         });
 
-        // DELETE HANDLER (calls API)
+        // PAGINATION: page button / prev / next clicks
+        const pager = $('#productsPagination');
+        if (pager) pager.addEventListener('click', function (e) {
+            const b = e.target.closest('[data-page]');
+            if (!b || b.disabled) return;
+            ui.page = Number(b.dataset.page);
+            renderProducts();
+            const tb = $('#view-products .toolbar');
+            if (tb) tb.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // EDIT / TOGGLE / DELETE HANDLERS (all persist via API)
         $('tbody', pTable).addEventListener('click', function (e) {
             const a = e.target.closest('[data-act]'); if (!a) return;
             const p = P.find(x => x.sku === a.closest('tr').dataset.sku); if (!p) return;
 
             if (a.dataset.act === 'edit') productForm(p);
 
+            // The Active/Inactive pill persists to the database via the API
             if (a.dataset.act === 'toggle') {
-                p.active = !p.active;
-                refresh();
-                toast(p.name + ' is now ' + (p.active ? 'active' : 'inactive') + '.');
+                if (!p.id) {
+                    toast('Product ID missing. Cannot update.', 'error');
+                    return;
+                }
+                const target = !p.active;
+                const fd = new FormData();
+                fd.append('id', p.id);
+                fd.append('active', String(target));
+
+                fetch('/api/products/toggleActive', {
+                    method: 'POST',
+                    body: fd
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            p.active = target;
+                            refresh();
+                            toast(p.name + ' is now ' + (target ? 'active' : 'inactive') + '.');
+                        } else {
+                            response.text().then(msg => toast('Error: ' + msg, 'error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        toast('Network error. Please try again.', 'error');
+                    });
             }
 
             if (a.dataset.act === 'del') {
@@ -419,7 +496,7 @@
                         .then(response => {
                             if (response.ok) {
                                 P.splice(P.indexOf(p), 1);
-                                refresh();
+                                refresh();   // renderProducts() moves back a page if this one is now empty
                                 toast('Product deleted successfully.', 'ok');
                             } else {
                                 response.text().then(msg => toast('Error: ' + msg, 'error'));
@@ -521,7 +598,7 @@
                 '<label class="chk"><input id="f-active" type="checkbox"' + (d.active ? ' checked' : '') + '> Listed as active</label>',
                 [['Cancel', 'btn-outline', closeModal], [isNew ? 'Add product' : 'Save changes', 'btn-primary', save]]);
 
-            // CHANGED: save button + "Adding..." / "Saving..." state
+            // save button + "Adding..." / "Saving..." state
             const saveBtn = $('.modal-foot .btn-primary', m);
             const idleLabel = isNew ? 'Add product' : 'Save changes';
             const busyLabel = isNew ? 'Adding...' : 'Saving...';
@@ -689,7 +766,6 @@
             }
 
             function save() {
-                // CHANGED: block double-clicks while a request is running
                 if (busy) return;
 
                 const needSub = Object.keys(CATALOG[catSel.value] || {}).length > 0;
@@ -707,7 +783,6 @@
                 $('#description-err', m).textContent = descMsg;
                 editor.parentNode.classList.toggle('bad', !!descMsg);
 
-                // Product images are required only for NEW products
                 const prodImagesErr = prodImages.length === 0 && isNew ? 'At least one product image is required.' : prodImages.length > 8 ? 'Maximum 8 product images allowed.' : '';
                 $('#prodimages-err', m).textContent = prodImagesErr;
                 prodZone.classList.toggle('bad', !!prodImagesErr);
@@ -723,7 +798,6 @@
                 ].every(Boolean);
                 if (!ok) return;
 
-                // CHANGED: validation passed -> button shows "Adding..."
                 setBusy(true);
 
                 const formData = new FormData();
@@ -735,16 +809,14 @@
                 formData.append('discount', $('#f-disc', m).value || '0');
                 formData.append('description', editor.innerHTML);
                 formData.append('attributes', JSON.stringify(attrs));
-                // CHANGED: send the "Listed as active" checkbox too
+                // Send the "Listed as active" checkbox to the server
                 formData.append('active', $('#f-active', m).checked ? 'true' : 'false');
 
-                // Only upload NEW images (data: URLs). Existing http URLs stay on the server.
                 const isNewInfoImage = infoImage && infoImage.startsWith('data:');
                 const newProdImages = prodImages.filter(img => img && img.startsWith('data:'));
 
                 const toBlob = src => fetch(src).then(res => res.blob());
 
-                // CHANGED: one clean flow instead of nested if/else branches
                 const tasks = [];
                 if (isNewInfoImage) {
                     tasks.push(toBlob(infoImage).then(blob => formData.append('infoImage', blob, 'info-image.png')));
@@ -780,8 +852,6 @@
                 })
                     .then(response => {
                         if (response.ok) {
-                            // CHANGED: the product list comes from the JSP, so reload the page
-                            // (stays on #products) and show the success message afterwards.
                             try {
                                 sessionStorage.setItem('sellerToast', isNew ? 'Product added successfully.' : 'Product updated successfully.');
                             } catch (e) {}
@@ -916,7 +986,7 @@
         refresh();
         applyServerStatus();
 
-        // CHANGED: show the success message saved before the page reloaded
+        // Show the success message saved before the page reloaded
         try {
             const pending = sessionStorage.getItem('sellerToast');
             if (pending) {

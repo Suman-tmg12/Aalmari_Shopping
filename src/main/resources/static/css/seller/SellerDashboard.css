@@ -1939,3 +1939,42 @@ button.pill:hover { filter: brightness(0.95); }
 }
 
 .image-upload-section .err { display: block; font-size: 12px; color: #d92d2d; margin-top: 4px; }
+
+/* ---------- Pagination ---------- */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #ece9e3;
+}
+.pg-info { font-size: 13.5px; color: #757575; }
+.pg-info strong { color: #222; font-weight: 600; }
+.pg-controls { display: flex; align-items: center; gap: 6px; }
+.pg-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #dcd9d2;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #444;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.pg-btn:hover:not(:disabled):not(.active) { background: #f7f5f1; border-color: #c9c5bb; }
+.pg-btn.active { background: #d97213; border-color: #d97213; color: #fff; font-weight: 600; cursor: default; }
+.pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pg-btn .material-symbols-outlined { font-size: 20px; }
+.pg-dots { padding: 0 4px; color: #8a8a8a; user-select: none; }
+
+@media (max-width: 700px) {
+    .pagination { justify-content: center; }
+    .pg-info { width: 100%; text-align: center; }
+}
