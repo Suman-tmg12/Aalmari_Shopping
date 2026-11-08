@@ -154,3 +154,19 @@
 .pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
 .pagination span.pg-dots { cursor: default; }
 .pagination span.pg-dots:hover { background: none; }
+
+/* ===== SECTION HEADERS ===== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    max-width: var(--max-content);
+    margin: 0 auto 14px;
+    padding: 0 var(--gutter);
+}
+
+.section-title {
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 700;
+    color: var(--color-accent);
+}

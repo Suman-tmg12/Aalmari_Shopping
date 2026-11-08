@@ -16,9 +16,9 @@
             <div class="footer-col">
                 <h3>AALMARI</h3>
                 <ul>
-                    <li><a href="${pageContext.request.contextPath}/about">About Us</a></li>
-                    <li><a href="${pageContext.request.contextPath}/contact">Contact Us</a></li>
-                    <li><a href="${pageContext.request.contextPath}/careers">Careers</a></li>
+                    <li><a href="${pageContext.request.contextPath}/AboutUs">About Us</a></li>
+                    <li><a href="${pageContext.request.contextPath}/ContactUs">Contact Us</a></li>
+                    <li><a href="${pageContext.request.contextPath}/Careers">Careers</a></li>
                     <li><a href="${pageContext.request.contextPath}/seller">Sell on Aalmari</a></li>
                 </ul>
             </div>

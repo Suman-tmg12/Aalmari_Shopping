@@ -77,6 +77,11 @@
     long priceCeiling = Math.max(100, ((highestPrice + 99) / 100) * 100);
 
     String qEnc = java.net.URLEncoder.encode(searchQuery, "UTF-8");
+
+    // Pagination: products per page (the browser reads this value from data-page-size)
+    final int PAGE_SIZE = 12;
+    int firstShown = matchingProducts.isEmpty() ? 0 : 1;
+    int lastShown = Math.min(PAGE_SIZE, matchingProducts.size());
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -90,6 +95,57 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=4">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
+
+    <!-- Pagination only: these styles use new "arp-" class names, so nothing in your existing design is touched -->
+    <style>
+        .ar-results { scroll-margin-top: 100px; }            /* keeps the grid clear of the fixed header after a page change */
+        .ar-results:focus { outline: none; }
+
+        .arp-nav { display: flex; justify-content: center; margin-top: 26px; }
+        .arp-nav[hidden] { display: none; }
+
+        .arp-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .arp-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            padding: 0 12px;
+            border: 1px solid #e3e7ec;
+            border-radius: 10px;
+            background: #fff;
+            color: #1f2933;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .arp-btn .material-symbols-outlined { font-size: 20px; }
+        .arp-btn:hover:not(:disabled):not([aria-current="page"]) { background: #ffe5cf; border-color: #f2c48f; }
+        .arp-btn[aria-current="page"] { background: #FF7B00; border-color: #FF7B00; color: #1f1305; cursor: default; }
+        .arp-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .arp-btn:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+
+        .arp-gap { display: inline-block; min-width: 22px; text-align: center; color: #5f6b7a; }
+
+        @media (max-width: 600px) {
+            .ar-results { scroll-margin-top: 155px; }
+        }
+        @media (max-width: 480px) {
+            .arp-btn { min-width: 38px; height: 38px; padding: 0 8px; }
+        }
+    </style>
 </head>
 <body>
     <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -262,7 +318,7 @@
                 <div class="ar-backdrop" id="arBackdrop"></div>
 
                 <!-- Results -->
-                <section class="ar-results">
+                <section class="ar-results" tabindex="-1" data-page-size="<%= PAGE_SIZE %>">
                     <% if (matchingProducts.isEmpty()) { %>
                     <div class="ar-empty">
                         <div class="ar-empty-icon"><span class="material-symbols-outlined ar-ic-lg">search_off</span></div>
@@ -317,7 +373,8 @@
                                             <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
                                             <div class="ar-sub-muted"><%= escapeHtml(sub) %></div>
                                         </div>
-                                        <span class="ar-view">Add to cart</span>
+                                        <span class="ar-view js-add-to-cart" role="button" tabindex="0"
+                                                                      data-product-id="<%= p.getId() %>">Add to cart</span>
                                     </div>
                                 </div>
                             </a>
@@ -334,8 +391,11 @@
                     </div>
 
                     <p class="ar-footer-count" id="arFooterCount">
-                        Showing <b id="arShownCount"><%= matchingProducts.size() %></b> of <b><%= matchingProducts.size() %></b> items
+                        Showing <b id="arShownCount"><%= firstShown %>–<%= lastShown %></b> of <b id="arTotalCount"><%= matchingProducts.size() %></b> items
                     </p>
+
+                    <!-- Page numbers (filled in by the script below) -->
+                    <nav class="arp-nav" id="arPagination" aria-label="Pagination" hidden></nav>
                     <% } %>
                 </section>
             </div>
@@ -386,12 +446,17 @@
                 }
 
                 /* ---------- State ---------- */
+                var results = document.querySelector('.ar-results');
+                var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 12;
                 var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
                 var CEILING = parseFloat($('arPriceRange').max) || 0;
-                var state = { min: 0, max: CEILING, types: [], discount: 0, sort: 'best' };
+                var state = { min: 0, max: CEILING, types: [], discount: 0, sort: 'best', page: 1 };
 
                 var priceRange = $('arPriceRange'), minInput = $('arMinPrice'), maxInput = $('arMaxPrice');
                 var hasServerCat = $('arActiveFilters').getAttribute('data-has-cat') === 'true';
+
+                var mqNarrow = window.matchMedia('(max-width: 480px)');
+                var mqMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
                 function clampPrices() {
                     if (isNaN(state.min) || state.min < 0) state.min = 0;
@@ -399,9 +464,10 @@
                     if (state.min > state.max) state.min = state.max;
                 }
 
-                /* ---------- Render ---------- */
-                function render() {
+                /* ---------- Render (filter, sort, then show one page) ---------- */
+                function render(keepPage) {
                     clampPrices();
+                    if (!keepPage) state.page = 1;   // any filter or sort change starts again at page 1
 
                     var sorted = cards.slice().sort(function (a, b) {
                         var pa = parseFloat(a.dataset.price) || 0, pb = parseFloat(b.dataset.price) || 0;
@@ -412,26 +478,126 @@
                         return (parseInt(a.dataset.index, 10) || 0) - (parseInt(b.dataset.index, 10) || 0);
                     });
 
-                    var visible = 0;
+                    var matches = [], rest = [];
                     sorted.forEach(function (card) {
                         var price = parseFloat(card.dataset.price) || 0;
                         var disc = parseFloat(card.dataset.discount) || 0;
                         var ok = price >= state.min && price <= state.max
                               && (state.types.length === 0 || state.types.indexOf(card.dataset.sub) !== -1)
                               && disc >= state.discount;
-                        card.hidden = !ok;
-                        if (ok) visible++;
+                        (ok ? matches : rest).push(card);
+                    });
+
+                    var visible = matches.length;
+                    var pages = Math.max(1, Math.ceil(visible / PAGE_SIZE));
+                    if (state.page > pages) state.page = pages;
+                    var start = (state.page - 1) * PAGE_SIZE;
+                    var end = Math.min(start + PAGE_SIZE, visible);
+
+                    matches.forEach(function (card, i) {
+                        card.hidden = !(i >= start && i < end);
+                        grid.appendChild(card);
+                    });
+                    rest.forEach(function (card) {
+                        card.hidden = true;
                         grid.appendChild(card);
                     });
 
                     $('arMatchCount').textContent = visible;
-                    $('arShownCount').textContent = visible;
+                    $('arShownCount').textContent = visible === 0 ? '0' : (start + 1) + '\u2013' + end;
+                    $('arTotalCount').textContent = visible;
                     $('arEmptyClient').classList.toggle('ar-hidden', visible !== 0);
                     $('arFooterCount').classList.toggle('ar-hidden', visible === 0);
                     grid.classList.toggle('ar-hidden', visible === 0);
 
+                    renderPagination(pages);
                     renderChips();
                 }
+
+                /* ---------- Pagination ---------- */
+                function pageItems(cur, pages) {
+                    var out = [], i;
+                    if (!mqNarrow.matches) {
+                        if (pages <= 7) { for (i = 1; i <= pages; i++) out.push(i); return out; }
+                        var s = Math.max(2, cur - 1), e = Math.min(pages - 1, cur + 1);
+                        if (cur <= 3) { s = 2; e = 4; }
+                        if (cur >= pages - 2) { s = pages - 3; e = pages - 1; }
+                        out.push(1);
+                        if (s > 2) out.push('gap');
+                        for (i = s; i <= e; i++) out.push(i);
+                        if (e < pages - 1) out.push('gap');
+                        out.push(pages);
+                        return out;
+                    }
+                    // narrow phones: first, current and last page only, so the row never overflows
+                    if (pages <= 5) { for (i = 1; i <= pages; i++) out.push(i); return out; }
+                    var keep = [1, cur, pages].filter(function (n, k, arr) { return arr.indexOf(n) === k; })
+                                              .sort(function (a, b) { return a - b; });
+                    keep.forEach(function (n, k) {
+                        if (k > 0) {
+                            var prev = keep[k - 1];
+                            if (n - prev === 2) out.push(prev + 1);
+                            else if (n - prev > 2) out.push('gap');
+                        }
+                        out.push(n);
+                    });
+                    return out;
+                }
+
+                function pageButton(label, target, opts) {
+                    var li = document.createElement('li');
+                    var b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'arp-btn';
+                    b.setAttribute('data-page', target);
+                    b.setAttribute('aria-label', opts.aria);
+                    if (opts.icon) {
+                        b.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">' + opts.icon + '</span>';
+                    } else {
+                        b.textContent = label;
+                    }
+                    if (opts.current) b.setAttribute('aria-current', 'page');
+                    if (opts.disabled) b.disabled = true;
+                    li.appendChild(b);
+                    return li;
+                }
+
+                function renderPagination(pages) {
+                    var nav = $('arPagination');
+                    nav.innerHTML = '';
+                    if (pages <= 1) { nav.hidden = true; return; }
+                    nav.hidden = false;
+
+                    var ul = document.createElement('ul');
+                    ul.className = 'arp-list';
+                    ul.appendChild(pageButton('', state.page - 1, { icon: 'chevron_left', aria: 'Previous page', disabled: state.page === 1 }));
+
+                    pageItems(state.page, pages).forEach(function (it) {
+                        if (it === 'gap') {
+                            var li = document.createElement('li');
+                            li.innerHTML = '<span class="arp-gap" aria-hidden="true">\u2026</span>';
+                            ul.appendChild(li);
+                        } else {
+                            ul.appendChild(pageButton(String(it), it, { aria: 'Page ' + it, current: it === state.page }));
+                        }
+                    });
+
+                    ul.appendChild(pageButton('', state.page + 1, { icon: 'chevron_right', aria: 'Next page', disabled: state.page === pages }));
+                    nav.appendChild(ul);
+                }
+
+                $('arPagination').addEventListener('click', function (e) {
+                    var b = e.target.closest('button[data-page]');
+                    if (!b || b.disabled) return;
+                    state.page = parseInt(b.getAttribute('data-page'), 10) || 1;
+                    render(true);
+                    results.scrollIntoView({ behavior: mqMotion.matches ? 'auto' : 'smooth', block: 'start' });
+                    results.focus({ preventScroll: true });
+                });
+
+                // Re-draw the page numbers if the screen crosses the phone width
+                if (mqNarrow.addEventListener) mqNarrow.addEventListener('change', function () { render(true); });
+                else if (mqNarrow.addListener) mqNarrow.addListener(function () { render(true); });
 
                 function chip(label, onRemove) {
                     var span = document.createElement('span');

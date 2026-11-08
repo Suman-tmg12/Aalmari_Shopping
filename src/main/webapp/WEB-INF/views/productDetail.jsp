@@ -1,5 +1,34 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%!
+    private static final String S3_BASE = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    private static String esc(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    // Returns the full URL of the first gallery image, or null if none
+    private static String firstGalleryImage(String json) {
+        if (json == null || json.isEmpty() || json.equals("[]")) return null;
+        try {
+            List<String> paths = MAPPER.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            for (String path : paths) {
+                if (path != null && !path.isEmpty()) {
+                    return path.startsWith("http") ? path : S3_BASE + path;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +38,43 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=10">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
+
+    <!-- Same card styles as product.jsp (used by the "You May Also Like" section) -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
+    <style>
+        /* ===== PAGINATION (same as product.jsp). var() fallbacks are used only if the variable is not defined on this page ===== */
+        .pagination {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: clamp(32px, 5vw, 48px);
+            font-size: 13px;
+            color: var(--color-text-muted, #6b7280);
+        }
+
+        .pagination span {
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm, 8px);
+            transition: background 0.15s var(--ease, ease), color 0.15s var(--ease, ease);
+        }
+
+        .pagination span:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .pagination span.active {
+            font-weight: bold;
+            color: #FFFFFF;
+            background: var(--color-accent, #ff7a00);
+        }
+
+        .pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .pagination span.pg-dots { cursor: default; }
+        .pagination span.pg-dots:hover { background: none; }
+    </style>
 </head>
 <body>
     <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -151,6 +217,77 @@
                 </div>
             </div>
 
+            <!-- ============ YOU MAY ALSO LIKE ============ -->
+            <%
+                @SuppressWarnings("unchecked")
+                List<com.example.aalmari.model.SellerProduct> similarProducts =
+                        (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("similarProducts");
+
+                if (similarProducts != null && !similarProducts.isEmpty()) {
+            %>
+            <div class="section-header">
+                <span class="section-title">You May Also Like</span>
+            </div>
+
+            <div class="ar-page">
+                <div class="ar-grid" id="similarGrid">
+                <%
+                    for (com.example.aalmari.model.SellerProduct p : similarProducts) {
+                        if (!Boolean.TRUE.equals(p.getActive())) continue;
+
+                        // Same price logic as ProductController (price = original, discount in %)
+                        int origPrice = p.getPrice() == null ? 0 : p.getPrice();
+                        int discount = p.getDiscount() == null ? 0 : p.getDiscount();
+                        int price = Math.max(0, (int) (origPrice * (100 - discount) / 100.0));
+                        long oldPrice = (discount > 0 && discount < 100) ? origPrice : 0;
+
+                        String cardImg = firstGalleryImage(p.getImageUrlsJson());
+                        if (cardImg == null) {
+                            cardImg = request.getContextPath() + "/placeholder.jpg";
+                        }
+
+                        String soldText = p.getSold() + " sold";
+                %>
+                    <article class="ar-card" data-price="<%= price %>" data-name="<%= esc(p.getName()) %>">
+                        <button type="button" class="ar-wish" aria-label="Save to wishlist">
+                            <span class="material-symbols-outlined ar-ic-sm">favorite</span>
+                        </button>
+                        <a href="${pageContext.request.contextPath}/product/<%= p.getId() %>" class="ar-card-link">
+                            <div class="ar-card-img">
+                                <img src="<%= esc(cardImg) %>" alt="<%= esc(p.getName()) %>" loading="lazy">
+                                <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
+                            </div>
+                            <div class="ar-card-body">
+                                <div>
+                                    <div class="ar-card-top">
+                                        <span class="ar-brand"><%= esc(p.getCategory()) %></span>
+                                        <span class="ar-sold"><%= soldText %></span>
+                                    </div>
+                                    <h3 class="ar-p-title"><%= esc(p.getName()) %></h3>
+                                </div>
+                                <div class="ar-price-row">
+                                    <div>
+                                        <div class="ar-price">Rs.<%= price %></div>
+                                        <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
+                                        <div class="ar-sub-muted"><%= esc(p.getSubCategory()) %></div>
+                                    </div>
+                                    <span class="ar-view js-add-to-cart" role="button" tabindex="0"
+                                          data-product-id="<%= p.getId() %>">Add to cart</span>
+                                </div>
+                            </div>
+                        </a>
+                    </article>
+                <%
+                    }
+                %>
+                </div>
+            </div>
+
+            <!-- Pagination (built by JavaScript) -->
+            <div class="pagination" id="similarPagination"></div>
+            <% } %>
+            <!-- ============ /YOU MAY ALSO LIKE ============ -->
+
         </div>
     </c:if>
 
@@ -195,14 +332,137 @@
         if (wishlistBtn) {
             wishlistBtn.addEventListener('click', function() { alert('Wishlist feature coming soon!'); });
         }
+        const PRODUCT_ID = '${product.id}';
         const addToCartBtn = document.querySelector('.add-to-cart-btn');
         if (addToCartBtn) {
-            addToCartBtn.addEventListener('click', function() { alert('Add to cart feature coming soon!'); });
+            addToCartBtn.addEventListener('click', function() {
+                const qty = Math.max(1, Math.min(10, parseInt(qtyInput ? qtyInput.value : 1) || 1));
+                addToCart(PRODUCT_ID, qty, addToCartBtn);   // defined in cart.js (loaded by header.jsp)
+            });
         }
         const buyNowBtn = document.querySelector('.buy-now-btn');
         if (buyNowBtn) {
             buyNowBtn.addEventListener('click', function() { alert('Buy now feature coming soon!'); });
         }
+
+        // "You May Also Like": wishlist heart toggle (same as product.jsp)
+        document.querySelectorAll('#similarGrid .ar-wish').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                btn.classList.toggle('ar-wished');
+            });
+        });
+
+        // "You May Also Like": pagination, 8 products per page (same logic as product.jsp)
+        (function () {
+            var PER_PAGE = 8;
+            var HEADER_OFFSET = 100; // change to your sticky header height in px
+            var grid  = document.getElementById('similarGrid');
+            var nav   = document.getElementById('similarPagination');
+            if (!grid || !nav) return;
+
+            var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
+            var total = Math.ceil(cards.length / PER_PAGE);
+            var current = 1;
+
+            // Hide pagination when everything fits on one page
+            if (total <= 1) { nav.style.display = 'none'; return; }
+
+            function getPageFromUrl() {
+                var p = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+                return (p >= 1 && p <= total) ? p : 1;
+            }
+
+            // Builds [1, '...', 4, 5, 6, '...', 20]
+            function pageItems() {
+                if (total <= 7) {
+                    return Array.from({ length: total }, function (_, i) { return i + 1; });
+                }
+                var items = [1];
+                var start = Math.max(2, current - 1);
+                var end   = Math.min(total - 1, current + 1);
+                if (start > 2) items.push('...');
+                for (var i = start; i <= end; i++) items.push(i);
+                if (end < total - 1) items.push('...');
+                items.push(total);
+                return items;
+            }
+
+            function makeItem(label, page, opts) {
+                opts = opts || {};
+                var s = document.createElement('span');
+                s.innerHTML = label;
+                if (opts.active) {
+                    s.className = 'active';
+                    s.setAttribute('aria-current', 'page');
+                } else if (opts.disabled) {
+                    s.className = 'disabled';
+                    s.setAttribute('aria-disabled', 'true');
+                } else {
+                    s.setAttribute('role', 'button');
+                    s.tabIndex = 0;
+                    s.addEventListener('click', function () { goTo(page, true); });
+                    s.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            goTo(page, true);
+                        }
+                    });
+                }
+                return s;
+            }
+
+            function renderNav() {
+                nav.innerHTML = '';
+                nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
+                pageItems().forEach(function (item) {
+                    if (item === '...') {
+                        var dots = document.createElement('span');
+                        dots.className = 'pg-dots';
+                        dots.textContent = '...';
+                        nav.appendChild(dots);
+                    } else {
+                        nav.appendChild(makeItem(item, item, { active: item === current }));
+                    }
+                });
+                nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
+            }
+
+            function showPage(page) {
+                current = page;
+                var start = (page - 1) * PER_PAGE;
+                var end   = start + PER_PAGE;
+                cards.forEach(function (card, i) {
+                    card.style.display = (i >= start && i < end) ? '' : 'none';
+                });
+                renderNav();
+            }
+
+            function goTo(page, userClicked) {
+                if (page < 1 || page > total) return;
+                showPage(page);
+                if (userClicked) {
+                    var url = new URL(window.location);
+                    url.searchParams.set('page', page);
+                    history.pushState({ page: page }, '', url);
+
+                    // Scroll only if the top of the grid is out of view
+                    var top = grid.getBoundingClientRect().top;
+                    if (top < HEADER_OFFSET) {
+                        window.scrollTo({
+                            top: top + window.pageYOffset - HEADER_OFFSET,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            }
+
+            // Browser back/forward buttons
+            window.addEventListener('popstate', function () { showPage(getPageFromUrl()); });
+
+            showPage(getPageFromUrl());
+        })();
 
         // VIEW MORE / VIEW LESS
         const viewMoreBtn = document.getElementById('viewMoreBtn');

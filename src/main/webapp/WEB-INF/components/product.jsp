@@ -89,7 +89,8 @@
                             <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
                             <div class="ar-sub-muted"><%= esc(p.getSubCategory()) %></div>
                         </div>
-                        <span class="ar-view">Add to cart</span>
+                        <span class="ar-view js-add-to-cart" role="button" tabindex="0"
+                              data-product-id="<%= p.getId() %>">Add to cart</span>
                     </div>
                 </div>
             </a>

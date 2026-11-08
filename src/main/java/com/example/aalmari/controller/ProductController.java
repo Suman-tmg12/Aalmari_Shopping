@@ -10,10 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Controller
 public class ProductController {
@@ -21,6 +23,7 @@ public class ProductController {
     private final SellerProductRepository sellerProductRepository;
     private final ObjectMapper objectMapper;
     private static final String S3_BUCKET_URL = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final int SIMILAR_LIMIT = 40;
 
     public ProductController(SellerProductRepository sellerProductRepository) {
         this.sellerProductRepository = sellerProductRepository;
@@ -122,7 +125,10 @@ public class ProductController {
             discountStr = "-" + discount + "%";
         }
 
-        // 5. Add to model
+        // 5. Similar products ("You May Also Like")
+        List<SellerProduct> similarProducts = findSimilarProducts(product);
+
+        // 6. Add to model
         model.addAttribute("product", product);
         model.addAttribute("specs", specs);
         model.addAttribute("galleryImages", galleryImages);
@@ -130,7 +136,42 @@ public class ProductController {
         model.addAttribute("currentPrice", currentPriceStr);
         model.addAttribute("originalPrice", originalPriceStr);
         model.addAttribute("discount", discountStr);
+        model.addAttribute("similarProducts", similarProducts);
 
         return "productDetail";
+    }
+
+    /**
+     * Same sub-category first, then the rest from the same category.
+     * Never includes the current product, never includes duplicates.
+     */
+    private List<SellerProduct> findSimilarProducts(SellerProduct current) {
+        List<SellerProduct> result = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        seen.add(current.getId());
+
+        String sub = current.getSubCategory();
+        if (sub != null && !sub.trim().isEmpty()) {
+            for (SellerProduct p : sellerProductRepository
+                    .findTop40ByActiveTrueAndSubCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
+                            sub, current.getId())) {
+                if (result.size() < SIMILAR_LIMIT && seen.add(p.getId())) {
+                    result.add(p);
+                }
+            }
+        }
+
+        String cat = current.getCategory();
+        if (result.size() < SIMILAR_LIMIT && cat != null && !cat.trim().isEmpty()) {
+            for (SellerProduct p : sellerProductRepository
+                    .findTop40ByActiveTrueAndCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
+                            cat, current.getId())) {
+                if (result.size() < SIMILAR_LIMIT && seen.add(p.getId())) {
+                    result.add(p);
+                }
+            }
+        }
+
+        return result;
     }
 }

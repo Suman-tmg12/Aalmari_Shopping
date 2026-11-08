@@ -2,7 +2,7 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 
-<%-- 2. Redirect to login page if session is empty --%>
+<%-- Redirect to login page if session is empty --%>
 <c:if test="${empty sessionScope.userId}">
     <c:redirect url="/login" />
 </c:if>
@@ -10,9 +10,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Cart - Aalmari Store</title>
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/cart.css?v=1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/cart.css?v=2">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -33,16 +35,26 @@
                         <div class="cart-item">
                             <div class="item-image">
                                 <c:if test="${not empty item.imageUrl}">
-                                    <img src="${pageContext.request.contextPath}${item.imageUrl}" alt="${item.name}">
+                                    <a href="${pageContext.request.contextPath}/product/${item.productId}">
+                                        <img src="${item.imageUrl}" alt="<c:out value='${item.name}'/>">
+                                    </a>
                                 </c:if>
                             </div>
 
                             <div class="item-details">
                                 <div class="item-top">
                                     <div class="item-info">
-                                        <h3 class="item-name">${item.name}</h3>
-                                        <p class="item-meta">Size: ${item.size}</p>
-                                        <p class="item-meta">Color: ${item.color}</p>
+                                        <h3 class="item-name">
+                                            <a href="${pageContext.request.contextPath}/product/${item.productId}"
+                                               style="color:inherit; text-decoration:none;">
+                                                <c:out value="${item.name}"/>
+                                            </a>
+                                        </h3>
+                                        <c:if test="${item.originalPrice > item.unitPrice}">
+                                            <p class="item-meta" style="text-decoration:line-through;">
+                                                Rs <fmt:formatNumber value="${item.originalPrice}" maxFractionDigits="0"/>
+                                            </p>
+                                        </c:if>
                                     </div>
 
                                     <form action="${pageContext.request.contextPath}/cart/remove" method="post" class="delete-form">
@@ -58,7 +70,7 @@
 
                                 <div class="item-bottom">
                                     <span class="item-price">
-                                        <fmt:formatNumber value="${item.price}" type="currency" currencySymbol="$"/>
+                                        Rs <fmt:formatNumber value="${item.unitPrice}" maxFractionDigits="0"/>
                                     </span>
 
                                     <form action="${pageContext.request.contextPath}/cart/update" method="post" class="qty-form">
@@ -82,30 +94,33 @@
 
             <div class="summary-row">
                 <span>Subtotal</span>
-                <span><fmt:formatNumber value="${subtotal}" type="currency" currencySymbol="$"/></span>
+                <span>Rs <fmt:formatNumber value="${subtotal}" maxFractionDigits="0"/></span>
             </div>
 
-            <div class="summary-row">
-                <span>Discount (-${discountPercent}%)</span>
-                <span class="discount-value">
-                    -<fmt:formatNumber value="${discountAmount}" type="currency" currencySymbol="$"/>
-                </span>
-            </div>
+            <c:if test="${discountAmount > 0}">
+                <div class="summary-row">
+                    <span>Discount (-${discountPercent}%)</span>
+                    <span class="discount-value">
+                        -Rs <fmt:formatNumber value="${discountAmount}" maxFractionDigits="0"/>
+                    </span>
+                </div>
+            </c:if>
 
             <div class="summary-row">
                 <span>Delivery Fee</span>
-                <span><fmt:formatNumber value="${deliveryFee}" type="currency" currencySymbol="$"/></span>
+                <span>Rs <fmt:formatNumber value="${deliveryFee}" maxFractionDigits="0"/></span>
             </div>
 
             <hr class="summary-divider">
 
             <div class="summary-row total-row">
                 <span>Total</span>
-                <span><fmt:formatNumber value="${total}" type="currency" currencySymbol="$"/></span>
+                <span>Rs <fmt:formatNumber value="${total}" maxFractionDigits="0"/></span>
             </div>
 
             <form action="${pageContext.request.contextPath}/checkout" method="get">
-                <button type="submit" class="checkout-btn">Go to Checkout</button>
+                <button type="submit" class="checkout-btn"
+                        <c:if test="${empty cartItems}">disabled</c:if>>Go to Checkout</button>
             </form>
         </div>
 

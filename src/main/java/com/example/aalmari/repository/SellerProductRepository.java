@@ -38,4 +38,13 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
            ORDER BY p.id DESC
            """)
     List<SellerProduct> findBySeller_IdAndActiveTrue(@Param("sellerId") Long sellerId);
+
+    // ---------- "You May Also Like" ----------
+    // Same sub-category, excluding the current product, best sellers first
+    List<SellerProduct> findTop40ByActiveTrueAndSubCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
+            String subCategory, Long id);
+
+    // Same category, excluding the current product, best sellers first
+    List<SellerProduct> findTop40ByActiveTrueAndCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
+            String category, Long id);
 }

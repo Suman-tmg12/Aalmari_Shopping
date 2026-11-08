@@ -86,12 +86,11 @@
             </div>
 
             <!-- Cart Icon with Badge -->
-            <a href="${pageContext.request.contextPath}/cart" class="icon-link" aria-label="Shopping cart">
-                <span class="material-symbols-outlined icon-item">local_mall</span>
-                <c:if test="${not empty sessionScope.cartItemCount && sessionScope.cartItemCount > 0}">
-                    <span class="cart-badge">${sessionScope.cartItemCount}</span>
-                </c:if>
-            </a>
+           <a href="${pageContext.request.contextPath}/cart" class="icon-link" id="cartLink"
+              data-logged-in="${not empty sessionScope.userId}" aria-label="Shopping cart">
+               <span class="material-symbols-outlined icon-item">local_mall</span>
+               <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+           </a>
 
             <!-- Hamburger menu trigger -->
             <span class="icon-item menu-trigger" aria-label="Menu">&#9776;</span>
@@ -282,5 +281,6 @@
             });
         });
     </script>
+    <script src="${pageContext.request.contextPath}/css/Cart/Cart.js"></script>
 </body>
 </html>
