@@ -8,7 +8,7 @@
     <title>Aalmari Store</title>
     <!-- Google Material Symbols for Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=10">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=11">
 </head>
 <body>
 
@@ -22,15 +22,18 @@
         </div>
 
         <!-- Search Bar Container -->
-        <form action="${pageContext.request.contextPath}/searchResult" method="GET" class="search-container" id="searchForm">
+        <form action="${pageContext.request.contextPath}/searchResult" method="GET"
+              class="search-container" id="searchForm"
+              data-suggest-url="${pageContext.request.contextPath}/api/search/suggest">
             <input type="text"
                    name="q"
-                   value="${param.q}"
+                   value="<c:out value='${param.q}'/>"
                    placeholder="Search for products, categories, brands..."
                    class="search-input"
                    aria-label="Search"
                    required
-                   autocomplete="off">
+                   autocomplete="off"
+                   maxlength="60">
             <button type="submit" class="search-btn-submit" aria-label="Submit search">
                 <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
             </button>
@@ -46,7 +49,7 @@
                         <!-- Logged In Trigger Button -->
                         <div class="account-trigger">
                             <span class="material-symbols-outlined icon-item">account_circle</span>
-                            <span class="user-name">${sessionScope.userFirstName}</span>
+                            <span class="user-name"><c:out value="${sessionScope.userFirstName}" /></span>
                             <span class="material-symbols-outlined dropdown-arrow" style="color: white">expand_more</span>
                         </div>
                         <!-- Dropdown Menu (Appears on Hover) -->
@@ -86,11 +89,11 @@
             </div>
 
             <!-- Cart Icon with Badge -->
-           <a href="${pageContext.request.contextPath}/cart" class="icon-link" id="cartLink"
-              data-logged-in="${not empty sessionScope.userId}" aria-label="Shopping cart">
-               <span class="material-symbols-outlined icon-item">local_mall</span>
-               <span class="cart-badge" id="cartBadge" style="display:none">0</span>
-           </a>
+            <a href="${pageContext.request.contextPath}/cart" class="icon-link" id="cartLink"
+               data-logged-in="${not empty sessionScope.userId}" aria-label="Shopping cart">
+                <span class="material-symbols-outlined icon-item">local_mall</span>
+                <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+            </a>
 
             <!-- Hamburger menu trigger -->
             <span class="icon-item menu-trigger" aria-label="Menu">&#9776;</span>
@@ -105,7 +108,6 @@
 
             <!-- Menu Links -->
             <nav class="menu-links">
-                <!-- User Profile Header inside Mobile Menu -->
                 <c:choose>
                     <c:when test="${not empty sessionScope.userId}">
                         <a href="${pageContext.request.contextPath}/myprofile" class="menu-link user-mobile-card">
@@ -139,7 +141,6 @@
                     Categories
                     <span class="material-symbols-outlined chevron">expand_more</span>
                 </div>
-                <!-- Nested accordion renders here -->
                 <div class="mobile-categories-accordion" id="mobileCategoriesAccordion"></div>
 
                 <a href="${pageContext.request.contextPath}/cart" class="menu-link">
@@ -282,5 +283,6 @@
         });
     </script>
     <script src="${pageContext.request.contextPath}/css/Cart/Cart.js"></script>
+    <script src="${pageContext.request.contextPath}/css/js/searchSuggest.js?v=1"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aalmari Full Width E-commerce Design</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/welcome.css?v=3">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/welcome.css?v=4">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -34,17 +34,39 @@
                 String[] flashTitles = {"Himalaya Face Scrub", "Wireless Headphone", "Classic Black Shoes", "Smart Fitness Band", "Skin Care Set", "Healthy", "Non-healthy"};
                 String[] flashPrices = {"Rs.70", "Rs.70", "Rs.90", "Rs.120", "Rs.150", "Rs.300", "Rs.450"};
                 String[] flashOldPrices = {"Rs.150", "Rs.120", "Rs.180", "Rs.240", "Rs.300", "Rs.500", "Rs.500"};
-                for(int i = 0; i < flashTitles.length; i++) {
+                for(int i = 0; i < Math.min(5, flashTitles.length); i++) {
+                    // Discount % calculated from the two prices
+                    int fsPrice = 0, fsOld = 0, fsDiscount = 0;
+                    try {
+                        fsPrice = Integer.parseInt(flashPrices[i].replaceAll("[^0-9]", ""));
+                        fsOld   = Integer.parseInt(flashOldPrices[i].replaceAll("[^0-9]", ""));
+                    } catch (NumberFormatException ex) { /* leave at 0 */ }
+                    if (fsPrice > 0 && fsOld > fsPrice) {
+                        fsDiscount = (int) Math.round((fsOld - fsPrice) * 100.0 / fsOld);
+                    }
             %>
-
-     <a href="${pageContext.request.contextPath}/flashsaleproduct?id=<%= flashIds[i] %>" style="text-decoration: none; color: inherit;">
-         <div class="card-sm">
-             <img src="${pageContext.request.contextPath}/HomePageImages/FlashSaleImages/<%= flashImages[i] %>" alt="<%= flashTitles[i] %>">
-             <div class="card-title"><%= flashTitles[i] %></div>
-             <div class="card-price"><%= flashPrices[i] %> <span><%= flashOldPrices[i] %></span></div>
-         </div>
-     </a>
-
+            <article class="fs-card">
+                <button type="button" class="fs-wish" aria-label="Save to wishlist">
+                    <span class="material-symbols-outlined">favorite</span>
+                </button>
+                <a href="${pageContext.request.contextPath}/flashsaleproduct?id=<%= flashIds[i] %>" class="fs-card-link">
+                    <div class="fs-card-img">
+                        <img src="${pageContext.request.contextPath}/HomePageImages/FlashSaleImages/<%= flashImages[i] %>"
+                             alt="<%= flashTitles[i] %>" loading="lazy">
+                        <% if (fsDiscount > 0) { %><span class="fs-badge">-<%= fsDiscount %>%</span><% } %>
+                    </div>
+                    <div class="fs-card-body">
+                        <h3 class="fs-title"><%= flashTitles[i] %></h3>
+                        <div class="fs-price-row">
+                            <div>
+                                <div class="fs-price"><%= flashPrices[i] %></div>
+                                <div class="fs-old"><%= flashOldPrices[i] %></div>
+                            </div>
+                            <span class="fs-view">View</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
             <% } %>
         </div>
     </div>
@@ -98,6 +120,15 @@
             const input = container.querySelector('.search-input');
             if (input) input.focus();
         }
+    });
+
+    // Flash sale wishlist heart toggle
+    document.querySelectorAll('.flash-sale-box .fs-wish').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            btn.classList.toggle('fs-wished');
+        });
     });
 
     // ========== HERO SLIDER (infinite loop, drag / swipe / keyboard) ==========

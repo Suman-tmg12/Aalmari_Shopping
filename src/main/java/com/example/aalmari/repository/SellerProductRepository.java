@@ -1,6 +1,7 @@
 package com.example.aalmari.repository;
 
 import com.example.aalmari.model.SellerProduct;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +31,19 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
            ORDER BY p.id DESC
            """)
     List<SellerProduct> searchActive(@Param("q") String q);
+
+    // Search suggestions (autocomplete): active product names only.
+    // Names that START with the query rank first, then names that merely contain it.
+    // The caller must escape %, _ and ! in :q using '!' (see SearchSuggestController).
+    @Query("""
+           SELECT p.name FROM SellerProduct p
+           WHERE p.active = true
+             AND LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '!'
+           ORDER BY CASE WHEN LOWER(p.name) LIKE LOWER(CONCAT(:q, '%')) ESCAPE '!'
+                         THEN 0 ELSE 1 END,
+                    p.name
+           """)
+    List<String> suggestNames(@Param("q") String q, Pageable pageable);
 
     // Store page: all active products of one seller (newest first)
     @Query("""

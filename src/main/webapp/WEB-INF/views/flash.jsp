@@ -5,6 +5,20 @@
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace("\"", "&quot;").replace("'", "&#39;");
     }
+
+    // Safe for use inside a JavaScript string
+    private static String jsEsc(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"")
+                .replace("<", "\\u003C").replace("\n", " ").replace("\r", " ");
+    }
+%>
+<%
+    // Read the selected category / sub-category from the URL (/flash?name=...&sub=...)
+    String curCat = request.getParameter("name");
+    String curSub = request.getParameter("sub");
+    if (curCat == null || curCat.trim().isEmpty()) curCat = "Electronics";
+    if (curSub != null && curSub.trim().isEmpty()) curSub = null;
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,7 +27,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Deals — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/flash.css?v=5">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/flash.css?v=6">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -34,8 +48,8 @@
 
                 <div class="results-header">
                     <div>
-                        <h1 class="results-title" id="pageTitle">Electronics</h1>
-                        <p class="results-subtitle" id="pageSubtitle">Showing results for Electronics</p>
+                        <h1 class="results-title" id="pageTitle"><%= esc(curCat) %></h1>
+                        <p class="results-subtitle" id="pageSubtitle">Showing flash deals for <%= esc(curCat) %><%= curSub != null ? " &rsaquo; " + esc(curSub) : "" %></p>
                     </div>
                     <div class="sort-row">
                         <label class="sort-label" for="sortBy">Sort By:</label>
@@ -63,7 +77,13 @@
                         String[] prodBrands  = {"Electronics", "Electronics", "Electronics", "Electronics", "Electronics", "Electronics"}; // adjust
                         String[] prodSubs    = {"Mobiles", "Laptops", "Headphones", "Headphones", "Smart Watches", "Accessories"};        // adjust
 
+                        int shown = 0;
                         for (int i = 0; i < prods.length; i++) {
+                            // Filter by selected category / sub-category
+                            if (!prodBrands[i].equalsIgnoreCase(curCat)) continue;
+                            if (curSub != null && !prodSubs[i].equalsIgnoreCase(curSub)) continue;
+                            shown++;
+
                             long price = prodPrices[i];
                             long oldPrice = prodOldPrices[i];
                             int discount = oldPrice > 0 ? (int) Math.round(((double) (oldPrice - price) / oldPrice) * 100) : 0;
@@ -98,6 +118,11 @@
                             </a>
                         </article>
                     <% } %>
+                    <% if (shown == 0) { %>
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #666;">
+                            <h2>No flash deals in this category yet.</h2>
+                        </div>
+                    <% } %>
                     </div>
                 </div>
 
@@ -124,7 +149,8 @@
             };
 
             const pageCTX = '${pageContext.request.contextPath}';
-            const CURRENT_CATEGORY = 'Electronics'; // TODO: set from request attribute server-side
+            const CURRENT_CATEGORY = '<%= jsEsc(curCat) %>';
+            const CURRENT_SUB = '<%= jsEsc(curSub) %>';
 
             document.addEventListener('DOMContentLoaded', function () {
                 // Wishlist heart toggle
@@ -151,23 +177,20 @@
                     subList.className = 'flash-sub-list';
                     pageCategories[cat].forEach(sub => {
                         const a = document.createElement('a');
-                        a.href = pageCTX + '/category?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
-                        a.className = 'flash-sub-link';
+                        // Stay on the flash route (not /category)
+                        a.href = pageCTX + '/flash?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
+                        a.className = 'flash-sub-link' + (cat === CURRENT_CATEGORY && sub === CURRENT_SUB ? ' active' : '');
                         a.textContent = sub;
                         subList.appendChild(a);
                     });
 
                     header.addEventListener('click', () => {
-                        const isOpen = wrap.classList.contains('open');
-                        document.querySelectorAll('.flash-group.open').forEach(g => {
-                            g.classList.remove('open');
-                            g.querySelector('.flash-header').classList.remove('active-cat');
-                        });
-                        if (!isOpen) {
-                            wrap.classList.add('open');
-                            header.classList.add('active-cat');
-                            document.getElementById('pageTitle').textContent = cat;
-                            document.getElementById('pageSubtitle').textContent = 'Showing results for ' + cat;
+                        // Open category -> load that category's flash deals; click again -> just collapse
+                        if (wrap.classList.contains('open')) {
+                            wrap.classList.remove('open');
+                            header.classList.remove('active-cat');
+                        } else {
+                            window.location.href = pageCTX + '/flash?name=' + encodeURIComponent(cat);
                         }
                     });
 

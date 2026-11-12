@@ -79,7 +79,7 @@
     String qEnc = java.net.URLEncoder.encode(searchQuery, "UTF-8");
 
     // Pagination: products per page (the browser reads this value from data-page-size)
-    final int PAGE_SIZE = 12;
+    final int PAGE_SIZE = 9;
     int firstShown = matchingProducts.isEmpty() ? 0 : 1;
     int lastShown = Math.min(PAGE_SIZE, matchingProducts.size());
 %>
@@ -96,54 +96,53 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=4">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 
-    <!-- Pagination only: these styles use new "arp-" class names, so nothing in your existing design is touched -->
+    <!-- Pagination styles (your design). Fallback values are used if the CSS variables are not defined. -->
     <style>
-        .ar-results { scroll-margin-top: 100px; }            /* keeps the grid clear of the fixed header after a page change */
+        .ar-results { scroll-margin-top: 100px; }   /* keeps the grid clear of the fixed header after a page change */
         .ar-results:focus { outline: none; }
 
-        .arp-nav { display: flex; justify-content: center; margin-top: 26px; }
-        .arp-nav[hidden] { display: none; }
-
-        .arp-list {
+        .pagination {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 6px;
-            list-style: none;
-            margin: 0;
-            padding: 0;
+            gap: 8px;
+            margin-top: 26px;
+            margin-bottom: clamp(32px, 5vw, 48px);
+            font-size: 13px;
+            color: var(--color-text-muted, #6B6B6B);
         }
 
-        .arp-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 40px;
-            height: 40px;
-            padding: 0 12px;
-            border: 1px solid #e3e7ec;
-            border-radius: 10px;
-            background: #fff;
-            color: #1f2933;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 700;
+        .pagination span {
             cursor: pointer;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm, 8px);
+            transition: background 0.15s var(--ease, ease), color 0.15s var(--ease, ease);
+            user-select: none;
         }
-        .arp-btn .material-symbols-outlined { font-size: 20px; }
-        .arp-btn:hover:not(:disabled):not([aria-current="page"]) { background: #ffe5cf; border-color: #f2c48f; }
-        .arp-btn[aria-current="page"] { background: #FF7B00; border-color: #FF7B00; color: #1f1305; cursor: default; }
-        .arp-btn:disabled { opacity: .45; cursor: not-allowed; }
-        .arp-btn:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
 
-        .arp-gap { display: inline-block; min-width: 22px; text-align: center; color: #5f6b7a; }
+        .pagination span:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .pagination span:focus-visible {
+            outline: 2px solid #FF7B00;
+            outline-offset: 2px;
+        }
+
+        .pagination span.active {
+            font-weight: bold;
+            color: #FFFFFF;
+            background: var(--color-accent, #FF7B00);
+            cursor: default;
+        }
+
+        .pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .pagination span.pg-dots { cursor: default; }
+        .pagination span.pg-dots:hover { background: none; }
 
         @media (max-width: 600px) {
             .ar-results { scroll-margin-top: 155px; }
-        }
-        @media (max-width: 480px) {
-            .arp-btn { min-width: 38px; height: 38px; padding: 0 8px; }
         }
     </style>
 </head>
@@ -394,8 +393,8 @@
                         Showing <b id="arShownCount"><%= firstShown %>–<%= lastShown %></b> of <b id="arTotalCount"><%= matchingProducts.size() %></b> items
                     </p>
 
-                    <!-- Page numbers (filled in by the script below) -->
-                    <nav class="arp-nav" id="arPagination" aria-label="Pagination" hidden></nav>
+                    <!-- Pagination (built by JavaScript, only shown when there are more than 8 products) -->
+                    <div class="pagination" id="pagination"></div>
                     <% } %>
                 </section>
             </div>
@@ -447,7 +446,7 @@
 
                 /* ---------- State ---------- */
                 var results = document.querySelector('.ar-results');
-                var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 12;
+                var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 8;
                 var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
                 var CEILING = parseFloat($('arPriceRange').max) || 0;
                 var state = { min: 0, max: CEILING, types: [], discount: 0, sort: 'best', page: 1 };
@@ -462,6 +461,22 @@
                     if (isNaN(state.min) || state.min < 0) state.min = 0;
                     if (isNaN(state.max) || state.max > CEILING) state.max = CEILING;
                     if (state.min > state.max) state.min = state.max;
+                }
+
+                /* ---------- Page number in the URL (?page=2) ---------- */
+                function getPageFromUrl() {
+                    var p = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+                    return p >= 1 ? p : 1;   // render() clamps it to the real number of pages
+                }
+
+                // Keeps the address bar in step with the current page (page 1 = no ?page= at all)
+                function syncUrl(push) {
+                    var url = new URL(window.location.href);
+                    if (state.page > 1) url.searchParams.set('page', state.page);
+                    else url.searchParams.delete('page');
+                    if (url.href === window.location.href) return;
+                    if (push) history.pushState({ page: state.page }, '', url);
+                    else history.replaceState({ page: state.page }, '', url);
                 }
 
                 /* ---------- Render (filter, sort, then show one page) ---------- */
@@ -491,6 +506,7 @@
                     var visible = matches.length;
                     var pages = Math.max(1, Math.ceil(visible / PAGE_SIZE));
                     if (state.page > pages) state.page = pages;
+                    if (state.page < 1) state.page = 1;
                     var start = (state.page - 1) * PAGE_SIZE;
                     var end = Math.min(start + PAGE_SIZE, visible);
 
@@ -515,6 +531,7 @@
                 }
 
                 /* ---------- Pagination ---------- */
+                // Builds e.g. [1, '...', 4, 5, 6, '...', 20]
                 function pageItems(cur, pages) {
                     var out = [], i;
                     if (!mqNarrow.matches) {
@@ -523,13 +540,13 @@
                         if (cur <= 3) { s = 2; e = 4; }
                         if (cur >= pages - 2) { s = pages - 3; e = pages - 1; }
                         out.push(1);
-                        if (s > 2) out.push('gap');
+                        if (s > 2) out.push('...');
                         for (i = s; i <= e; i++) out.push(i);
-                        if (e < pages - 1) out.push('gap');
+                        if (e < pages - 1) out.push('...');
                         out.push(pages);
                         return out;
                     }
-                    // narrow phones: first, current and last page only, so the row never overflows
+                    // narrow phones: first, current and last page only, so the row stays short
                     if (pages <= 5) { for (i = 1; i <= pages; i++) out.push(i); return out; }
                     var keep = [1, cur, pages].filter(function (n, k, arr) { return arr.indexOf(n) === k; })
                                               .sort(function (a, b) { return a - b; });
@@ -537,62 +554,82 @@
                         if (k > 0) {
                             var prev = keep[k - 1];
                             if (n - prev === 2) out.push(prev + 1);
-                            else if (n - prev > 2) out.push('gap');
+                            else if (n - prev > 2) out.push('...');
                         }
                         out.push(n);
                     });
                     return out;
                 }
 
-                function pageButton(label, target, opts) {
-                    var li = document.createElement('li');
-                    var b = document.createElement('button');
-                    b.type = 'button';
-                    b.className = 'arp-btn';
-                    b.setAttribute('data-page', target);
-                    b.setAttribute('aria-label', opts.aria);
-                    if (opts.icon) {
-                        b.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">' + opts.icon + '</span>';
+                function makeItem(label, target, opts) {
+                    opts = opts || {};
+                    var s = document.createElement('span');
+                    s.innerHTML = label;   // labels are fixed strings or numbers, never user input
+                    if (opts.active) {
+                        s.className = 'active';
+                        s.setAttribute('aria-current', 'page');
+                    } else if (opts.disabled) {
+                        s.className = 'disabled';
+                        s.setAttribute('aria-disabled', 'true');
                     } else {
-                        b.textContent = label;
+                        s.setAttribute('role', 'button');
+                        s.setAttribute('aria-label', opts.aria || ('Page ' + target));
+                        s.tabIndex = 0;
+                        s.addEventListener('click', function () { goTo(target); });
+                        s.addEventListener('keydown', function (e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                goTo(target);
+                            }
+                        });
                     }
-                    if (opts.current) b.setAttribute('aria-current', 'page');
-                    if (opts.disabled) b.disabled = true;
-                    li.appendChild(b);
-                    return li;
+                    return s;
                 }
 
                 function renderPagination(pages) {
-                    var nav = $('arPagination');
+                    var nav = $('pagination');
                     nav.innerHTML = '';
-                    if (pages <= 1) { nav.hidden = true; return; }
-                    nav.hidden = false;
 
-                    var ul = document.createElement('ul');
-                    ul.className = 'arp-list';
-                    ul.appendChild(pageButton('', state.page - 1, { icon: 'chevron_left', aria: 'Previous page', disabled: state.page === 1 }));
+                    // Hide pagination when everything fits on one page
+                    if (pages <= 1) { nav.style.display = 'none'; return; }
+                    nav.style.display = '';
 
-                    pageItems(state.page, pages).forEach(function (it) {
-                        if (it === 'gap') {
-                            var li = document.createElement('li');
-                            li.innerHTML = '<span class="arp-gap" aria-hidden="true">\u2026</span>';
-                            ul.appendChild(li);
+                    nav.appendChild(makeItem('&lt; Previous', state.page - 1,
+                        { disabled: state.page === 1, aria: 'Previous page' }));
+
+                    pageItems(state.page, pages).forEach(function (item) {
+                        if (item === '...') {
+                            var dots = document.createElement('span');
+                            dots.className = 'pg-dots';
+                            dots.textContent = '...';
+                            nav.appendChild(dots);
                         } else {
-                            ul.appendChild(pageButton(String(it), it, { aria: 'Page ' + it, current: it === state.page }));
+                            nav.appendChild(makeItem(String(item), item, { active: item === state.page }));
                         }
                     });
 
-                    ul.appendChild(pageButton('', state.page + 1, { icon: 'chevron_right', aria: 'Next page', disabled: state.page === pages }));
-                    nav.appendChild(ul);
+                    nav.appendChild(makeItem('Next &gt;', state.page + 1,
+                        { disabled: state.page === pages, aria: 'Next page' }));
                 }
 
-                $('arPagination').addEventListener('click', function (e) {
-                    var b = e.target.closest('button[data-page]');
-                    if (!b || b.disabled) return;
-                    state.page = parseInt(b.getAttribute('data-page'), 10) || 1;
-                    render(true);
-                    results.scrollIntoView({ behavior: mqMotion.matches ? 'auto' : 'smooth', block: 'start' });
+                function goTo(target) {
+                    if (target < 1) return;
+                    state.page = target;
+                    render(true);       // render() clamps the page if it is too high
+                    syncUrl(true);      // adds ?page=N so Back/Forward work
+
+                    // Scroll only if the top of the results is out of view
+                    var top = results.getBoundingClientRect().top;
+                    if (top < 100) {
+                        results.scrollIntoView({ behavior: mqMotion.matches ? 'auto' : 'smooth', block: 'start' });
+                    }
                     results.focus({ preventScroll: true });
+                }
+
+                // Browser Back / Forward buttons
+                window.addEventListener('popstate', function () {
+                    state.page = getPageFromUrl();
+                    render(true);
                 });
 
                 // Re-draw the page numbers if the screen crosses the phone width
@@ -620,20 +657,20 @@
                     if (state.min > 0 || state.max < CEILING) {
                         count++;
                         box.appendChild(chip('Rs ' + state.min + ' – Rs ' + state.max, function () {
-                            state.min = 0; state.max = CEILING; syncPriceInputs(); render();
+                            state.min = 0; state.max = CEILING; syncPriceInputs(); change();
                         }));
                     }
                     state.types.forEach(function (t) {
                         count++;
                         box.appendChild(chip(t, function () {
                             state.types = state.types.filter(function (x) { return x !== t; });
-                            syncTypeBoxes(); render();
+                            syncTypeBoxes(); change();
                         }));
                     });
                     if (state.discount > 0) {
                         count++;
                         box.appendChild(chip(state.discount + '%+ off', function () {
-                            state.discount = 0; syncDiscountRadios(); render();
+                            state.discount = 0; syncDiscountRadios(); change();
                         }));
                     }
 
@@ -642,6 +679,12 @@
                     var badge = $('arFilterBadge');
                     badge.textContent = total;
                     badge.classList.toggle('ar-hidden', total === 0);
+                }
+
+                // A filter or sort change: go back to page 1 and drop ?page= from the address bar
+                function change() {
+                    render();
+                    syncUrl(false);
                 }
 
                 /* ---------- Sync helpers ---------- */
@@ -666,29 +709,29 @@
                     var ts = $('arTypeSearch');
                     if (ts) { ts.value = ''; filterTypeList(''); }
                     syncPriceInputs(); syncTypeBoxes(); syncDiscountRadios();
-                    render();
+                    change();
                 }
 
                 /* ---------- Events ---------- */
                 priceRange.addEventListener('input', function () {
                     state.max = parseFloat(this.value) || 0;
-                    clampPrices(); syncPriceInputs(); render();
+                    clampPrices(); syncPriceInputs(); change();
                 });
                 minInput.addEventListener('change', function () {
                     state.min = parseFloat(this.value) || 0;
-                    clampPrices(); syncPriceInputs(); render();
+                    clampPrices(); syncPriceInputs(); change();
                 });
                 maxInput.addEventListener('change', function () {
                     state.max = parseFloat(this.value);
                     if (isNaN(state.max)) state.max = CEILING;
-                    clampPrices(); syncPriceInputs(); render();
+                    clampPrices(); syncPriceInputs(); change();
                 });
 
                 document.querySelectorAll('.ar-type-cb').forEach(function (cb) {
                     cb.addEventListener('change', function () {
                         if (cb.checked) { if (state.types.indexOf(cb.value) === -1) state.types.push(cb.value); }
                         else state.types = state.types.filter(function (x) { return x !== cb.value; });
-                        render();
+                        change();
                     });
                 });
 
@@ -702,10 +745,10 @@
                 if (typeSearch) typeSearch.addEventListener('input', function () { filterTypeList(this.value); });
 
                 document.querySelectorAll('input[name="arDiscount"]').forEach(function (r) {
-                    r.addEventListener('change', function () { state.discount = parseInt(r.value, 10) || 0; render(); });
+                    r.addEventListener('change', function () { state.discount = parseInt(r.value, 10) || 0; change(); });
                 });
 
-                $('sortBy').addEventListener('change', function () { state.sort = this.value; render(); });
+                $('sortBy').addEventListener('change', function () { state.sort = this.value; change(); });
 
                 var gridBtn = $('arGridView'), listBtn = $('arListView');
                 gridBtn.addEventListener('click', function () {
@@ -732,7 +775,10 @@
                     showToast(on ? 'Saved to wishlist' : 'Removed from wishlist');
                 });
 
-                render();
+                // First draw: honour ?page=N if the visitor arrived on a later page
+                state.page = getPageFromUrl();
+                render(true);
+                syncUrl(false);   // fixes the address bar if ?page= was out of range
             });
         })();
     </script>
