@@ -55,6 +55,7 @@ public class MyProfileController {
         session.setAttribute("userFirstName", updated.getFirstName());
         session.setAttribute("userLastName", updated.getLastName());
         session.setAttribute("userPhone", updated.getPhone());
+        session.setAttribute("userProfilePicPath", updated.getProfilePicPath() == null ? "" : updated.getProfilePicPath());
 
         return "redirect:/myprofile?saved=true";
     }

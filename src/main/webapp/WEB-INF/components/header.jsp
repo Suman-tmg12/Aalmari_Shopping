@@ -3,7 +3,7 @@
 <%-- Include fragment: no <html>/<head>/<body> here. The including page provides <title> and viewport meta. --%>
 <!-- Google Material Symbols for Icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=11">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=12">
 
     <!-- Top Navigation Bar -->
     <div class="top-nav">
@@ -39,10 +39,17 @@
             <div class="account-dropdown-container">
                 <c:choose>
                     <c:when test="${not empty sessionScope.userId}">
-                        <!-- Logged In Trigger Button -->
+                        <!-- Logged In Trigger Button: profile picture instead of the name.
+                             headerPicUrl is added to every page by HeaderProfileAdvice.java -->
                         <div class="account-trigger">
-                            <span class="material-symbols-outlined icon-item">account_circle</span>
-                            <span class="user-name"><c:out value="${sessionScope.userFirstName}" /></span>
+                            <c:choose>
+                                <c:when test="${not empty headerPicUrl}">
+                                    <img src="<c:out value='${headerPicUrl}'/>" alt="Account" class="header-avatar" id="header-avatar">
+                                </c:when>
+                                <c:otherwise>
+                                    <span class="material-symbols-outlined icon-item">account_circle</span>
+                                </c:otherwise>
+                            </c:choose>
                             <span class="material-symbols-outlined dropdown-arrow" style="color: white">expand_more</span>
                         </div>
                         <!-- Dropdown Menu (Appears on Hover) -->

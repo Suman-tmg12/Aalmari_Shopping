@@ -100,6 +100,7 @@ public class AccountController {
         session.setAttribute("userLastName", user.getLastName());
         session.setAttribute("userEmail", user.getEmail());
         session.setAttribute("userPhone", user.getPhone());
+        session.setAttribute("userProfilePicPath", user.getProfilePicPath() == null ? "" : user.getProfilePicPath());
 
         return "redirect:/";
     }

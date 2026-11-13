@@ -15,6 +15,13 @@
     <title>User Profile &amp; Account Settings - Luma Store</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=11">
+    <%-- Product card styles (.ar-card ...) shared with the home page Products section --%>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
+    <style>
+        /* Wishlist uses the shared product card (.ar-card) from produc.css */
+        #tab-wishlist .ar-page { max-width: none; margin: 0; padding: 0; }
+        #tab-wishlist .ar-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    </style>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -86,19 +93,6 @@
                 <!-- ===== 1. OVERVIEW ===== -->
                 <div id="tab-overview" class="tab-content">
 
-                    <div class="hero">
-                        <div class="hero-glow"></div>
-                        <div class="hero-text">
-                            <span class="hero-tag"><i data-lucide="sparkles"></i> Customer Dashboard</span>
-                            <h2>Welcome back, ${sessionScope.userFirstName}!</h2>
-                            <p>Track active shipments, manage saved payment options, and customize notification alerts.</p>
-                        </div>
-                        <div class="points-box">
-                            <p class="points-label">Reward Points</p>
-                            <p class="points-value">1,450 pts</p>
-                            <button class="points-btn" onclick="showToast('Reward points redeemed successfully!')">Redeem Points</button>
-                        </div>
-                    </div>
 
                     <div class="stat-grid">
                         <div class="stat">
@@ -272,44 +266,72 @@
                     </div>
                 </div>
 
-                <!-- ===== 3. WISHLIST ===== -->
+                <!-- ===== 3. WISHLIST (uses the same .ar-card design as the home page Products) ===== -->
                 <div id="tab-wishlist" class="tab-content hidden">
                     <div>
                         <h2 class="page-title">Saved Wishlist</h2>
                         <p class="page-sub">Your favorite saved items</p>
                     </div>
 
-                    <div class="product-grid">
-                        <div class="product-card">
-                            <div class="product-img">
-                                <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=300&q=80" alt="Camera">
-                                <button class="remove-fab" onclick="this.closest('.product-card').remove(); showToast('Removed from wishlist')" aria-label="Remove">
-                                    <i data-lucide="trash-2"></i>
-                                </button>
-                            </div>
-                            <div class="product-body">
-                                <div>
-                                    <h4>Vintage Retro Camera</h4>
-                                    <p class="product-price">$299.00</p>
-                                </div>
-                                <button class="btn-cart" onclick="showToast('Added to cart!')">Add to Cart</button>
-                            </div>
-                        </div>
+                    <div class="ar-page">
+                        <div class="ar-grid" id="wishlistGrid">
 
-                        <div class="product-card">
-                            <div class="product-img">
-                                <img src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=300&q=80" alt="Sneakers">
-                                <button class="remove-fab" onclick="this.closest('.product-card').remove(); showToast('Removed from wishlist')" aria-label="Remove">
-                                    <i data-lucide="trash-2"></i>
+                            <article class="ar-card">
+                                <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" onclick="removeFromWishlist(this)">
+                                    <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                                 </button>
-                            </div>
-                            <div class="product-body">
-                                <div>
-                                    <h4>Classic White Leather Sneakers</h4>
-                                    <p class="product-price">$75.00</p>
-                                </div>
-                                <button class="btn-cart" onclick="showToast('Added to cart!')">Add to Cart</button>
-                            </div>
+                                <a href="#" class="ar-card-link" onclick="event.preventDefault()">
+                                    <div class="ar-card-img">
+                                        <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=300&q=80" alt="Vintage Retro Camera" loading="lazy">
+                                        <span class="ar-badge">-10%</span>
+                                    </div>
+                                    <div class="ar-card-body">
+                                        <div>
+                                            <div class="ar-card-top">
+                                                <span class="ar-brand">Electronics</span>
+                                                <span class="ar-sold">120 sold</span>
+                                            </div>
+                                            <h3 class="ar-p-title">Vintage Retro Camera</h3>
+                                        </div>
+                                        <div class="ar-price-row">
+                                            <div>
+                                                <div class="ar-price">Rs.2999</div>
+                                                <div class="ar-old">Rs.3332</div>
+                                                <div class="ar-sub-muted">Cameras</div>
+                                            </div>
+                                            <span class="ar-view" role="button" tabindex="0" onclick="addWishlistItemToCart(event)">Add to cart</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </article>
+
+                            <article class="ar-card">
+                                <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" onclick="removeFromWishlist(this)">
+                                    <span class="material-symbols-outlined ar-ic-sm">favorite</span>
+                                </button>
+                                <a href="#" class="ar-card-link" onclick="event.preventDefault()">
+                                    <div class="ar-card-img">
+                                        <img src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=300&q=80" alt="Classic White Leather Sneakers" loading="lazy">
+                                    </div>
+                                    <div class="ar-card-body">
+                                        <div>
+                                            <div class="ar-card-top">
+                                                <span class="ar-brand">Fashion</span>
+                                                <span class="ar-sold">85 sold</span>
+                                            </div>
+                                            <h3 class="ar-p-title">Classic White Leather Sneakers</h3>
+                                        </div>
+                                        <div class="ar-price-row">
+                                            <div>
+                                                <div class="ar-price">Rs.1500</div>
+                                                <div class="ar-sub-muted">Shoes</div>
+                                            </div>
+                                            <span class="ar-view" role="button" tabindex="0" onclick="addWishlistItemToCart(event)">Add to cart</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </article>
+
                         </div>
                     </div>
                 </div>
@@ -740,6 +762,23 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // ===== Wishlist =====
+        function removeFromWishlist(btn) {
+            var card = btn.closest('.ar-card');
+            var grid = document.getElementById('wishlistGrid');
+            if (card) card.remove();
+            showToast('Removed from wishlist');
+            if (grid && !grid.querySelector('.ar-card')) {
+                grid.innerHTML = '<p class="page-sub">Your wishlist is empty.</p>';
+            }
+        }
+
+        function addWishlistItemToCart(e) {
+            e.preventDefault();   // the button sits inside the card's <a>
+            e.stopPropagation();
+            showToast('Added to cart!');
+        }
+
         // ===== Password =====
         function togglePassVisibility(inputId) {
             var input = document.getElementById(inputId);
@@ -800,7 +839,7 @@
             reader.onload = function (e) {
                 var src = e.target.result;
                 document.getElementById('settings-avatar-preview').src = src;
-                // header-avatar does not exist on this page, so guard against null
+                // header-avatar is the profile picture in header.jsp (missing when the user has no picture yet)
                 var headerAvatar = document.getElementById('header-avatar');
                 if (headerAvatar) headerAvatar.src = src;
                 document.getElementById('sidebar-avatar').src = src;

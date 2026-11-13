@@ -100,7 +100,7 @@ button, input {
 
 /* ===== SEARCH BAR ===== */
 .search-container {
-    position: relative;                 /* NEW: anchors the suggestions dropdown */
+    position: relative;                 /* anchors the suggestions dropdown */
     display: flex;
     align-items: center;
     flex: 1 1 auto;
@@ -303,6 +303,25 @@ button, input {
 
 .account-trigger:hover {
     background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Profile picture shown in the header instead of the user's name */
+.header-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+    background: #fff;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.account-trigger:hover .header-avatar {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px #FF7B00;
 }
 
 .user-name, .login-label {
@@ -718,6 +737,11 @@ button, input {
     .nav-icons { order: 2; margin-left: auto; }
     .search-container { order: 3; flex: 1 1 100%; max-width: 100%; margin: 0; }
     .categories-trigger { display: none; }
+
+    .header-avatar {
+        width: 34px;
+        height: 34px;
+    }
 
     .account-dropdown-menu {
         display: none; /* Uses Mobile Slideout Menu instead on narrow phones */
