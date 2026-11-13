@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,57 +21,44 @@
     <jsp:include page="/WEB-INF/components/Slider.jsp" />
     <!-- Hero Carousel Banner -->
 
-    <!-- Flash Sale Section -->
-    <div class="section-header">
-        <span class="section-title">Flash Sale</span>
-        <a href="${pageContext.request.contextPath}/flash" class="section-more">more</a>
-    </div>
-<div class="flash-sale-wrapper">
-    <div class="flash-sale-box">
-        <div class="horizontal-scroll">
-            <%
-                String[] flashIds    = {"himalaya-face-scrub", "wireless-headphone", "classic-black-shoes", "smart-fitness-band", "skin-care-set", "healthy-food-pack", "unhealthy-foods"};
-                String[] flashImages = {"HimalayaFaceScrub.jpg","Wireless_headPhone.jpg","ClassicBlackShoes.jpg","SmartFitnessBand.jpg","skincare.jpg","Healthy.jpg","unhealthy-foods.jpg"};
-                String[] flashTitles = {"Himalaya Face Scrub", "Wireless Headphone", "Classic Black Shoes", "Smart Fitness Band", "Skin Care Set", "Healthy", "Non-healthy"};
-                String[] flashPrices = {"Rs.70", "Rs.70", "Rs.90", "Rs.120", "Rs.150", "Rs.300", "Rs.450"};
-                String[] flashOldPrices = {"Rs.150", "Rs.120", "Rs.180", "Rs.240", "Rs.300", "Rs.500", "Rs.500"};
-                for(int i = 0; i < Math.min(5, flashTitles.length); i++) {
-                    // Discount % calculated from the two prices
-                    int fsPrice = 0, fsOld = 0, fsDiscount = 0;
-                    try {
-                        fsPrice = Integer.parseInt(flashPrices[i].replaceAll("[^0-9]", ""));
-                        fsOld   = Integer.parseInt(flashOldPrices[i].replaceAll("[^0-9]", ""));
-                    } catch (NumberFormatException ex) { /* leave at 0 */ }
-                    if (fsPrice > 0 && fsOld > fsPrice) {
-                        fsDiscount = (int) Math.round((fsOld - fsPrice) * 100.0 / fsOld);
-                    }
-            %>
-            <article class="fs-card">
-                <button type="button" class="fs-wish" aria-label="Save to wishlist">
-                    <span class="material-symbols-outlined">favorite</span>
-                </button>
-                <a href="${pageContext.request.contextPath}/flashsaleproduct?id=<%= flashIds[i] %>" class="fs-card-link">
-                    <div class="fs-card-img">
-                        <img src="${pageContext.request.contextPath}/HomePageImages/FlashSaleImages/<%= flashImages[i] %>"
-                             alt="<%= flashTitles[i] %>" loading="lazy">
-                        <% if (fsDiscount > 0) { %><span class="fs-badge">-<%= fsDiscount %>%</span><% } %>
-                    </div>
-                    <div class="fs-card-body">
-                        <h3 class="fs-title"><%= flashTitles[i] %></h3>
-                        <div class="fs-price-row">
-                            <div>
-                                <div class="fs-price"><%= flashPrices[i] %></div>
-                                <div class="fs-old"><%= flashOldPrices[i] %></div>
-                            </div>
-                            <span class="fs-view">View</span>
-                        </div>
-                    </div>
-                </a>
-            </article>
-            <% } %>
-        </div>
-    </div>
-</div>
+       <!-- Flash Sale Section (live seller flash sales) -->
+       <c:if test="${not empty homeFlashDeals}">
+       <div class="section-header">
+           <span class="section-title">Flash Sale</span>
+           <a href="${pageContext.request.contextPath}/flash" class="section-more">more</a>
+       </div>
+       <div class="flash-sale-wrapper">
+           <div class="flash-sale-box">
+               <div class="horizontal-scroll">
+                   <c:forEach var="d" items="${homeFlashDeals}">
+                   <article class="fs-card">
+                       <button type="button" class="fs-wish" aria-label="Save to wishlist">
+                           <span class="material-symbols-outlined">favorite</span>
+                       </button>
+                       <a href="${pageContext.request.contextPath}/flashsaleproduct?id=${d.itemId}" class="fs-card-link">
+                           <div class="fs-card-img">
+                               <c:if test="${not empty d.mainImage}">
+                                   <img src="${d.mainImage}" alt="<c:out value='${d.title}'/>" loading="lazy">
+                               </c:if>
+                               <span class="fs-badge">${d.discount}</span>
+                           </div>
+                           <div class="fs-card-body">
+                               <h3 class="fs-title"><c:out value="${d.title}"/></h3>
+                               <div class="fs-price-row">
+                                   <div>
+                                       <div class="fs-price">${d.currentPrice}</div>
+                                       <div class="fs-old">${d.originalPrice}</div>
+                                   </div>
+                                   <span class="fs-view">View</span>
+                               </div>
+                           </div>
+                       </a>
+                   </article>
+                   </c:forEach>
+               </div>
+           </div>
+       </div>
+       </c:if>
 
     <!-- Categories Section -->
     <div class="section-header">

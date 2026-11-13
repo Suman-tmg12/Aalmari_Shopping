@@ -57,7 +57,7 @@
                                         </c:if>
                                     </div>
 
-                                    <form action="${pageContext.request.contextPath}/cart/remove" method="post" class="delete-form">
+                                    <form action="${pageContext.request.contextPath}/cart/remove" method="post" class="delete-form js-cart-form">
                                         <input type="hidden" name="itemId" value="${item.id}">
                                         <button type="submit" class="delete-btn" title="Remove item">
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,7 +73,7 @@
                                         Rs <fmt:formatNumber value="${item.unitPrice}" maxFractionDigits="0"/>
                                     </span>
 
-                                    <form action="${pageContext.request.contextPath}/cart/update" method="post" class="qty-form">
+                                    <form action="${pageContext.request.contextPath}/cart/update" method="post" class="qty-form js-cart-form">
                                         <input type="hidden" name="itemId" value="${item.id}">
                                         <button type="submit" name="action" value="decrease" class="qty-btn">-</button>
                                         <span class="qty-value">${item.quantity}</span>
@@ -128,5 +128,57 @@
 </div>
 
 <jsp:include page="/WEB-INF/components/footer.jsp" />
+
+<script>
+    // Remove / quantity buttons are sent with fetch() and the page is reloaded with
+    // location.replace(), which swaps the current history entry instead of adding a new one
+    // (so Back doesn't have to be pressed once per click).
+    //
+    // IMPORTANT: the quantity form has buttons named "action", so form.action returns the
+    // <button> element instead of the URL. Always use form.getAttribute('action') here.
+    (function () {
+        var CART_URL = '${pageContext.request.contextPath}/cart';
+        var busy = false;
+
+        document.querySelectorAll('.js-cart-form').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (busy) return;
+                busy = true;
+
+                var btn = e.submitter;   // the button that was clicked (decrease / increase / delete)
+                var params = new URLSearchParams();
+                new FormData(form).forEach(function (v, k) { params.append(k, v); });
+                // the clicked button is not part of FormData, add it by hand
+                if (btn && btn.name) params.append(btn.name, btn.value);
+
+                var url = form.getAttribute('action');
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString(),
+                    credentials: 'same-origin'
+                }).then(function (res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    location.replace(CART_URL);
+                }).catch(function (err) {
+                    console.error('[cart] request failed, falling back to normal submit', err);
+                    busy = false;
+                    // form.submit() does not send the clicked button's name/value, so re-add it
+                    if (btn && btn.name) {
+                        var h = document.createElement('input');
+                        h.type = 'hidden';
+                        h.name = btn.name;
+                        h.value = btn.value;
+                        form.appendChild(h);
+                    }
+                    // form.submit can also be shadowed by a child named "submit", so call it safely
+                    HTMLFormElement.prototype.submit.call(form);
+                });
+            });
+        });
+    })();
+</script>
 </body>
 </html>

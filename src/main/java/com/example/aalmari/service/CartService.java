@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CartService {
@@ -25,14 +26,17 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final SellerProductRepository productRepository;
     private final UserRepository userRepository;
+    private final FlashSaleService flashSaleService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public CartService(CartItemRepository cartItemRepository,
                        SellerProductRepository productRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       FlashSaleService flashSaleService) {
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.flashSaleService = flashSaleService;
     }
 
     /** Adds a product (or increases its quantity). Returns the new total item count. */
@@ -49,6 +53,12 @@ public class CartService {
             throw new IllegalArgumentException("This product is out of stock.");
         }
         int limit = Math.min(MAX_QTY_PER_ITEM, stock);
+
+        // Flash sale: cap by the customer's remaining limit and the remaining flash stock
+        Optional<FlashSaleService.Offer> offer = flashSaleService.offerFor(userId, productId);
+        if (offer.isPresent()) {
+            limit = Math.min(limit, offer.get().maxQty());
+        }
 
         CartItem item = cartItemRepository.findByUser_IdAndProduct_Id(userId, productId).orElse(null);
         if (item == null) {
@@ -70,6 +80,14 @@ public class CartService {
         cartItemRepository.findByIdAndUser_Id(itemId, userId).ifPresent(item -> {
             int stock = item.getProduct().getStock() == null ? 0 : item.getProduct().getStock();
             int limit = Math.max(1, Math.min(MAX_QTY_PER_ITEM, stock));
+
+            // Flash sale: same cap as add()
+            Optional<FlashSaleService.Offer> offer =
+                    flashSaleService.offerFor(userId, item.getProduct().getId());
+            if (offer.isPresent()) {
+                limit = Math.max(1, Math.min(limit, offer.get().maxQty()));
+            }
+
             int q = item.getQuantity() + (increase ? 1 : -1);
             item.setQuantity(Math.max(1, Math.min(limit, q)));
             cartItemRepository.save(item);
@@ -87,7 +105,7 @@ public class CartService {
         return cartItemRepository.countItems(userId);
     }
 
-    /** Builds everything cart.jsp shows. Prices always come from the live product row. */
+    /** Builds everything cart.jsp shows. Prices always come from the live product row / live flash sale. */
     @Transactional(readOnly = true)
     public CartView view(Long userId) {
         CartView view = new CartView();
@@ -101,6 +119,12 @@ public class CartService {
             int discount = p.getDiscount() == null ? 0 : p.getDiscount();
             long unit = (long) (price * (100 - discount) / 100.0);   // same formula as ProductController
             int qty = item.getQuantity();
+
+            // Flash sale price applies while the sale is live and the quantity is within the allowed amount
+            Optional<FlashSaleService.Offer> offer = flashSaleService.offerFor(userId, p.getId());
+            if (offer.isPresent() && qty <= offer.get().maxQty()) {
+                unit = offer.get().flashPrice();
+            }
 
             CartView.Line line = new CartView.Line();
             line.setId(item.getId());

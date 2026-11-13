@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%!
     private static String esc(String s) {
         if (s == null) return "";
@@ -14,11 +15,12 @@
     }
 %>
 <%
-    // Read the selected category / sub-category from the URL (/flash?name=...&sub=...)
+    // Selected category / sub-category from the URL (/flash?name=...&sub=...). Both optional.
     String curCat = request.getParameter("name");
     String curSub = request.getParameter("sub");
-    if (curCat == null || curCat.trim().isEmpty()) curCat = "Electronics";
+    if (curCat != null && curCat.trim().isEmpty()) curCat = null;
     if (curSub != null && curSub.trim().isEmpty()) curSub = null;
+    String heading = curCat == null ? "All Flash Deals" : curCat;
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,8 +50,10 @@
 
                 <div class="results-header">
                     <div>
-                        <h1 class="results-title" id="pageTitle"><%= esc(curCat) %></h1>
-                        <p class="results-subtitle" id="pageSubtitle">Showing flash deals for <%= esc(curCat) %><%= curSub != null ? " &rsaquo; " + esc(curSub) : "" %></p>
+                        <h1 class="results-title" id="pageTitle"><%= esc(heading) %></h1>
+                        <p class="results-subtitle" id="pageSubtitle">
+                            ${flashDeals.size()} live flash deal(s)<%= curCat != null ? " in " + esc(curCat) : "" %><%= curSub != null ? " &rsaquo; " + esc(curSub) : "" %>
+                        </p>
                     </div>
                     <div class="sort-row">
                         <label class="sort-label" for="sortBy">Sort By:</label>
@@ -66,63 +70,46 @@
                 <!-- Product Grid (3 per row) -->
                 <div class="ar-page">
                     <div class="ar-grid" id="productGrid">
-                    <%
-                        String[] prodIds     = {"iphone-15-pro", "macbook-pro-m3", "airpods-pro", "wireless-headphone", "smart-fitness-band", "bluetooth-speaker"}; // adjust
-                        String[] prods       = {"iPhone 15 Pro", "MacBook Pro M3", "AirPods Pro", "Wireless Headphone", "Smart Fitness Band", "Bluetooth Speaker"};
-                        String[] prodImages  = {"iphone15pro.jpg", "MacBookProm3.jpg", "Airpods.jpg", "Wireless_headPhone.jpg", "SmartFitnessBand.jpg", "hairSpray.jpg"};
-                        String[] prodFolders = {"Products", "Products", "Products", "FlashSaleImages", "FlashSaleImages", "Products"};
-                        long[]   prodPrices    = {1500, 2200, 250, 70, 120, 180};
-                        long[]   prodOldPrices = {2300, 3200, 400, 120, 200, 300};
-                        String[] prodSold    = {"12.4k sold", "9.7k sold", "15.2k sold", "4.5k sold", "2.3k sold", "1.1k sold"};
-                        String[] prodBrands  = {"Electronics", "Electronics", "Electronics", "Electronics", "Electronics", "Electronics"}; // adjust
-                        String[] prodSubs    = {"Mobiles", "Laptops", "Headphones", "Headphones", "Smart Watches", "Accessories"};        // adjust
 
-                        int shown = 0;
-                        for (int i = 0; i < prods.length; i++) {
-                            // Filter by selected category / sub-category
-                            if (!prodBrands[i].equalsIgnoreCase(curCat)) continue;
-                            if (curSub != null && !prodSubs[i].equalsIgnoreCase(curSub)) continue;
-                            shown++;
-
-                            long price = prodPrices[i];
-                            long oldPrice = prodOldPrices[i];
-                            int discount = oldPrice > 0 ? (int) Math.round(((double) (oldPrice - price) / oldPrice) * 100) : 0;
-                    %>
-                        <article class="ar-card" data-index="<%= i %>" data-price="<%= price %>" data-name="<%= esc(prods[i]) %>">
+                        <c:forEach var="d" items="${flashDeals}">
+                        <article class="ar-card" data-price="${d.flashPrice}">
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                             </button>
-                            <a href="${pageContext.request.contextPath}/flashsaleproduct?id=<%= prodIds[i] %>" class="ar-card-link">
+                            <a href="${pageContext.request.contextPath}/flashsaleproduct?id=${d.itemId}" class="ar-card-link">
                                 <div class="ar-card-img">
-                                    <img src="${pageContext.request.contextPath}/HomePageImages/<%= prodFolders[i] %>/<%= prodImages[i] %>"
-                                         alt="<%= esc(prods[i]) %>" loading="lazy">
-                                    <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
+                                    <c:if test="${not empty d.mainImage}">
+                                        <img src="${d.mainImage}" alt="<c:out value='${d.title}'/>" loading="lazy">
+                                    </c:if>
+                                    <span class="ar-badge">${d.discount}</span>
                                 </div>
                                 <div class="ar-card-body">
                                     <div>
                                         <div class="ar-card-top">
-                                            <span class="ar-brand"><%= esc(prodBrands[i]) %></span>
-                                            <span class="ar-sold"><%= esc(prodSold[i]) %></span>
+                                            <span class="ar-brand"><c:out value="${d.category}"/></span>
+                                            <span class="ar-sold">${d.soldText}</span>
                                         </div>
-                                        <h3 class="ar-p-title"><%= esc(prods[i]) %></h3>
+                                        <h3 class="ar-p-title"><c:out value="${d.title}"/></h3>
                                     </div>
                                     <div class="ar-price-row">
                                         <div>
-                                            <div class="ar-price">Rs.<%= price %></div>
-                                            <% if (oldPrice > price) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
-                                            <div class="ar-sub-muted"><%= esc(prodSubs[i]) %></div>
+                                            <div class="ar-price">${d.currentPrice}</div>
+                                            <div class="ar-old">${d.originalPrice}</div>
+                                            <div class="ar-sub-muted"><c:out value="${d.subCategory}"/></div>
+                                            <div class="ar-sub-muted fs-ends" data-end="${d.endTime}"></div>
                                         </div>
                                         <span class="ar-view">Add to cart</span>
                                     </div>
                                 </div>
                             </a>
                         </article>
-                    <% } %>
-                    <% if (shown == 0) { %>
-                        <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #666;">
-                            <h2>No flash deals in this category yet.</h2>
-                        </div>
-                    <% } %>
+                        </c:forEach>
+
+                        <c:if test="${empty flashDeals}">
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #666;">
+                                <h2>No live flash deals in this category right now.</h2>
+                            </div>
+                        </c:if>
                     </div>
                 </div>
 
@@ -134,7 +121,6 @@
 
     <script>
         (function () {
-            // ===== Category Data (scoped locally to avoid clashing with header2.jsp) =====
             const pageCategories = {
                 "Electronics": ["Mobiles", "Laptops", "Tablets", "Headphones", "Cameras", "Smart Watches", "Accessories"],
                 "Fashion": ["Men", "Women", "Kids", "Shoes", "Bags", "Watches", "Clothing"],
@@ -152,8 +138,23 @@
             const CURRENT_CATEGORY = '<%= jsEsc(curCat) %>';
             const CURRENT_SUB = '<%= jsEsc(curSub) %>';
 
+            // "Ends in 02:14:09" under each card
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function tickEnds() {
+                document.querySelectorAll('.fs-ends').forEach(function (el) {
+                    var s = Math.floor((Number(el.dataset.end) - Date.now()) / 1000);
+                    if (s <= 0) { el.textContent = 'Ended'; return; }
+                    var d = Math.floor(s / 86400); s %= 86400;
+                    var h = Math.floor(s / 3600); s %= 3600;
+                    var m = Math.floor(s / 60); s %= 60;
+                    el.textContent = 'Ends in ' + (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(s);
+                });
+            }
+
             document.addEventListener('DOMContentLoaded', function () {
-                // Wishlist heart toggle
+                tickEnds();
+                setInterval(tickEnds, 1000);
+
                 document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
                     btn.addEventListener('click', function (e) {
                         e.preventDefault();
@@ -177,7 +178,6 @@
                     subList.className = 'flash-sub-list';
                     pageCategories[cat].forEach(sub => {
                         const a = document.createElement('a');
-                        // Stay on the flash route (not /category)
                         a.href = pageCTX + '/flash?name=' + encodeURIComponent(cat) + '&sub=' + encodeURIComponent(sub);
                         a.className = 'flash-sub-link' + (cat === CURRENT_CATEGORY && sub === CURRENT_SUB ? ' active' : '');
                         a.textContent = sub;
@@ -185,7 +185,6 @@
                     });
 
                     header.addEventListener('click', () => {
-                        // Open category -> load that category's flash deals; click again -> just collapse
                         if (wrap.classList.contains('open')) {
                             wrap.classList.remove('open');
                             header.classList.remove('active-cat');

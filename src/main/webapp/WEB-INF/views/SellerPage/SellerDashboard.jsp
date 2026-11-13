@@ -169,6 +169,7 @@
                     String[][] items = {
                         {"<span class=\"material-symbols-outlined\">dashboard</span>", "Dashboard"},
                         {"<span class=\"material-symbols-outlined\">package_2</span>", "Products"},
+                        {"<span class=\"material-symbols-outlined\">bolt</span>", "Flash Sale"},
                         {"<span class=\"material-symbols-outlined\">shopping_bag</span>", "Orders"},
                         {"<span class=\"material-symbols-outlined\">currency_rupee</span>", "Finance"},
                         {"<span class=\"material-symbols-outlined\">storefront</span>", "My Store"},
@@ -571,6 +572,39 @@
             </div>
             <!-- ============ END VIEW: PRODUCTS ============ -->
 
+            <!-- ============ VIEW: FLASH SALE ============ -->
+            <div class="view" id="view-flashsale" style="display: none;">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Flash Sale</h1>
+                        <div class="page-subtitle" id="flashSubtitle">Time-limited discounts on your listed products</div>
+                    </div>
+                    <button class="btn-primary" type="button" id="newFlashBtn">
+                        <span class="material-symbols-outlined">add</span> Create flash sale
+                    </button>
+                </div>
+
+                <div class="stat-grid" id="flashStats"></div>
+
+                <div class="tabs" id="flashTabs">
+                    <button type="button" class="tab active" data-filter="all">All <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="live">Live <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="scheduled">Scheduled <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="ended">Ended <span class="tab-count">0</span></button>
+                </div>
+
+                <div id="flashList"></div>
+                <div class="empty-note" id="flashEmpty" style="display:none;">No flash sales here yet.</div>
+
+                <%
+                    String flashJson = (String) request.getAttribute("flashSalesJson");
+                    if (flashJson == null || flashJson.trim().isEmpty()) flashJson = "[]";
+                    flashJson = flashJson.replace("<", "\\u003c");
+                %>
+                <script type="application/json" id="flashData"><%= flashJson %></script>
+            </div>
+            <!-- ============ END VIEW: FLASH SALE ============ -->
+
 
             <!-- ============ VIEW: ORDERS ============ -->
             <div class="view" id="view-orders" style="display: none;">
@@ -925,6 +959,6 @@
 <script>
 var SERVER_STATUS = "<%= rawStatus %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=2"></script>
 </body>
 </html>

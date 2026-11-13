@@ -6,6 +6,7 @@ import com.example.aalmari.model.User;
 import com.example.aalmari.repository.UserRepository;
 import com.example.aalmari.repository.SellerDocumentationRepository;
 import com.example.aalmari.repository.SellerProductRepository;
+import com.example.aalmari.service.FlashSaleService;
 import com.example.aalmari.service.impl.S3Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
@@ -28,15 +29,18 @@ public class SellerController {
     private final SellerDocumentationRepository sellerDocumentationRepository;
     private final SellerProductRepository sellerProductRepository;
     private final UserRepository userRepository;
+    private final FlashSaleService flashSaleService;
 
     public SellerController(S3Service s3Service,
                             SellerDocumentationRepository sellerDocumentationRepository,
                             SellerProductRepository sellerProductRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            FlashSaleService flashSaleService) {
         this.s3Service = s3Service;
         this.sellerDocumentationRepository = sellerDocumentationRepository;
         this.sellerProductRepository = sellerProductRepository;
         this.userRepository = userRepository;
+        this.flashSaleService = flashSaleService;
     }
 
     // S3 Bucket URL - Replace with your actual bucket URL
@@ -202,6 +206,9 @@ public class SellerController {
 
         model.addAttribute("products", myProducts);
 
+        // --- Flash sales for the Flash Sale tab (JSON read by SellerDashboard.js) ---
+        model.addAttribute("flashSalesJson", flashSaleService.sellerJson(userId));
+
         return "SellerPage/SellerDashboard";
     }
 
@@ -289,7 +296,7 @@ public class SellerController {
             @RequestParam("discount") String discountStr,
             @RequestParam("description") String description,
             @RequestParam("attributes") String attributesJson,
-            // FIXED: receive the "Listed as active" checkbox from the edit form
+            // receive the "Listed as active" checkbox from the edit form
             @RequestParam(value = "active", required = false) String activeStr,
             @RequestParam(value = "infoImage", required = false) MultipartFile infoImage,
             @RequestParam(value = "productImages", required = false) List<MultipartFile> productImages,
@@ -324,7 +331,7 @@ public class SellerController {
             product.setDescription(description);
             product.setAttributesJson(attributesJson);
 
-            // FIXED: persist the "Listed as active" checkbox to the database
+            // persist the "Listed as active" checkbox to the database
             if (activeStr != null) {
                 product.setActive(Boolean.parseBoolean(activeStr));
             }
@@ -387,7 +394,7 @@ public class SellerController {
         }
     }
 
-    // --- NEW: Toggle Active/Inactive (pill button in the products table) ---
+    // --- Toggle Active/Inactive (pill button in the products table) ---
     @PostMapping("/api/products/toggleActive")
     public ResponseEntity<?> toggleActive(
             @RequestParam("id") Long productId,
@@ -444,6 +451,9 @@ public class SellerController {
                 return ResponseEntity.status(403).body("Unauthorized access to product");
             }
 
+            // Blocks if the product is in a live/scheduled flash sale, otherwise removes old flash history
+            flashSaleService.detachProduct(productId);
+
             // Delete images from S3
             if (product.getInfoImageUrl() != null && !product.getInfoImageUrl().isEmpty()) {
                 String path = product.getInfoImageUrl().replace(S3_BUCKET_URL, "");
@@ -468,6 +478,8 @@ public class SellerController {
 
             return ResponseEntity.ok("Product deleted successfully.");
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());

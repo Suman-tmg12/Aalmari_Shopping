@@ -403,10 +403,10 @@
             if (!badge && n) { badge = el('span', 'badge'); $('#sidebarNav .nav-item[data-view="messages"]').appendChild(badge); }
             if (badge) { badge.textContent = n; badge.style.display = n ? '' : 'none'; }
         }
-        function refresh() { renderProducts(); renderOrders(); renderStore(); renderMessages(); syncDash(); }
+        function refresh() { renderProducts(); renderFlash(); renderOrders(); renderStore(); renderMessages(); syncDash(); }
 
         /* ============ Routing (hash + back button) ============ */
-        const VIEWS = ['dashboard', 'products', 'orders', 'finance', 'mystore', 'messages'];
+        const VIEWS = ['dashboard', 'products', 'flashsale', 'orders', 'finance', 'mystore', 'messages'];
         let approved = false;
         function show(v, push) {
             if (VIEWS.indexOf(v) < 0 || !approved) v = 'dashboard';
@@ -854,7 +854,8 @@
                         if (response.ok) {
                             try {
                                 sessionStorage.setItem('sellerToast', isNew ? 'Product added successfully.' : 'Product updated successfully.');
-                            } catch (e) {}
+                            } catch (e) {
+                            }
                             if (modalElement) closeModal();
                             location.hash = '#products';
                             location.reload();
@@ -871,7 +872,231 @@
                         toast('Network error. Please try again.', 'error');
                     });
             }
-        }
+            }
+            /* ============ Flash Sale ============ */
+            const FS = { MIN_DISC: 10, MAX_DISC: 90, MIN_LEAD: 15 * 60e3, MIN_DUR: 3600e3, MAX_DUR: 72 * 3600e3, MAX_ITEMS: 20 };
+            let F = [];
+            try { F = JSON.parse($('#flashData').textContent) || []; } catch (e) { F = []; }
+            let fsFilter = 'all', fsSig = '';
+
+            const pad2 = n => String(n).padStart(2, '0');
+            const fsStatus = f => (f.endedEarly || Date.now() >= f.end) ? 'ended' : (Date.now() < f.start ? 'scheduled' : 'live');
+            const fsPrice = (price, disc) => Math.round(price * (100 - disc) / 100);
+            const fsDate = ms => new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            const toInput = ms => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            function fsLeft(ms) {
+                let s = Math.max(0, Math.floor(ms / 1000));
+                const d = Math.floor(s / 86400); s %= 86400;
+                const h = Math.floor(s / 3600); s %= 3600;
+                const m = Math.floor(s / 60); s %= 60;
+                return (d ? d + 'd ' : '') + pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+            }
+            function fsCountText(f) {
+                const st = fsStatus(f);
+                if (st === 'live') return 'Ends in ' + fsLeft(f.end - Date.now());
+                if (st === 'scheduled') return 'Starts in ' + fsLeft(f.start - Date.now());
+                return f.endedEarly ? 'Ended early' : 'Finished';
+            }
+            function fsSignature() { return F.map(f => f.id + ':' + fsStatus(f)).join('|'); }
+
+            function renderFlash() {
+                if (!$('#flashList')) return;
+                const by = { live: [], scheduled: [], ended: [] };
+                F.forEach(f => by[fsStatus(f)].push(f));
+                let units = 0, rev = 0;
+                F.forEach(f => f.items.forEach(i => { units += i.sold || 0; rev += (i.sold || 0) * fsPrice(i.price, i.disc); }));
+
+                $('#flashStats').innerHTML =
+                    [['Live now', by.live.length, 'bolt', 'ic-orange'], ['Scheduled', by.scheduled.length, 'schedule', 'ic-blue'],
+                        ['Flash units sold', fmt(units), 'shopping_bag', 'ic-green'], ['Flash revenue', 'Rs ' + fmt(rev), 'currency_rupee', 'ic-purple']]
+                        .map(s => '<div class="stat-card"><div class="stat-top"><span class="stat-label">' + s[0] + '</span><span class="stat-icon ' + s[3] +
+                            '"><span class="material-symbols-outlined">' + s[2] + '</span></span></div><div class="stat-value">' + s[1] + '</div></div>').join('');
+
+                $$('#flashTabs .tab').forEach(t => {
+                    const k = t.dataset.filter;
+                    $('.tab-count', t).textContent = k === 'all' ? F.length : by[k].length;
+                    t.classList.toggle('active', k === fsFilter);
+                });
+
+                const order = { live: 0, scheduled: 1, ended: 2 };
+                const list = F.filter(f => fsFilter === 'all' || fsStatus(f) === fsFilter)
+                    .sort((a, b) => order[fsStatus(a)] - order[fsStatus(b)] || (fsStatus(a) === 'ended' ? b.end - a.end : a.start - b.start));
+
+                $('#flashList').innerHTML = list.map(function (f) {
+                    const st = fsStatus(f);
+                    const actions = st === 'scheduled'
+                        ? '<button type="button" class="btn-outline" data-fa="edit"><span class="material-symbols-outlined">edit</span> Edit</button>' +
+                        '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>'
+                        : st === 'live'
+                            ? '<button type="button" class="btn-outline danger" data-fa="end"><span class="material-symbols-outlined">stop_circle</span> End now</button>'
+                            : '<button type="button" class="btn-outline" data-fa="dup"><span class="material-symbols-outlined">content_copy</span> Duplicate</button>' +
+                            '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>';
+                    return '<div class="fs-card ' + st + '" data-id="' + esc(f.id) + '"><div class="fs-head"><div>' +
+                        '<div class="fs-title"><span class="material-symbols-outlined">bolt</span>' + esc(f.name) + '<span class="pill pill-' + st + '">' + st.charAt(0).toUpperCase() + st.slice(1) + '</span></div>' +
+                        '<div class="fs-time">' + fsDate(f.start) + ' → ' + fsDate(f.end) + ' · <span class="fs-count' + (st === 'ended' ? ' muted' : '') + '" data-cd="' + esc(f.id) + '">' + fsCountText(f) + '</span></div></div>' +
+                        '<div class="fs-actions">' + actions + '</div></div>' +
+                        '<div class="fs-card-wrap"><table class="fs-items"><thead><tr><th>PRODUCT</th><th class="num">REGULAR</th><th class="num">FLASH PRICE</th><th>SOLD / QTY</th><th class="num">LIMIT</th></tr></thead><tbody>' +
+                        f.items.map(function (i) {
+                            const pct = i.qty ? Math.min(100, Math.round((i.sold || 0) * 100 / i.qty)) : 0;
+                            return '<tr><td>' + esc(i.name) + '</td><td class="num"><span class="fs-old">Rs ' + fmt(i.price) + '</span></td>' +
+                                '<td class="num"><span class="fs-new">Rs ' + fmt(fsPrice(i.price, i.disc)) + '</span><span class="fs-off">-' + i.disc + '%</span></td>' +
+                                '<td>' + (i.sold || 0) + ' / ' + i.qty + '<div class="fs-bar"><div style="width:' + pct + '%"></div></div></td><td class="num">' + i.limit + '</td></tr>';
+                        }).join('') + '</tbody></table></div></div>';
+                }).join('');
+                $('#flashEmpty').style.display = list.length ? 'none' : 'block';
+                $('#flashSubtitle').textContent = F.length + ' flash sale' + (F.length === 1 ? '' : 's') + (by.live.length ? ' · ' + by.live.length + ' live' : '');
+                fsSig = fsSignature();
+            }
+
+            /* live countdown + automatic status change */
+            setInterval(function () {
+                if (!$('#flashList') || document.hidden) return;
+                if (fsSignature() !== fsSig) return renderFlash();
+                $$('[data-cd]').forEach(s => { const f = F.find(x => String(x.id) === s.dataset.cd); if (f) s.textContent = fsCountText(f); });
+            }, 1000);
+
+            $$('#flashTabs .tab').forEach(t => t.addEventListener('click', function () { fsFilter = t.dataset.filter; renderFlash(); }));
+            $('#newFlashBtn').addEventListener('click', () => flashForm(null));
+
+            function fsPost(url, data, okMsg) {
+                const fd = new FormData(); Object.keys(data).forEach(k => fd.append(k, data[k]));
+                fetch(url, { method: 'POST', body: fd }).then(function (r) {
+                    if (r.ok) {
+                        try { sessionStorage.setItem('sellerToast', okMsg); } catch (e) {}
+                        location.hash = '#flashsale'; location.reload();
+                    } else r.text().then(m => toast('Error: ' + m, 'error'));
+                }).catch(function () { toast('Network error. Please try again.', 'error'); });
+            }
+
+            $('#flashList').addEventListener('click', function (e) {
+                const b = e.target.closest('[data-fa]'); if (!b) return;
+                const f = F.find(x => String(x.id) === b.closest('.fs-card').dataset.id); if (!f) return;
+                const a = b.dataset.fa;
+                if (a === 'edit') flashForm(f);
+                if (a === 'dup') flashForm(Object.assign({}, f, { id: null, name: f.name + ' (copy)', items: f.items.map(i => Object.assign({}, i, { sold: 0 })) }), true);
+                if (a === 'end') confirmBox('End flash sale', 'End <strong>' + esc(f.name) + '</strong> now? Products return to their regular price immediately.', 'End now',
+                    () => fsPost('/api/flashsales/end', { id: f.id }, 'Flash sale ended.'));
+                if (a === 'del') confirmBox('Delete flash sale', 'Delete <strong>' + esc(f.name) + '</strong>? This cannot be undone.', 'Delete',
+                    () => fsPost('/api/flashsales/delete', { id: f.id }, 'Flash sale deleted.'));
+            });
+
+            function flashForm(f, isCopy) {
+                const isNew = !f || !f.id;
+                const t0 = Math.ceil((Date.now() + 3600e3) / 900e3) * 900e3;           // next quarter-hour, ~1h ahead
+                const d = (f && !isCopy) ? f : { name: f ? f.name : '', start: t0, end: t0 + 6 * 3600e3, items: f ? f.items : [] };
+                const byPid = {}; d.items.forEach(i => { byPid[String(i.pid)] = i; });
+                const pool = P.filter(p => p.id && (byPid[String(p.id)] || (p.active && p.stock > 0)));
+
+                const rows = pool.map(function (p) {
+                    const it = byPid[String(p.id)];
+                    return '<div class="fs-row' + (it ? ' on' : '') + '" data-pid="' + esc(p.id) + '" data-name="' + esc(p.name.toLowerCase()) + '">' +
+                        '<label class="fs-pick"><input type="checkbox" class="fs-chk"' + (it ? ' checked' : '') + '><div class="prod-thumb">' +
+                        (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '">' : esc(p.name.charAt(0))) + '</div><div><div class="prod-name">' + esc(p.name) +
+                        '</div><div class="muted-sm">Rs ' + fmt(p.price) + ' · ' + p.stock + ' in stock</div></div></label>' +
+                        '<div class="fs-fields"><label>Discount %<input type="number" class="fs-disc" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" value="' + (it ? it.disc : '') + '" placeholder="10–90"></label>' +
+                        '<label>Flash qty<input type="number" class="fs-qty" min="1" max="' + p.stock + '" value="' + (it ? it.qty : '') + '"></label>' +
+                        '<label>Limit / customer<input type="number" class="fs-lim" min="1" value="' + (it ? it.limit : '') + '"></label>' +
+                        '<div class="fs-prev">—</div></div></div>';
+                }).join('') || '<div class="pop-empty">No active, in-stock products available. Add or activate a product first.</div>';
+
+                const m = modal(isNew ? 'Create flash sale' : 'Edit flash sale',
+                    '<div class="fs-rules"><strong>Flash sale rules:</strong> minimum discount ' + FS.MIN_DISC + '%, maximum ' + FS.MAX_DISC + '%. Starts at least 15 minutes from now, runs 1–72 hours. ' +
+                    'A product can only be in one sale at a time. Flash quantity cannot exceed current stock.</div>' +
+                    '<label class="fld">Campaign name<input id="fs-name" maxlength="60" value="' + esc(d.name) + '" placeholder="e.g. Weekend Mega Deal"></label>' +
+                    '<div class="fld-row"><label class="fld">Starts<input id="fs-start" type="datetime-local" value="' + toInput(d.start) + '"></label>' +
+                    '<label class="fld">Ends<input id="fs-end" type="datetime-local" value="' + toInput(d.end) + '"></label></div>' +
+                    '<div class="editor-label"><span>SELECT PRODUCTS</span><span class="editor-support" id="fs-count">0 selected</span></div>' +
+                    '<div class="fs-bulk"><label class="fld">Discount for all selected<input id="fs-bulk" type="number" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" placeholder="10–90 %"></label>' +
+                    '<button type="button" class="btn-outline" id="fs-bulk-btn">Apply to selected</button>' +
+                    '<div class="search-box" style="flex:1;min-width:160px;width:auto"><span class="material-symbols-outlined">search</span><input type="text" id="fs-search" placeholder="Filter products..."></div></div>' +
+                    '<div class="fs-list" id="fs-list">' + rows + '</div><div class="fs-error" id="fs-error"></div>',
+                    [['Cancel', 'btn-outline', closeModal], [isNew ? 'Schedule sale' : 'Save changes', 'btn-primary', save]]);
+                $('.modal', m).classList.add('modal-lg');
+
+                const list = $('#fs-list', m), saveBtn = $('.modal-foot .btn-primary', m);
+                let busy = false;
+                const rowP = r => P.find(x => String(x.id) === r.dataset.pid);
+
+                function preview(r) {
+                    const p = rowP(r), disc = Number($('.fs-disc', r).value), box = $('.fs-prev', r);
+                    box.innerHTML = (disc >= FS.MIN_DISC && disc <= FS.MAX_DISC)
+                        ? '<strong>Rs ' + fmt(fsPrice(p.price, disc)) + '</strong>save Rs ' + fmt(p.price - fsPrice(p.price, disc)) : '—';
+                }
+                function count() { $('#fs-count', m).textContent = $$('.fs-row.on', m).length + ' selected'; }
+                $$('.fs-row.on', m).forEach(preview); count();
+
+                list.addEventListener('change', function (e) {
+                    if (!e.target.classList.contains('fs-chk')) return;
+                    const r = e.target.closest('.fs-row'), p = rowP(r);
+                    r.classList.toggle('on', e.target.checked);
+                    if (e.target.checked) {
+                        if (!$('.fs-disc', r).value) $('.fs-disc', r).value = $('#fs-bulk', m).value || FS.MIN_DISC;
+                        if (!$('.fs-qty', r).value) $('.fs-qty', r).value = p.stock;
+                        if (!$('.fs-lim', r).value) $('.fs-lim', r).value = 1;
+                        preview(r);
+                    }
+                    count();
+                });
+                list.addEventListener('input', e => { const r = e.target.closest('.fs-row'); if (r) { e.target.classList.remove('bad'); preview(r); } });
+                $('#fs-bulk-btn', m).onclick = function () {
+                    const v = Number($('#fs-bulk', m).value);
+                    if (!(v >= FS.MIN_DISC && v <= FS.MAX_DISC)) { $('#fs-error', m).textContent = 'Bulk discount must be between ' + FS.MIN_DISC + '% and ' + FS.MAX_DISC + '%.'; return; }
+                    $('#fs-error', m).textContent = '';
+                    $$('.fs-row.on', m).forEach(r => { $('.fs-disc', r).value = v; preview(r); });
+                };
+                $('#fs-search', m).addEventListener('input', function () {
+                    const q = this.value.toLowerCase();
+                    $$('.fs-row', m).forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+                });
+
+                function save() {
+                    if (busy) return;
+                    const errBox = $('#fs-error', m); errBox.textContent = '';
+                    $$('.bad', m).forEach(x => x.classList.remove('bad'));
+                    const fail = msg => { errBox.textContent = msg; return false; };
+
+                    const name = $('#fs-name', m).value.trim();
+                    const start = new Date($('#fs-start', m).value).getTime(), end = new Date($('#fs-end', m).value).getTime();
+                    if (!name) return fail('Campaign name is required.');
+                    if (isNaN(start) || isNaN(end)) return fail('Choose a valid start and end time.');
+                    const timeChanged = isNew || start !== d.start;
+                    if (timeChanged && start < Date.now() + FS.MIN_LEAD) return fail('Sale must start at least 15 minutes from now.');
+                    if (end - start < FS.MIN_DUR) return fail('Sale must run for at least 1 hour.');
+                    if (end - start > FS.MAX_DUR) return fail('Sale can run for at most 72 hours.');
+
+                    const rowsOn = $$('.fs-row.on', m);
+                    if (!rowsOn.length) return fail('Select at least one product.');
+                    if (rowsOn.length > FS.MAX_ITEMS) return fail('You can add up to ' + FS.MAX_ITEMS + ' products per sale.');
+
+                    const items = [];
+                    for (const r of rowsOn) {
+                        const p = rowP(r), disc = Number($('.fs-disc', r).value), qty = Number($('.fs-qty', r).value), lim = Number($('.fs-lim', r).value);
+                        if (!Number.isInteger(disc) || disc < FS.MIN_DISC || disc > FS.MAX_DISC) { $('.fs-disc', r).classList.add('bad'); return fail(p.name + ': discount must be ' + FS.MIN_DISC + '–' + FS.MAX_DISC + '%.'); }
+                        if (!Number.isInteger(qty) || qty < 1 || qty > p.stock) { $('.fs-qty', r).classList.add('bad'); return fail(p.name + ': flash quantity must be 1–' + p.stock + ' (current stock).'); }
+                        if (!Number.isInteger(lim) || lim < 1 || lim > qty) { $('.fs-lim', r).classList.add('bad'); return fail(p.name + ': limit per customer must be 1–' + qty + '.'); }
+                        items.push({ productId: p.id, discount: disc, qty: qty, limit: lim });
+                    }
+                    // no product in two overlapping sales
+                    const clash = [];
+                    F.forEach(o => {
+                        if ((!isNew && String(o.id) === String(d.id)) || fsStatus(o) === 'ended') return;
+                        if (start < o.end && end > o.start) o.items.forEach(oi => { if (items.some(i => String(i.productId) === String(oi.pid))) clash.push(oi.name); });
+                    });
+                    if (clash.length) return fail('Already in another sale during this time: ' + [...new Set(clash)].join(', ') + '.');
+
+                    busy = true; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+                    fetch('/api/flashsales/save', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: isNew ? null : d.id, name: name, start: start, end: end, items: items })
+                    }).then(function (r) {
+                        if (r.ok) {
+                            try { sessionStorage.setItem('sellerToast', isNew ? 'Flash sale scheduled.' : 'Flash sale updated.'); } catch (e) {}
+                            closeModal(); location.hash = '#flashsale'; location.reload();
+                        } else r.text().then(function (msg) { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail(msg); });
+                    }).catch(function () { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail('Network error. Please try again.'); });
+                }
+            }
+
 
         /* ============ Orders ============ */
         $$('#orderTabs .tab').forEach(t => t.addEventListener('click', function () {

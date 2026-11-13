@@ -1,16 +1,9 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aalmari Store</title>
-    <!-- Google Material Symbols for Icons -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=11">
-</head>
-<body>
+<%-- Include fragment: no <html>/<head>/<body> here. The including page provides <title> and viewport meta. --%>
+<!-- Google Material Symbols for Icons -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=11">
 
     <!-- Top Navigation Bar -->
     <div class="top-nav">
@@ -270,19 +263,26 @@
                 });
             });
 
-            /* Smooth Scroll for Logo */
+            /* Smooth Scroll for Logo (only when already on the home page) */
             document.addEventListener('click', function(e) {
                 const logoLink = e.target.closest('#logoLink');
                 if (!logoLink) return;
-                const isFlashPage = window.location.pathname.endsWith('/');
-                if (isFlashPage) {
+                const isHome = window.location.pathname === CTX + '/' || window.location.pathname === CTX;
+                if (isHome) {
                     e.preventDefault();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
         });
     </script>
+    <script>
+        // Back/Forward restores the old page from the browser cache (bfcache), so scripts do not run again
+        // and the cart badge keeps the old number. Reload once in that case so the badge is fresh.
+        window.addEventListener('pageshow', function (e) {
+            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            var fromHistory = e.persisted || (nav && nav.type === 'back_forward');
+            if (fromHistory) location.reload();
+        });
+    </script>
     <script src="${pageContext.request.contextPath}/css/Cart/Cart.js"></script>
     <script src="${pageContext.request.contextPath}/css/js/searchSuggest.js?v=1"></script>
-</body>
-</html>
