@@ -1,7 +1,9 @@
 package com.example.aalmari.controller;
 
+import com.example.aalmari.dto.OrderCard;
 import com.example.aalmari.dto.WishlistCard;
 import com.example.aalmari.model.User;
+import com.example.aalmari.service.OrderService;
 import com.example.aalmari.service.UserService;
 import com.example.aalmari.service.WishlistService;
 import com.example.aalmari.service.impl.S3Service;
@@ -28,9 +30,21 @@ public class MyProfileController {
     @Autowired
     private WishlistService wishlistService;
 
+    @Autowired
+    private OrderService orderService;
+
     @GetMapping("/myprofile")
     public String showMyProfile(HttpSession session, Model model) {
         Long userId = (Long) session.getAttribute("userId");
+
+        // Safe defaults so the page shows 0 and empty lists instead of blanks
+        model.addAttribute("orders", List.of());
+        model.addAttribute("recentOrders", List.of());
+        model.addAttribute("orderCount", 0);
+        model.addAttribute("activeOrderCount", 0);
+        model.addAttribute("wishlistItems", List.of());
+        model.addAttribute("wishlistCount", 0);
+        model.addAttribute("wishlistSaleCount", 0);
 
         if (userId != null) {
             userService.findById(userId).ifPresent(user -> {
@@ -40,11 +54,22 @@ public class MyProfileController {
                 }
             });
 
-            // Wishlist tab + sidebar count + overview stat
+            // Wishlist tab, sidebar count and overview stat
             List<WishlistCard> wishlist = wishlistService.cards(userId);
             model.addAttribute("wishlistItems", wishlist);
             model.addAttribute("wishlistCount", wishlist.size());
             model.addAttribute("wishlistSaleCount", wishlist.stream().filter(WishlistCard::isOnSale).count());
+
+            // Orders: My Orders tab, Recent Purchases, Total Orders stat and sidebar count
+            List<OrderCard> orders = orderService.listForUser(userId);
+            long active = orders.stream()
+                    .filter(o -> "processing".equals(o.getStatusGroup()) || "shipped".equals(o.getStatusGroup()))
+                    .count();
+
+            model.addAttribute("orders", orders);
+            model.addAttribute("recentOrders", orders.stream().limit(3).toList());
+            model.addAttribute("orderCount", orders.size());
+            model.addAttribute("activeOrderCount", active);
         }
 
         return "myprofile";
@@ -64,11 +89,12 @@ public class MyProfileController {
 
         User updated = userService.updateProfile(userId, firstName, lastName, phone, profilePic);
 
-        // keep session text fields in sync so header/sidebar name update immediately
+        // Keep session text fields in sync so the header and sidebar update immediately
         session.setAttribute("userFirstName", updated.getFirstName());
         session.setAttribute("userLastName", updated.getLastName());
         session.setAttribute("userPhone", updated.getPhone());
-        session.setAttribute("userProfilePicPath", updated.getProfilePicPath() == null ? "" : updated.getProfilePicPath());
+        session.setAttribute("userProfilePicPath",
+                updated.getProfilePicPath() == null ? "" : updated.getProfilePicPath());
 
         return "redirect:/myprofile?saved=true";
     }

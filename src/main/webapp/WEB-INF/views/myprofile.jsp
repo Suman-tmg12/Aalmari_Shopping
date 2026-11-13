@@ -1,8 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%-- Using Jakarta EE 9+ / Spring Boot 3? Change the taglib uri above to: jakarta.tags.core --%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%-- Using Jakarta EE 9+ / Spring Boot 3? Change the taglib uris above to: jakarta.tags.core / jakarta.tags.functions --%>
 
-<%-- 2. Redirect to login page if session is empty --%>
 <c:if test="${empty sessionScope.userId}">
     <c:redirect url="/login" />
 </c:if>
@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile &amp; Account Settings - Luma Store</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=11">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=12">
     <%-- Product card styles (.ar-card ...) shared with the home page Products section --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
     <style>
@@ -42,15 +42,12 @@
                         </div>
                         <div class="profile-info">
                             <h3 id="sidebar-name" class="profile-name"><c:choose>
-                                                                           <c:when test="${not empty sessionScope.userFirstName or not empty sessionScope.userLastName}">
-                                                                             <c:out value="${sessionScope.userFirstName}" /> <c:out value="${sessionScope.userLastName}" />
-                                                                           </c:when>
-                                                                           <c:otherwise>
-                                                                             Guest
-                                                                           </c:otherwise>
-                                                                         </c:choose></h3>
-                            <p class="profile-email">${sessionScope.userEmail}</p>
-                         <!--   <span class="vip-badge"><i data-lucide="crown"></i> Gold VIP</span> -->
+                                <c:when test="${not empty sessionScope.userFirstName or not empty sessionScope.userLastName}">
+                                    <c:out value="${sessionScope.userFirstName}" /> <c:out value="${sessionScope.userLastName}" />
+                                </c:when>
+                                <c:otherwise>Guest</c:otherwise>
+                            </c:choose></h3>
+                            <p class="profile-email"><c:out value="${sessionScope.userEmail}" /></p>
                         </div>
                     </div>
 
@@ -60,7 +57,7 @@
                         </button>
                         <button onclick="switchTab('orders')" data-tab="orders" class="nav-btn">
                             <i data-lucide="package"></i><span>My Orders</span>
-                            <span class="nav-count">3</span>
+                            <span class="nav-count" id="ordersNavCount" <c:if test="${orderCount == 0}">style="display:none"</c:if>>${orderCount}</span>
                         </button>
                         <button onclick="switchTab('wishlist')" data-tab="wishlist" class="nav-btn">
                             <i data-lucide="heart"></i><span>Wishlist</span>
@@ -78,10 +75,10 @@
                     </nav>
 
                     <div class="sidebar-foot">
-                    <a href="${pageContext.request.contextPath}/logout">
-                        <button class="signout" onclick="showToast('You have been logged out')">
-                            <i data-lucide="log-out"></i><span>Sign Out</span>
-                        </button>
+                        <a href="${pageContext.request.contextPath}/logout">
+                            <button class="signout" onclick="showToast('You have been logged out')">
+                                <i data-lucide="log-out"></i><span>Sign Out</span>
+                            </button>
                         </a>
                     </div>
                 </div>
@@ -93,21 +90,20 @@
                 <!-- ===== 1. OVERVIEW ===== -->
                 <div id="tab-overview" class="tab-content">
 
-
                     <div class="stat-grid">
                         <div class="stat">
                             <div>
                                 <p class="stat-label">Total Orders</p>
-                                <p class="stat-value">14</p>
-                                <span class="stat-note note-green"><i data-lucide="arrow-up-right"></i> +2 this month</span>
+                                <p class="stat-value" id="orderStatValue">${orderCount}</p>
+                                <span class="stat-note note-green"><i data-lucide="arrow-up-right"></i> ${activeOrderCount} in progress</span>
                             </div>
                             <div class="stat-icon tone-indigo"><i data-lucide="package"></i></div>
                         </div>
                         <div class="stat">
                             <div>
                                 <p class="stat-label">Wishlist Items</p>
-                               <p class="stat-value" id="wishlistStatValue">${wishlistCount}</p>
-                               <span class="stat-note note-rose"><i data-lucide="heart"></i>&nbsp; <span id="wishlistSaleCount">${wishlistSaleCount}</span>&nbsp;items on sale</span>
+                                <p class="stat-value" id="wishlistStatValue">${wishlistCount}</p>
+                                <span class="stat-note note-rose"><i data-lucide="heart"></i>&nbsp; <span id="wishlistSaleCount">${wishlistSaleCount}</span>&nbsp;items on sale</span>
                             </div>
                             <div class="stat-icon tone-rose"><i data-lucide="heart"></i></div>
                         </div>
@@ -140,40 +136,46 @@
                             </button>
                         </div>
                         <div class="table-wrap">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Date</th>
-                                        <th>Status</th>
-                                        <th>Total</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="strong">#ORD-2026-8942</td>
-                                        <td class="date">Oct 10, 2026</td>
-                                        <td><span class="pill pill-amber">Processing</span></td>
-                                        <td class="strong">$148.50</td>
-                                        <td><button class="btn-detail" onclick="openOrderModal('#ORD-2026-8942', 'Processing', '$148.50')">View Details</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="strong">#ORD-2026-7819</td>
-                                        <td class="date">Sep 28, 2026</td>
-                                        <td><span class="pill pill-sky">Shipped</span></td>
-                                        <td class="strong">$84.00</td>
-                                        <td><button class="btn-detail" onclick="openOrderModal('#ORD-2026-7819', 'Shipped', '$84.00')">View Details</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="strong">#ORD-2026-6210</td>
-                                        <td class="date">Sep 15, 2026</td>
-                                        <td><span class="pill pill-green">Delivered</span></td>
-                                        <td class="strong">$230.20</td>
-                                        <td><button class="btn-detail" onclick="openOrderModal('#ORD-2026-6210', 'Delivered', '$230.20')">View Details</button></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <c:choose>
+                                <c:when test="${empty recentOrders}">
+                                    <p class="order-empty">You have not placed any orders yet.</p>
+                                </c:when>
+                                <c:otherwise>
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Total</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:forEach var="o" items="${recentOrders}">
+                                                <tr>
+                                                    <td class="strong"><c:out value="${o.orderNumber}" /></td>
+                                                    <td class="date"><c:out value="${o.dateLabel}" /></td>
+                                                    <td><span class="pill ${o.statusClass}"><c:out value="${o.statusLabel}" /></span></td>
+                                                    <td class="strong"><c:out value="${o.totalLabel}" /></td>
+                                                    <td>
+                                                        <button class="btn-detail" type="button"
+                                                                onclick="openOrderModal(this)"
+                                                                data-order-number="${fn:escapeXml(o.orderNumber)}"
+                                                                data-status-label="${fn:escapeXml(o.statusLabel)}"
+                                                                data-status-class="${o.statusClass}"
+                                                                data-date="${fn:escapeXml(o.dateLabel)}"
+                                                                data-total="${fn:escapeXml(o.totalLabel)}"
+                                                                data-item-count="${o.itemCount}"
+                                                                data-payment="${fn:escapeXml(o.paymentLabel)}"
+                                                                data-address="${fn:escapeXml(o.shippingAddress)}">View Details</button>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                 </div>
@@ -186,155 +188,207 @@
                             <p class="page-sub">Track shipment status and order history</p>
                         </div>
                         <div class="filters">
-                            <button onclick="filterOrders('all', this)" class="filter-btn active">All Orders</button>
-                            <button onclick="filterOrders('processing', this)" class="filter-btn">Processing</button>
-                            <button onclick="filterOrders('shipped', this)" class="filter-btn">Shipped</button>
-                            <button onclick="filterOrders('delivered', this)" class="filter-btn">Delivered</button>
-                            <button onclick="filterOrders('cancelled', this)" class="filter-btn">Cancelled</button>
+                            <button type="button" onclick="filterOrders('all', this)" class="filter-btn active">All Orders <span class="filter-count" data-count-for="all"></span></button>
+                            <button type="button" onclick="filterOrders('processing', this)" class="filter-btn">Processing <span class="filter-count" data-count-for="processing"></span></button>
+                            <button type="button" onclick="filterOrders('shipped', this)" class="filter-btn">Shipped <span class="filter-count" data-count-for="shipped"></span></button>
+                            <button type="button" onclick="filterOrders('delivered', this)" class="filter-btn">Delivered <span class="filter-count" data-count-for="delivered"></span></button>
+                            <button type="button" onclick="filterOrders('cancelled', this)" class="filter-btn">Cancelled <span class="filter-count" data-count-for="cancelled"></span></button>
                         </div>
                     </div>
 
-                    <div class="order-list">
-                        <div class="order-card" data-status="processing">
-                            <div class="order-head">
-                                <div class="order-id-row">
-                                    <span class="order-id">#ORD-2026-8942</span>
-                                    <span class="pill pill-amber">Processing</span>
-                                </div>
-                                <div class="order-date">Ordered on <b>Oct 10, 2026</b></div>
-                            </div>
-                            <div class="order-body">
-                                <div class="order-product">
-                                    <img class="order-thumb" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=150&q=80" alt="Headphones">
-                                    <div>
-                                        <h4>Wireless ANC Headphones Pro</h4>
-                                        <p class="order-meta">Qty: 1 • Matte Black</p>
-                                        <p class="order-price">$148.50</p>
+                    <div class="order-list" id="orderList">
+                        <c:forEach var="o" items="${orders}">
+
+                            <%-- Progress tracker: how many steps are complete / which one is active --%>
+                            <c:choose>
+                                <c:when test="${o.statusGroup == 'delivered'}">
+                                    <c:set var="stepDone" value="4" /><c:set var="stepNow" value="0" />
+                                </c:when>
+                                <c:when test="${o.statusGroup == 'shipped'}">
+                                    <c:set var="stepDone" value="2" /><c:set var="stepNow" value="3" />
+                                </c:when>
+                                <c:otherwise>
+                                    <c:set var="stepDone" value="1" /><c:set var="stepNow" value="2" />
+                                </c:otherwise>
+                            </c:choose>
+
+                            <article class="order-card" data-group="${o.statusGroup}"
+                                     data-order-number="${fn:escapeXml(o.orderNumber)}"
+                                     data-status-label="${fn:escapeXml(o.statusLabel)}"
+                                     data-status-class="${o.statusClass}"
+                                     data-date="${fn:escapeXml(o.dateLabel)}"
+                                     data-total="${fn:escapeXml(o.totalLabel)}"
+                                     data-item-count="${o.itemCount}"
+                                     data-payment="${fn:escapeXml(o.paymentLabel)}"
+                                     data-address="${fn:escapeXml(o.shippingAddress)}">
+
+                                <!-- Summary strip -->
+                                <header class="oc-head">
+                                    <div class="oc-meta">
+                                        <div class="oc-meta-item">
+                                            <span class="oc-label">Order placed</span>
+                                            <span class="oc-value"><c:out value="${o.dateLabel}" /></span>
+                                        </div>
+                                        <div class="oc-meta-item">
+                                            <span class="oc-label">Total</span>
+                                            <span class="oc-value"><c:out value="${o.totalLabel}" /></span>
+                                        </div>
+                                        <div class="oc-meta-item oc-ship">
+                                            <span class="oc-label">Ship to</span>
+                                            <span class="oc-value" title="<c:out value='${o.shippingAddress}' />"><c:out value="${o.shippingAddress}" /></span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="order-actions">
-                                    <button class="btn btn-primary" onclick="openOrderModal('#ORD-2026-8942', 'Processing', '$148.50')">Track Order</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="order-card" data-status="shipped">
-                            <div class="order-head">
-                                <div class="order-id-row">
-                                    <span class="order-id">#ORD-2026-7819</span>
-                                    <span class="pill pill-sky">Shipped</span>
-                                </div>
-                                <div class="order-date">Ordered on <b>Sep 28, 2026</b></div>
-                            </div>
-                            <div class="order-body">
-                                <div class="order-product">
-                                    <img class="order-thumb" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=150&q=80" alt="Watch">
-                                    <div>
-                                        <h4>Leather Smartwatch Series 5</h4>
-                                        <p class="order-meta">Qty: 1 • Tan Brown</p>
-                                        <p class="order-price">$84.00</p>
+                                    <div class="oc-meta-item oc-id">
+                                        <span class="oc-label">Order # <b><c:out value="${o.orderNumber}" /></b></span>
+                                        <button type="button" class="oc-link" onclick="openOrderModal(this.closest('.order-card'))">View order details</button>
                                     </div>
-                                </div>
-                                <div class="order-actions">
-                                    <button class="btn btn-primary" onclick="openOrderModal('#ORD-2026-7819', 'Shipped', '$84.00')">Track Order</button>
-                                </div>
-                            </div>
-                        </div>
+                                </header>
 
-                        <div class="order-card" data-status="delivered">
-                            <div class="order-head">
-                                <div class="order-id-row">
-                                    <span class="order-id">#ORD-2026-6210</span>
-                                    <span class="pill pill-green">Delivered</span>
-                                </div>
-                                <div class="order-date">Ordered on <b>Sep 15, 2026</b></div>
-                            </div>
-                            <div class="order-body">
-                                <div class="order-product">
-                                    <img class="order-thumb" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=150&q=80" alt="Sneakers">
-                                    <div>
-                                        <h4>Ultra Light Running Shoes</h4>
-                                        <p class="order-meta">Qty: 1 • Red / Black</p>
-                                        <p class="order-price">$230.20</p>
-                                    </div>
-                                </div>
-                                <div class="order-actions">
-                                    <button class="btn btn-gray" onclick="openOrderModal('#ORD-2026-6210', 'Delivered', '$230.20')">View Invoice</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            <!-- ===== 3. WISHLIST (real data, same .ar-card design as the product grids) ===== -->
-            <div id="tab-wishlist" class="tab-content hidden">
-                <div>
-                    <h2 class="page-title">Saved Wishlist</h2>
-                    <p class="page-sub">Your favorite saved items</p>
-                </div>
-
-                <div class="ar-page">
-                    <div class="ar-grid" id="wishlistGrid">
-                        <c:forEach var="w" items="${wishlistItems}">
-                        <article class="ar-card" data-product-id="${w.productId}" data-on-sale="${w.onSale}">
-                            <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" aria-pressed="true"
-                                    data-product-id="${w.productId}">
-                                <span class="material-symbols-outlined ar-ic-sm">favorite</span>
-                            </button>
-                            <a <c:if test="${w.active}">href="${pageContext.request.contextPath}${w.link}"</c:if> class="ar-card-link">
-                                <div class="ar-card-img">
+                                <!-- Status + tracker -->
+                                <div class="oc-status">
+                                    <span class="pill ${o.statusClass}"><c:out value="${o.statusLabel}" /></span>
                                     <c:choose>
-                                        <c:when test="${not empty w.imageUrl}">
-                                            <img src="${w.imageUrl}" alt="<c:out value='${w.name}'/>" loading="lazy">
+                                        <c:when test="${o.statusGroup == 'cancelled'}">
+                                            <p class="oc-cancel-note">This order was cancelled. Any payment made will be refunded to your original payment method.</p>
                                         </c:when>
                                         <c:otherwise>
-                                            <img src="${pageContext.request.contextPath}/placeholder.jpg" alt="" loading="lazy">
+                                            <ol class="oc-track" aria-label="Order progress">
+                                                <c:forEach var="stepLabel" items="Order placed,Processing,Shipped,Delivered" varStatus="s">
+                                                    <li class="${s.count <= stepDone ? 'done' : (s.count == stepNow ? 'current' : '')}">
+                                                        <span class="oc-dot"></span>
+                                                        <span class="oc-step"><c:out value="${stepLabel}" /></span>
+                                                    </li>
+                                                </c:forEach>
+                                            </ol>
                                         </c:otherwise>
                                     </c:choose>
-                                    <c:if test="${w.discount > 0}">
-                                        <span class="ar-badge"><c:if test="${w.flash}">&#9889; </c:if>-${w.discount}%</span>
-                                    </c:if>
                                 </div>
-                                <div class="ar-card-body">
-                                    <div>
-                                        <div class="ar-card-top">
-                                            <span class="ar-brand"><c:out value="${w.category}"/></span>
-                                            <span class="ar-sold">${w.sold} sold</span>
-                                        </div>
-                                        <h3 class="ar-p-title"><c:out value="${w.name}"/></h3>
+
+                                <!-- Items + actions -->
+                                <div class="oc-body">
+                                    <div class="oc-items">
+                                        <c:forEach var="line" items="${o.lines}" varStatus="ls">
+                                            <div class="oc-item ${ls.index >= 3 ? 'oc-extra' : ''}">
+                                                <img class="oc-thumb" src="${line.imageSrc}" alt="<c:out value='${line.name}' />" loading="lazy">
+                                                <div class="oc-info">
+                                                    <h4 class="oc-name"><c:out value="${line.name}" /></h4>
+                                                    <p class="oc-sub">Qty: ${line.quantity} &bull; <c:out value="${line.unitPriceLabel}" /> each</p>
+                                                </div>
+                                                <div class="oc-line-total"><c:out value="${line.lineTotalLabel}" /></div>
+                                            </div>
+                                        </c:forEach>
+
+                                        <c:if test="${fn:length(o.lines) > 3}">
+                                            <button type="button" class="oc-more" onclick="toggleOrderItems(this)"
+                                                    data-more="Show ${fn:length(o.lines) - 3} more items" data-less="Show fewer items">
+                                                Show ${fn:length(o.lines) - 3} more items
+                                            </button>
+                                        </c:if>
                                     </div>
-                                    <div class="ar-price-row">
-                                        <div>
-                                            <div class="ar-price">Rs.${w.price}</div>
-                                            <c:if test="${w.oldPrice > 0}"><div class="ar-old">Rs.${w.oldPrice}</div></c:if>
-                                            <div class="ar-sub-muted"><c:out value="${w.subCategory}"/></div>
-                                        </div>
-                                        <c:choose>
-                                            <c:when test="${w.available}">
-                                                <%-- Cart.js (loaded by header.jsp) handles .js-add-to-cart --%>
-                                                <span class="ar-view js-add-to-cart" role="button" tabindex="0"
-                                                      data-product-id="${w.productId}">Add to cart</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="ar-view" style="opacity:.5;pointer-events:none;">Unavailable</span>
-                                            </c:otherwise>
-                                        </c:choose>
+
+                                    <div class="oc-actions">
+                                        <button type="button"
+                                                class="${o.statusGroup == 'cancelled' ? 'btn btn-gray btn-block' : 'btn btn-primary btn-block'}"
+                                                onclick="openOrderModal(this.closest('.order-card'))">
+                                            <c:choose>
+                                                <c:when test="${o.statusGroup == 'delivered'}">View invoice</c:when>
+                                                <c:when test="${o.statusGroup == 'cancelled'}">View details</c:when>
+                                                <c:otherwise>Track order</c:otherwise>
+                                            </c:choose>
+                                        </button>
+                                        <c:if test="${o.statusGroup != 'cancelled'}">
+                                            <button type="button" class="btn btn-outline btn-block"
+                                                    onclick="openOrderModal(this.closest('.order-card'))">View details</button>
+                                        </c:if>
                                     </div>
                                 </div>
-                            </a>
-                        </article>
+
+                                <!-- Footer -->
+                                <footer class="oc-foot">
+                                    <span>Payment: <b><c:out value="${o.paymentLabel}" /></b></span>
+                                    <span>${o.itemCount} <c:choose><c:when test="${o.itemCount == 1}">item</c:when><c:otherwise>items</c:otherwise></c:choose></span>
+                                </footer>
+                            </article>
                         </c:forEach>
                     </div>
 
-                    <div id="wishlistEmpty" style="text-align:center;padding:50px 0;color:#666;${empty wishlistItems ? '' : 'display:none;'}">
-                        <h3>Your wishlist is empty</h3>
-                        <p class="page-sub">Tap the heart on any product to save it here.</p>
-                        <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Continue shopping</a>
+                    <div id="ordersEmpty" class="order-empty" style="${empty orders ? '' : 'display:none;'}">
+                        <h3>No orders yet</h3>
+                        <p class="page-sub">Your placed orders will show up here.</p>
+                        <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Start shopping</a>
+                    </div>
+                    <p id="ordersFilterEmpty" class="order-empty" style="display:none;">No orders in this group.</p>
+                </div>
+
+                <!-- ===== 3. WISHLIST (real data, same .ar-card design as the product grids) ===== -->
+                <div id="tab-wishlist" class="tab-content hidden">
+                    <div>
+                        <h2 class="page-title">Saved Wishlist</h2>
+                        <p class="page-sub">Your favorite saved items</p>
+                    </div>
+
+                    <div class="ar-page">
+                        <div class="ar-grid" id="wishlistGrid">
+                            <c:forEach var="w" items="${wishlistItems}">
+                                <article class="ar-card" data-product-id="${w.productId}" data-on-sale="${w.onSale}">
+                                    <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" aria-pressed="true"
+                                            data-product-id="${w.productId}">
+                                        <span class="material-symbols-outlined ar-ic-sm">favorite</span>
+                                    </button>
+                                    <a <c:if test="${w.active}">href="${pageContext.request.contextPath}${w.link}"</c:if> class="ar-card-link">
+                                        <div class="ar-card-img">
+                                            <c:choose>
+                                                <c:when test="${not empty w.imageUrl}">
+                                                    <img src="${w.imageUrl}" alt="<c:out value='${w.name}'/>" loading="lazy">
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <img src="${pageContext.request.contextPath}/placeholder.jpg" alt="" loading="lazy">
+                                                </c:otherwise>
+                                            </c:choose>
+                                            <c:if test="${w.discount > 0}">
+                                                <span class="ar-badge"><c:if test="${w.flash}">&#9889; </c:if>-${w.discount}%</span>
+                                            </c:if>
+                                        </div>
+                                        <div class="ar-card-body">
+                                            <div>
+                                                <div class="ar-card-top">
+                                                    <span class="ar-brand"><c:out value="${w.category}"/></span>
+                                                    <span class="ar-sold">${w.sold} sold</span>
+                                                </div>
+                                                <h3 class="ar-p-title"><c:out value="${w.name}"/></h3>
+                                            </div>
+                                            <div class="ar-price-row">
+                                                <div>
+                                                    <div class="ar-price">Rs.${w.price}</div>
+                                                    <c:if test="${w.oldPrice > 0}"><div class="ar-old">Rs.${w.oldPrice}</div></c:if>
+                                                    <div class="ar-sub-muted"><c:out value="${w.subCategory}"/></div>
+                                                </div>
+                                                <c:choose>
+                                                    <c:when test="${w.available}">
+                                                        <%-- Cart.js (loaded by header.jsp) handles .js-add-to-cart --%>
+                                                        <span class="ar-view js-add-to-cart" role="button" tabindex="0"
+                                                              data-product-id="${w.productId}">Add to cart</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="ar-view" style="opacity:.5;pointer-events:none;">Unavailable</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </article>
+                            </c:forEach>
+                        </div>
+
+                        <div id="wishlistEmpty" style="text-align:center;padding:50px 0;color:#666;${empty wishlistItems ? '' : 'display:none;'}">
+                            <h3>Your wishlist is empty</h3>
+                            <p class="page-sub">Tap the heart on any product to save it here.</p>
+                            <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Continue shopping</a>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-                <!-- ===== 4. ADDRESSES ===== -->
+                <!-- ===== 4. ADDRESSES (static until the address table exists) ===== -->
                 <div id="tab-addresses" class="tab-content hidden">
                     <div class="row-between">
                         <div>
@@ -378,7 +432,7 @@
                     </div>
                 </div>
 
-                <!-- ===== 5. PAYMENTS ===== -->
+                <!-- ===== 5. PAYMENTS (static until the payment table exists) ===== -->
                 <div id="tab-payments" class="tab-content hidden">
                     <div class="row-between">
                         <div>
@@ -459,11 +513,11 @@
                             <div class="form-grid">
                                 <div>
                                     <label class="label">First Name</label>
-                                    <input type="text" name="firstName" id="input-first-name" class="input" value="${sessionScope.userFirstName}" required>
+                                    <input type="text" name="firstName" id="input-first-name" class="input" value="<c:out value='${sessionScope.userFirstName}'/>" required>
                                 </div>
                                 <div>
                                     <label class="label">Last Name</label>
-                                    <input type="text" name="lastName" id="input-last-name" class="input" value="${sessionScope.userLastName}" required>
+                                    <input type="text" name="lastName" id="input-last-name" class="input" value="<c:out value='${sessionScope.userLastName}'/>" required>
                                 </div>
                             </div>
 
@@ -471,7 +525,7 @@
                                 <div>
                                     <label class="label">Email Address</label>
                                     <div class="input-wrap">
-                                        <input type="email" class="input pad-right" value="${sessionScope.userEmail}" readonly required>
+                                        <input type="email" class="input pad-right" value="<c:out value='${sessionScope.userEmail}'/>" readonly required>
                                         <span class="verified"><i data-lucide="check"></i> Verified</span>
                                     </div>
                                 </div>
@@ -485,7 +539,7 @@
                                             <option value="+91">🇮🇳 +91</option>
                                         </select>
                                         <div class="input-wrap">
-                                            <input type="tel" name="phone" class="input pad-right" value="${sessionScope.userPhone}">
+                                            <input type="tel" name="phone" class="input pad-right" value="<c:out value='${sessionScope.userPhone}'/>">
                                             <span class="verified"><i data-lucide="shield-check"></i> Verified</span>
                                         </div>
                                     </div>
@@ -607,7 +661,7 @@
                                 <p>Irreversible actions regarding your customer account</p>
                             </div>
                         </div>
-                        <p class="danger-text">Deleting your account will permanently clear your reward points (1,450 pts), order history, and saved addresses. This action cannot be undone.</p>
+                        <p class="danger-text">Deleting your account will permanently clear your reward points, order history, and saved addresses. This action cannot be undone.</p>
                         <button class="btn btn-danger" onclick="openDeleteModal()">
                             <i data-lucide="trash-2"></i><span>Deactivate or Delete Account</span>
                         </button>
@@ -620,25 +674,27 @@
 
     <!-- ============ MODALS ============ -->
 
-    <!-- Order details -->
+    <!-- Order details (filled from the clicked element's data attributes) -->
     <div id="order-modal" class="modal-overlay hidden">
         <div class="modal">
             <button class="modal-close" onclick="closeOrderModal()" aria-label="Close"><i data-lucide="x"></i></button>
             <div class="modal-order-head">
                 <div class="modal-order-ic"><i data-lucide="package"></i></div>
                 <div>
-                    <h3 id="modal-order-id">#ORD-2026-8942</h3>
-                    <p id="modal-order-status">Processing</p>
+                    <h3 id="modal-order-id"></h3>
+                    <p id="modal-order-status"></p>
                 </div>
             </div>
             <div class="modal-stack">
                 <div class="info-box">
-                    <div class="info-row"><span>Shipping Address:</span><b>742 Evergreen Terrace</b></div>
-                    <div class="info-row"><span>Payment Method:</span><b>Visa ending 4892</b></div>
+                    <div class="info-row"><span>Order Date:</span><b id="modal-order-date"></b></div>
+                    <div class="info-row"><span>Items:</span><b id="modal-order-items"></b></div>
+                    <div class="info-row"><span>Shipping Address:</span><b id="modal-order-address"></b></div>
+                    <div class="info-row"><span>Payment Method:</span><b id="modal-order-payment"></b></div>
                 </div>
                 <div class="total-box">
-                    <span class="tl">Total Paid</span>
-                    <span id="modal-order-total" class="tv">$148.50</span>
+                    <span class="tl">Total</span>
+                    <span id="modal-order-total" class="tv"></span>
                 </div>
             </div>
             <div class="modal-foot">
@@ -716,7 +772,7 @@
         <div class="modal sm">
             <div class="warn-ic"><i data-lucide="octagon-alert"></i></div>
             <h3 class="modal-title">Delete Account?</h3>
-            <p class="modal-text">Are you sure you want to delete your profile? All purchase records, saved addresses, and 1,450 loyalty reward points will be permanently lost.</p>
+            <p class="modal-text">Are you sure you want to delete your profile? All purchase records, saved addresses, and loyalty reward points will be permanently lost.</p>
             <div class="modal-foot center">
                 <button class="btn btn-gray btn-lg" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn btn-danger" onclick="closeDeleteModal(); showToast('Account deactivation request submitted');">Confirm Delete</button>
@@ -732,6 +788,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             lucide.createIcons();
+            refreshOrderFilterCounts();
 
             // Show a success toast after redirect back from the profile-save POST
             var params = new URLSearchParams(window.location.search);
@@ -741,7 +798,7 @@
         });
 
         // NOTE: In JSP, a dollar sign followed by braces is parsed as EL even inside <script>.
-        // Template literals were therefore replaced with string concatenation below.
+        // Template literals are avoided below and string concatenation is used instead.
 
         // ===== Tabs =====
         function switchTab(tabId) {
@@ -754,33 +811,67 @@
                 btn.classList.toggle('active', btn.dataset.tab === tabId);
             });
 
-            // Close mobile sidebar after navigating
             document.getElementById('sidebar-container').classList.remove('open');
-
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-// ===== Wishlist: un-hearting a card here removes it and refreshes the counts =====
-function refreshWishlistCounts() {
-    var n = document.querySelectorAll('#wishlistGrid .ar-card').length;
-    var sale = document.querySelectorAll('#wishlistGrid .ar-card[data-on-sale="true"]').length;
-    var nav = document.getElementById('wishlistNavCount');
-    var stat = document.getElementById('wishlistStatValue');
-    var saleEl = document.getElementById('wishlistSaleCount');
-    var empty = document.getElementById('wishlistEmpty');
-    if (nav) { nav.textContent = n; nav.style.display = n > 0 ? '' : 'none'; }
-    if (stat) stat.textContent = n;
-    if (saleEl) saleEl.textContent = sale;
-    if (empty) empty.style.display = n === 0 ? '' : 'none';
-}
+        // ===== Wishlist: un-hearting a card here removes it and refreshes the counts =====
+        function refreshWishlistCounts() {
+            var n = document.querySelectorAll('#wishlistGrid .ar-card').length;
+            var sale = document.querySelectorAll('#wishlistGrid .ar-card[data-on-sale="true"]').length;
+            var nav = document.getElementById('wishlistNavCount');
+            var stat = document.getElementById('wishlistStatValue');
+            var saleEl = document.getElementById('wishlistSaleCount');
+            var empty = document.getElementById('wishlistEmpty');
+            if (nav) { nav.textContent = n; nav.style.display = n > 0 ? '' : 'none'; }
+            if (stat) stat.textContent = n;
+            if (saleEl) saleEl.textContent = sale;
+            if (empty) empty.style.display = n === 0 ? '' : 'none';
+        }
 
-document.addEventListener('wishlist:change', function (e) {
-    if (e.detail.wished) return;
-    var card = document.querySelector('#wishlistGrid .ar-card[data-product-id="' + e.detail.productId + '"]');
-    if (card) card.remove();
-    refreshWishlistCounts();
-});
+        document.addEventListener('wishlist:change', function (e) {
+            if (e.detail.wished) return;
+            var card = document.querySelector('#wishlistGrid .ar-card[data-product-id="' + e.detail.productId + '"]');
+            if (card) card.remove();
+            refreshWishlistCounts();
+        });
 
+        // ===== Orders: group filter tabs with live counts =====
+        function filterOrders(group, btnElement) {
+            document.querySelectorAll('.filter-btn').forEach(function (btn) { btn.classList.remove('active'); });
+            btnElement.classList.add('active');
+
+            var shown = 0;
+            document.querySelectorAll('#orderList .order-card').forEach(function (card) {
+                var match = group === 'all' || card.dataset.group === group;
+                card.style.display = match ? 'block' : 'none';
+                if (match) shown++;
+            });
+
+            var total = document.querySelectorAll('#orderList .order-card').length;
+            var filterEmpty = document.getElementById('ordersFilterEmpty');
+            if (filterEmpty) filterEmpty.style.display = (total > 0 && shown === 0) ? '' : 'none';
+        }
+
+        function refreshOrderFilterCounts() {
+            var cards = document.querySelectorAll('#orderList .order-card');
+            var counts = { all: cards.length, processing: 0, shipped: 0, delivered: 0, cancelled: 0 };
+            cards.forEach(function (card) {
+                var g = card.dataset.group;
+                if (counts.hasOwnProperty(g)) counts[g]++;
+            });
+            Object.keys(counts).forEach(function (key) {
+                var el = document.querySelector('[data-count-for="' + key + '"]');
+                if (el) el.textContent = '(' + counts[key] + ')';
+            });
+        }
+
+        // Expand / collapse extra items inside an order card
+        function toggleOrderItems(btn) {
+            var box = btn.closest('.oc-items');
+            var open = box.classList.toggle('expanded');
+            btn.textContent = open ? btn.dataset.less : btn.dataset.more;
+        }
 
         // ===== Password =====
         function togglePassVisibility(inputId) {
@@ -842,7 +933,6 @@ document.addEventListener('wishlist:change', function (e) {
             reader.onload = function (e) {
                 var src = e.target.result;
                 document.getElementById('settings-avatar-preview').src = src;
-                // header-avatar is the profile picture in header.jsp (missing when the user has no picture yet)
                 var headerAvatar = document.getElementById('header-avatar');
                 if (headerAvatar) headerAvatar.src = src;
                 document.getElementById('sidebar-avatar').src = src;
@@ -850,21 +940,19 @@ document.addEventListener('wishlist:change', function (e) {
             reader.readAsDataURL(file);
         }
 
-        // ===== Orders =====
-        function filterOrders(status, btnElement) {
-            document.querySelectorAll('.filter-btn').forEach(function (btn) { btn.classList.remove('active'); });
-            btnElement.classList.add('active');
-
-            document.querySelectorAll('.order-card').forEach(function (card) {
-                card.style.display = (status === 'all' || card.dataset.status === status) ? 'block' : 'none';
-            });
-        }
-
         // ===== Modals =====
-        function openOrderModal(id, status, total) {
-            document.getElementById('modal-order-id').innerText = id;
-            document.getElementById('modal-order-status').innerText = status;
-            document.getElementById('modal-order-total').innerText = total;
+        // Reads the order details from the clicked element's data-* attributes.
+        function openOrderModal(btn) {
+            var d = btn.dataset;
+            document.getElementById('modal-order-id').textContent = d.orderNumber || '';
+            var statusEl = document.getElementById('modal-order-status');
+            statusEl.textContent = d.statusLabel || '';
+            statusEl.className = d.statusClass || '';
+            document.getElementById('modal-order-date').textContent = d.date || '';
+            document.getElementById('modal-order-items').textContent = d.itemCount || '0';
+            document.getElementById('modal-order-address').textContent = d.address || '';
+            document.getElementById('modal-order-payment').textContent = d.payment || '';
+            document.getElementById('modal-order-total').textContent = d.total || '';
             document.getElementById('order-modal').classList.remove('hidden');
         }
         function closeOrderModal() { document.getElementById('order-modal').classList.add('hidden'); }

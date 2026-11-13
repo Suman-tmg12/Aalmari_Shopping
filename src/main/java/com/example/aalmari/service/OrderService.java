@@ -2,6 +2,8 @@ package com.example.aalmari.service;
 
 import com.example.aalmari.dto.CartView;
 import com.example.aalmari.dto.CheckoutForm;
+import com.example.aalmari.dto.OrderCard;
+import com.example.aalmari.dto.OrderLineCard;
 import com.example.aalmari.model.Order;
 import com.example.aalmari.model.OrderItem;
 import com.example.aalmari.model.SellerProduct;
@@ -13,28 +15,43 @@ import com.example.aalmari.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class OrderService {
+
+    private static final String S3_BUCKET_URL = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final String PLACEHOLDER_IMG = "/placeholder.jpg";
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
+
+    /** Label, pill colour and filter group for one stored status. */
+    private record StatusInfo(String label, String pillClass, String group) {}
 
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;
     private final SellerProductRepository productRepository;
     private final UserRepository userRepository;
+    private final FlashSaleService flashSaleService;
 
     public OrderService(OrderRepository orderRepository,
                         CartService cartService,
                         CartItemRepository cartItemRepository,
                         SellerProductRepository productRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        FlashSaleService flashSaleService) {
         this.orderRepository = orderRepository;
         this.cartService = cartService;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.flashSaleService = flashSaleService;
     }
 
     /** Name and phone to pre-fill the checkout form (keys: fullName, phone). */
@@ -50,11 +67,8 @@ public class OrderService {
     }
 
     /**
-     * Cash on delivery: creates the order, takes the stock, and empties the cart, all in one
-     * transaction. Prices come from CartService.view(), which reads the live product rows and the
-     * live flash sale, so nothing the browser sends can change the amount.
-     *
-     * Throws IllegalStateException with a message that is safe to show to the customer.
+     * Cash on delivery: claims flash units, takes stock, creates the order and empties the cart,
+     * all in one transaction. Any exception rolls back everything.
      */
     @Transactional
     public Order placeCodOrder(Long userId, CheckoutForm f) {
@@ -95,6 +109,16 @@ public class OrderService {
                         ? line.getName() + " is out of stock."
                         : "Only " + stock + " of " + line.getName() + " left in stock.");
             }
+
+            // Claims flash units and enforces the per-customer limit; throws if the deal sold out.
+            long unitPrice = line.getUnitPrice();
+            Optional<Integer> flashPrice =
+                    flashSaleService.claim(userId, line.getProductId(), line.getQuantity());
+            if (flashPrice.isPresent() && flashPrice.get() != unitPrice) {
+                throw new IllegalStateException(
+                        "The price of " + line.getName() + " has changed. Please review your cart.");
+            }
+
             p.setStock(stock - line.getQuantity());
             p.setSold((p.getSold() == null ? 0 : p.getSold()) + line.getQuantity());
             productRepository.save(p);
@@ -103,17 +127,14 @@ public class OrderService {
             item.setProductId(line.getProductId());
             item.setName(line.getName());
             item.setImageUrl(line.getImageUrl());
-            item.setUnitPrice(line.getUnitPrice());
+            item.setUnitPrice(unitPrice);
             item.setOriginalPrice(line.getOriginalPrice());
             item.setQuantity(line.getQuantity());
-            item.setLineTotal(line.getLineTotal());
+            item.setLineTotal(unitPrice * line.getQuantity());
             order.addItem(item);
-
-            // TODO (flash sale): if this line was bought at a flash price, save a FlashPurchase
-            // and reduce the flash stock here. Needs FlashSaleService, see the notes.
         }
 
-        orderRepository.save(order);                                   // gets the id
+        orderRepository.save(order);                                    // assigns the id
         order.setOrderNumber(String.format("AAL-%06d", order.getId())); // e.g. AAL-000042
 
         cartItemRepository.deleteAll(cartItemRepository.findByUser_IdOrderByIdDesc(userId));
@@ -128,6 +149,83 @@ public class OrderService {
             o.getItems().size(); // load the lazy list while the session is open
         }
         return o;
+    }
+
+    /** The user's orders, newest first, ready for the My Profile page. */
+    @Transactional(readOnly = true)
+    public List<OrderCard> listForUser(Long userId) {
+        List<OrderCard> out = new ArrayList<>();
+        for (Order o : orderRepository.findByUser_IdOrderByIdDesc(userId)) {
+            out.add(toCard(o));
+        }
+        return out;
+    }
+
+    private OrderCard toCard(Order o) {
+        StatusInfo st = statusInfo(o.getStatus());
+
+        List<OrderLineCard> lines = new ArrayList<>();
+        for (OrderItem i : o.getItems()) {
+            lines.add(new OrderLineCard(
+                    i.getName(),
+                    imageSrc(i.getImageUrl()),
+                    i.getQuantity(),
+                    rs(i.getUnitPrice()),
+                    rs(i.getLineTotal())));
+        }
+
+        String shipping = nz(o.getReceiverName()) + ", " + nz(o.getAddress()) + ", " + nz(o.getCity());
+        if (!nz(o.getProvince()).isEmpty()) {
+            shipping += ", " + o.getProvince();
+        }
+
+        String number = o.getOrderNumber() != null ? o.getOrderNumber() : "AAL-" + o.getId();
+
+        return new OrderCard(
+                number,
+                st.label(),
+                st.pillClass(),
+                st.group(),
+                o.getCreatedAt().format(DATE_FMT),
+                rs(o.getTotal()),
+                paymentLabel(o.getPaymentMethod()),
+                shipping,
+                lines.size(),
+                lines);
+    }
+
+    /** PLACED shows as Processing; PENDING_PAYMENT as Awaiting payment, under the Processing tab. */
+    private static StatusInfo statusInfo(String status) {
+        if (status == null) return new StatusInfo("Processing", "pill-amber", "processing");
+        return switch (status) {
+            case "PENDING_PAYMENT" -> new StatusInfo("Awaiting payment", "pill-amber", "processing");
+            case "SHIPPED"         -> new StatusInfo("Shipped", "pill-sky", "shipped");
+            case "DELIVERED"       -> new StatusInfo("Delivered", "pill-green", "delivered");
+            case "CANCELLED"       -> new StatusInfo("Cancelled", "pill-rose", "cancelled");
+            default                -> new StatusInfo("Processing", "pill-amber", "processing");
+        };
+    }
+
+    private static String paymentLabel(String method) {
+        if (method == null) return "";
+        return switch (method) {
+            case "COD"    -> "Cash on delivery";
+            case "ESEWA"  -> "eSewa";
+            case "KHALTI" -> "Khalti";
+            case "CARD"   -> "Card";
+            default       -> method;
+        };
+    }
+
+    /** Whole rupees, e.g. "Rs. 1,250". */
+    private static String rs(long amount) {
+        return String.format(Locale.US, "Rs. %,d", amount);
+    }
+
+    /** Cart stores either a full URL or a bare S3 key. */
+    private static String imageSrc(String path) {
+        if (path == null || path.isEmpty()) return PLACEHOLDER_IMG;
+        return path.startsWith("http") ? path : S3_BUCKET_URL + path;
     }
 
     private static String nz(String s) { return s == null ? "" : s; }
