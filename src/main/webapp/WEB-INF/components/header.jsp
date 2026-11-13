@@ -88,6 +88,13 @@
                 </c:choose>
             </div>
 
+            <!-- Wishlist Icon with Badge -->
+            <a href="${pageContext.request.contextPath}/myprofile?tab=wishlist" class="icon-link" id="wishlistLink"
+               data-logged-in="${not empty sessionScope.userId}" aria-label="Wishlist">
+                <span class="material-symbols-outlined icon-item">favorite</span>
+                <span class="cart-badge" id="wishlistBadge" style="display:none">0</span>
+            </a>
+
             <!-- Cart Icon with Badge -->
             <a href="${pageContext.request.contextPath}/cart" class="icon-link" id="cartLink"
                data-logged-in="${not empty sessionScope.userId}" aria-label="Shopping cart">
@@ -110,6 +117,10 @@
             <nav class="menu-links">
                 <c:choose>
                     <c:when test="${not empty sessionScope.userId}">
+                    <a href="${pageContext.request.contextPath}/myprofile?tab=wishlist" class="menu-link">
+                        <span class="material-symbols-outlined">favorite</span>
+                        Wishlist
+                    </a>
                         <a href="${pageContext.request.contextPath}/myprofile" class="menu-link user-mobile-card">
                             <span class="material-symbols-outlined">account_circle</span>
                             <div>
@@ -292,4 +303,5 @@
         });
     </script>
     <script src="${pageContext.request.contextPath}/css/Cart/Cart.js"></script>
+    <script src="${pageContext.request.contextPath}/css/js/Wishlist.js?v=1"></script>
     <script src="${pageContext.request.contextPath}/css/js/searchSuggest.js?v=1"></script>

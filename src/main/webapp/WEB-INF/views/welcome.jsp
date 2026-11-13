@@ -31,7 +31,7 @@
            <div class="flash-sale-box">
                <div class="horizontal-scroll">
                    <c:forEach var="d" items="${homeFlashDeals}">
-                   <article class="fs-card">
+                   <article class="fs-card" data-product-id="${d.productId}">
                        <button type="button" class="fs-wish" aria-label="Save to wishlist">
                            <span class="material-symbols-outlined">favorite</span>
                        </button>
@@ -110,14 +110,7 @@
         }
     });
 
-    // Flash sale wishlist heart toggle
-    document.querySelectorAll('.flash-sale-box .fs-wish').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            btn.classList.toggle('fs-wished');
-        });
-    });
+
 
     // ========== HERO SLIDER (infinite loop, drag / swipe / keyboard) ==========
     (function () {

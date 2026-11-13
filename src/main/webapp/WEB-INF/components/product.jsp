@@ -110,14 +110,7 @@
  <div class="pagination" id="pagination"></div>
 
 <script>
-    // Wishlist heart toggle
-    document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            btn.classList.toggle('ar-wished');
-        });
-    });
+
 
     // Pagination: 8 products per page
     (function () {

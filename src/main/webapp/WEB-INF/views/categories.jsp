@@ -197,14 +197,7 @@
                 const currentCategory = pageRoot.dataset.category || 'Electronics';
                 const currentSub = pageRoot.dataset.sub || null;
 
-                // Wishlist heart toggle
-                document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        btn.classList.toggle('ar-wished');
-                    });
-                });
+
 
                 // Auto-scroll active mobile chip into view on load
                 const activeChip = document.querySelector('.category-chip-bar .chip.active');

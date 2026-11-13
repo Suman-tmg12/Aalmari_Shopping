@@ -766,14 +766,7 @@
                 var clearAll = $('arClearAll');
                 if (clearAll) clearAll.addEventListener('click', resetAll);
 
-                // Wishlist heart (visual only)
-                grid.addEventListener('click', function (e) {
-                    var btn = e.target.closest('.ar-wish');
-                    if (!btn) return;
-                    e.preventDefault();
-                    var on = btn.classList.toggle('ar-wished');
-                    showToast(on ? 'Saved to wishlist' : 'Removed from wishlist');
-                });
+
 
                 // First draw: honour ?page=N if the visitor arrived on a later page
                 state.page = getPageFromUrl();

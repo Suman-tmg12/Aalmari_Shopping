@@ -72,7 +72,7 @@
                     <div class="ar-grid" id="productGrid">
 
                         <c:forEach var="d" items="${flashDeals}">
-                        <article class="ar-card" data-price="${d.flashPrice}">
+                        <article class="ar-card" data-price="${d.flashPrice}" data-product-id="${d.productId}">
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                             </button>
@@ -155,13 +155,7 @@
                 tickEnds();
                 setInterval(tickEnds, 1000);
 
-                document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        btn.classList.toggle('ar-wished');
-                    });
-                });
+
 
                 const accordion = document.getElementById('sidebarAccordion');
                 if (!accordion) return;

@@ -64,7 +64,7 @@
                         </button>
                         <button onclick="switchTab('wishlist')" data-tab="wishlist" class="nav-btn">
                             <i data-lucide="heart"></i><span>Wishlist</span>
-                            <span class="nav-count">4</span>
+                            <span class="nav-count" id="wishlistNavCount" <c:if test="${wishlistCount == 0}">style="display:none"</c:if>>${wishlistCount}</span>
                         </button>
                         <button onclick="switchTab('addresses')" data-tab="addresses" class="nav-btn">
                             <i data-lucide="map-pin"></i><span>Saved Addresses</span>
@@ -106,8 +106,8 @@
                         <div class="stat">
                             <div>
                                 <p class="stat-label">Wishlist Items</p>
-                                <p class="stat-value">4</p>
-                                <span class="stat-note note-rose"><i data-lucide="heart"></i> 2 items on sale</span>
+                               <p class="stat-value" id="wishlistStatValue">${wishlistCount}</p>
+                               <span class="stat-note note-rose"><i data-lucide="heart"></i>&nbsp; <span id="wishlistSaleCount">${wishlistSaleCount}</span>&nbsp;items on sale</span>
                             </div>
                             <div class="stat-icon tone-rose"><i data-lucide="heart"></i></div>
                         </div>
@@ -266,75 +266,73 @@
                     </div>
                 </div>
 
-                <!-- ===== 3. WISHLIST (uses the same .ar-card design as the home page Products) ===== -->
-                <div id="tab-wishlist" class="tab-content hidden">
-                    <div>
-                        <h2 class="page-title">Saved Wishlist</h2>
-                        <p class="page-sub">Your favorite saved items</p>
+            <!-- ===== 3. WISHLIST (real data, same .ar-card design as the product grids) ===== -->
+            <div id="tab-wishlist" class="tab-content hidden">
+                <div>
+                    <h2 class="page-title">Saved Wishlist</h2>
+                    <p class="page-sub">Your favorite saved items</p>
+                </div>
+
+                <div class="ar-page">
+                    <div class="ar-grid" id="wishlistGrid">
+                        <c:forEach var="w" items="${wishlistItems}">
+                        <article class="ar-card" data-product-id="${w.productId}" data-on-sale="${w.onSale}">
+                            <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" aria-pressed="true"
+                                    data-product-id="${w.productId}">
+                                <span class="material-symbols-outlined ar-ic-sm">favorite</span>
+                            </button>
+                            <a <c:if test="${w.active}">href="${pageContext.request.contextPath}${w.link}"</c:if> class="ar-card-link">
+                                <div class="ar-card-img">
+                                    <c:choose>
+                                        <c:when test="${not empty w.imageUrl}">
+                                            <img src="${w.imageUrl}" alt="<c:out value='${w.name}'/>" loading="lazy">
+                                        </c:when>
+                                        <c:otherwise>
+                                            <img src="${pageContext.request.contextPath}/placeholder.jpg" alt="" loading="lazy">
+                                        </c:otherwise>
+                                    </c:choose>
+                                    <c:if test="${w.discount > 0}">
+                                        <span class="ar-badge"><c:if test="${w.flash}">&#9889; </c:if>-${w.discount}%</span>
+                                    </c:if>
+                                </div>
+                                <div class="ar-card-body">
+                                    <div>
+                                        <div class="ar-card-top">
+                                            <span class="ar-brand"><c:out value="${w.category}"/></span>
+                                            <span class="ar-sold">${w.sold} sold</span>
+                                        </div>
+                                        <h3 class="ar-p-title"><c:out value="${w.name}"/></h3>
+                                    </div>
+                                    <div class="ar-price-row">
+                                        <div>
+                                            <div class="ar-price">Rs.${w.price}</div>
+                                            <c:if test="${w.oldPrice > 0}"><div class="ar-old">Rs.${w.oldPrice}</div></c:if>
+                                            <div class="ar-sub-muted"><c:out value="${w.subCategory}"/></div>
+                                        </div>
+                                        <c:choose>
+                                            <c:when test="${w.available}">
+                                                <%-- Cart.js (loaded by header.jsp) handles .js-add-to-cart --%>
+                                                <span class="ar-view js-add-to-cart" role="button" tabindex="0"
+                                                      data-product-id="${w.productId}">Add to cart</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="ar-view" style="opacity:.5;pointer-events:none;">Unavailable</span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                </div>
+                            </a>
+                        </article>
+                        </c:forEach>
                     </div>
 
-                    <div class="ar-page">
-                        <div class="ar-grid" id="wishlistGrid">
-
-                            <article class="ar-card">
-                                <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" onclick="removeFromWishlist(this)">
-                                    <span class="material-symbols-outlined ar-ic-sm">favorite</span>
-                                </button>
-                                <a href="#" class="ar-card-link" onclick="event.preventDefault()">
-                                    <div class="ar-card-img">
-                                        <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=300&q=80" alt="Vintage Retro Camera" loading="lazy">
-                                        <span class="ar-badge">-10%</span>
-                                    </div>
-                                    <div class="ar-card-body">
-                                        <div>
-                                            <div class="ar-card-top">
-                                                <span class="ar-brand">Electronics</span>
-                                                <span class="ar-sold">120 sold</span>
-                                            </div>
-                                            <h3 class="ar-p-title">Vintage Retro Camera</h3>
-                                        </div>
-                                        <div class="ar-price-row">
-                                            <div>
-                                                <div class="ar-price">Rs.2999</div>
-                                                <div class="ar-old">Rs.3332</div>
-                                                <div class="ar-sub-muted">Cameras</div>
-                                            </div>
-                                            <span class="ar-view" role="button" tabindex="0" onclick="addWishlistItemToCart(event)">Add to cart</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </article>
-
-                            <article class="ar-card">
-                                <button type="button" class="ar-wish ar-wished" aria-label="Remove from wishlist" onclick="removeFromWishlist(this)">
-                                    <span class="material-symbols-outlined ar-ic-sm">favorite</span>
-                                </button>
-                                <a href="#" class="ar-card-link" onclick="event.preventDefault()">
-                                    <div class="ar-card-img">
-                                        <img src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=300&q=80" alt="Classic White Leather Sneakers" loading="lazy">
-                                    </div>
-                                    <div class="ar-card-body">
-                                        <div>
-                                            <div class="ar-card-top">
-                                                <span class="ar-brand">Fashion</span>
-                                                <span class="ar-sold">85 sold</span>
-                                            </div>
-                                            <h3 class="ar-p-title">Classic White Leather Sneakers</h3>
-                                        </div>
-                                        <div class="ar-price-row">
-                                            <div>
-                                                <div class="ar-price">Rs.1500</div>
-                                                <div class="ar-sub-muted">Shoes</div>
-                                            </div>
-                                            <span class="ar-view" role="button" tabindex="0" onclick="addWishlistItemToCart(event)">Add to cart</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </article>
-
-                        </div>
+                    <div id="wishlistEmpty" style="text-align:center;padding:50px 0;color:#666;${empty wishlistItems ? '' : 'display:none;'}">
+                        <h3>Your wishlist is empty</h3>
+                        <p class="page-sub">Tap the heart on any product to save it here.</p>
+                        <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Continue shopping</a>
                     </div>
                 </div>
+            </div>
 
                 <!-- ===== 4. ADDRESSES ===== -->
                 <div id="tab-addresses" class="tab-content hidden">
@@ -762,22 +760,27 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // ===== Wishlist =====
-        function removeFromWishlist(btn) {
-            var card = btn.closest('.ar-card');
-            var grid = document.getElementById('wishlistGrid');
-            if (card) card.remove();
-            showToast('Removed from wishlist');
-            if (grid && !grid.querySelector('.ar-card')) {
-                grid.innerHTML = '<p class="page-sub">Your wishlist is empty.</p>';
-            }
-        }
+// ===== Wishlist: un-hearting a card here removes it and refreshes the counts =====
+function refreshWishlistCounts() {
+    var n = document.querySelectorAll('#wishlistGrid .ar-card').length;
+    var sale = document.querySelectorAll('#wishlistGrid .ar-card[data-on-sale="true"]').length;
+    var nav = document.getElementById('wishlistNavCount');
+    var stat = document.getElementById('wishlistStatValue');
+    var saleEl = document.getElementById('wishlistSaleCount');
+    var empty = document.getElementById('wishlistEmpty');
+    if (nav) { nav.textContent = n; nav.style.display = n > 0 ? '' : 'none'; }
+    if (stat) stat.textContent = n;
+    if (saleEl) saleEl.textContent = sale;
+    if (empty) empty.style.display = n === 0 ? '' : 'none';
+}
 
-        function addWishlistItemToCart(e) {
-            e.preventDefault();   // the button sits inside the card's <a>
-            e.stopPropagation();
-            showToast('Added to cart!');
-        }
+document.addEventListener('wishlist:change', function (e) {
+    if (e.detail.wished) return;
+    var card = document.querySelector('#wishlistGrid .ar-card[data-product-id="' + e.detail.productId + '"]');
+    if (card) card.remove();
+    refreshWishlistCounts();
+});
+
 
         // ===== Password =====
         function togglePassVisibility(inputId) {

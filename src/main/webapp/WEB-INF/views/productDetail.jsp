@@ -122,7 +122,7 @@
                     </c:if>
                     <div class="gallery-main">
                         <img src="${galleryImages[0]}" alt="${product.name}" id="mainImage">
-                        <button class="wishlist-btn" aria-label="Add to wishlist">
+                        <button type="button" class="wishlist-btn" aria-label="Add to wishlist" data-product-id="${product.id}">
                             <span class="material-symbols-outlined">favorite</span>
                         </button>
                     </div>
@@ -328,10 +328,7 @@
         }
 
         // Button Placeholders
-        const wishlistBtn = document.querySelector('.wishlist-btn');
-        if (wishlistBtn) {
-            wishlistBtn.addEventListener('click', function() { alert('Wishlist feature coming soon!'); });
-        }
+
         const PRODUCT_ID = '${product.id}';
         const addToCartBtn = document.querySelector('.add-to-cart-btn');
         if (addToCartBtn) {
@@ -345,14 +342,7 @@
             buyNowBtn.addEventListener('click', function() { alert('Buy now feature coming soon!'); });
         }
 
-        // "You May Also Like": wishlist heart toggle (same as product.jsp)
-        document.querySelectorAll('#similarGrid .ar-wish').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                btn.classList.toggle('ar-wished');
-            });
-        });
+
 
         // "You May Also Like": pagination, 8 products per page (same logic as product.jsp)
         (function () {

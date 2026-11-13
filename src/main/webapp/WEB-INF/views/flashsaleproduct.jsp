@@ -53,7 +53,7 @@
                     <c:if test="${not empty product.mainImage}">
                         <img src="${product.mainImage}" alt="<c:out value='${product.title}'/>" id="mainImage">
                     </c:if>
-                    <button type="button" class="wishlist-btn" aria-label="Add to wishlist">
+                    <button type="button" class="wishlist-btn" aria-label="Add to wishlist" data-product-id="${product.productId}">
                         <span class="material-symbols-outlined">favorite</span>
                     </button>
                 </div>
@@ -238,9 +238,6 @@
             qtyInput.addEventListener('change', clampQty);
         }
 
-        // ===== Buttons =====
-        const wishlistBtn = document.querySelector('.gallery-main .wishlist-btn');
-        if (wishlistBtn) wishlistBtn.addEventListener('click', () => wishlistBtn.classList.toggle('wished'));
 
         // Add to Cart: same flow as productDetails.jsp (addToCart is defined in Cart.js, loaded by header.jsp)
         const PRODUCT_ID = '${product.productId}';
@@ -313,14 +310,7 @@
             }
         })();
 
-        // ===== Related deals: heart toggle =====
-        document.querySelectorAll('#flashRelatedGrid .ar-wish').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                btn.classList.toggle('ar-wished');
-            });
-        });
+
 
        // ===== Related deals: Add to cart (stops the parent <a> from navigating) =====
        (function () {
