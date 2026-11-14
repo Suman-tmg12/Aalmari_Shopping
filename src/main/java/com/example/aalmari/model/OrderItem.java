@@ -1,6 +1,7 @@
 package com.example.aalmari.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 /** A product line inside an order. Name, image and prices are copied at purchase time. */
 @Entity
@@ -45,6 +46,13 @@ public class OrderItem {
     /** PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED. Each seller moves their own lines. */
     @Column(nullable = false, length = 20)
     private String status = "PENDING";
+
+    /** When the seller marked this line delivered. Null until then (and on old rows). */
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    public LocalDateTime getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(LocalDateTime deliveredAt) { this.deliveredAt = deliveredAt; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

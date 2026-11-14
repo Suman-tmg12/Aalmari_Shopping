@@ -3,7 +3,7 @@
     const $ = (s, r) => (r || document).querySelector(s);
     const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
     const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h) e.innerHTML = h; return e; };
-    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const num = s => parseInt(String(s || '').replace(/\D/g, ''), 10) || 0;
     const fmt = n => Number(n).toLocaleString('en-US');
     const store = {
@@ -13,6 +13,9 @@
     const LABEL = { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', return: 'Return Req.', cancelled: 'Cancelled' };
     const NEXT = { pending: 'confirmed', confirmed: 'shipped', shipped: 'delivered' };
     const NEXT_BTN = { pending: 'Confirm order', confirmed: 'Mark as shipped', shipped: 'Mark as delivered' };
+
+    // Set to true only to demo the fake "new message" popups.
+    const SIMULATE_MESSAGES = false;
 
     /* ============ Category → Sub-category → Attribute fields ============ */
     const A_BRAND = 'Brand', A_COLOR = 'Color', A_MATERIAL = 'Material', A_EXPIRY = 'Expiry date@date';
@@ -216,6 +219,7 @@
                 active: $('.pill', r).textContent.trim() === 'Active',
                 imageUrl: $('.prod-thumb img', r) ? $('.prod-thumb img', r).src : '',
                 editData: jsonData,
+                attrs: jsonData.attrs || {},          // used by search + attribute text under product names
                 images: imagesList
             };
         });
@@ -234,10 +238,10 @@
             };
         });
         const dashCards = $$('#approvedDashboard .stat-card');
+        // Revenue and order count come from the server (delivered orders), so they are not recomputed here.
         let revenue = num($('.stat-value', dashCards[0]).textContent);
         let orderCount = num($('.stat-value', dashCards[1]).textContent);
 
-        // PAGINATION: `page` = current products page, PAGE_SIZE = rows per page
         const PAGE_SIZE = 5;
         const ui = { pq: '', pf: 'all', sort: null, dir: 1, oq: '', of: 'all', mq: '', page: 1 };
         const FILTERS = { all: 'All products', active: 'Active', inactive: 'Inactive', low: 'Low stock (≤5)', out: 'Out of stock' };
@@ -255,7 +259,6 @@
         }
 
         /* ============ Pagination helpers ============ */
-        // Builds e.g. [1, '…', 4, 5, 6, '…', 20]
         function pageNumbers(cur, total) {
             if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
             const s = new Set([1, total, cur - 1, cur, cur + 1]);
@@ -298,9 +301,8 @@
                 return (typeof x === 'string' ? x.localeCompare(y) : x - y) * ui.dir;
             });
 
-            // PAGINATION: slice the filtered + sorted list to the current page
             const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
-            if (ui.page > totalPages) ui.page = totalPages;   // e.g. after deleting the last item on a page
+            if (ui.page > totalPages) ui.page = totalPages;
             if (ui.page < 1) ui.page = 1;
             const start = (ui.page - 1) * PAGE_SIZE;
             const pageList = list.slice(start, start + PAGE_SIZE);
@@ -308,7 +310,7 @@
             $('#productsTable tbody').innerHTML = pageList.map(function (p) {
                 const attrTxt = Object.keys(p.attrs || {}).map(k => p.attrs[k]).join(' · ');
                 return '<tr data-sku="' + esc(p.sku) + '" data-id="' + esc(p.id) + '"><td><div class="prod-cell"><div class="prod-thumb">' +
-                    (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">' : esc(p.name.charAt(0))) +
+                    (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="">' : esc(p.name.charAt(0))) +
                     '</div><div><div class="prod-name">' + esc(p.name) + '</div><div class="prod-sku">' + esc(p.sku) + '</div>' +
                     (attrTxt ? '<div class="prod-attrs">' + esc(attrTxt) + '</div>' : '') + '</div></div></td>' +
                     '<td><span class="cat-tag"><span class="material-symbols-outlined">sell</span>' + esc(p.cat) + '</span>' +
@@ -339,9 +341,9 @@
             const list = O.filter(o => (ui.of === 'all' || o.status === ui.of) &&
                 (!q || (o.ref + ' ' + o.cust + ' ' + o.product).toLowerCase().includes(q)));
             $('#ordersTable tbody').innerHTML = list.map(o =>
-                '<tr data-ref="' + esc(o.ref) + '" data-status="' + o.status + '"><td><div class="order-ref">' + esc(o.ref) + '</div><div class="muted-sm">' + esc(o.date) +
+                '<tr data-ref="' + esc(o.ref) + '" data-status="' + esc(o.status) + '"><td><div class="order-ref">' + esc(o.ref) + '</div><div class="muted-sm">' + esc(o.date) +
                 '</div></td><td><div class="cust-name">' + esc(o.cust) + '</div><div class="muted-sm">' + esc(o.product) + '</div></td>' +
-                '<td class="center"><span class="o-badge ' + o.status + '">' + LABEL[o.status] + '</span></td><td class="num price">Rs ' + fmt(o.total) +
+                '<td class="center"><span class="o-badge ' + esc(o.status) + '">' + (LABEL[o.status] || esc(o.status)) + '</span></td><td class="num price">Rs ' + fmt(o.total) +
                 '</td><td class="chev"><span class="material-symbols-outlined">chevron_right</span></td></tr>').join('');
             $('#ordersEmpty').style.display = list.length ? 'none' : 'block';
             $$('#orderTabs .tab').forEach(function (t) {
@@ -358,7 +360,7 @@
                 const sold = p.sold >= 1000 ? (p.sold / 1000).toFixed(1) + 'k' : p.sold;
                 const stock = p.stock === 0 ? ['out', 'Out of stock'] : p.stock <= 5 ? ['low', 'Only ' + p.stock + ' left'] : ['', p.stock + ' in stock'];
                 return '<div class="pcard"><div class="pcard-img">' +
-                    (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : esc(p.name.charAt(0))) +
+                    (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="">' : esc(p.name.charAt(0))) +
                     (p.disc ? '<span class="pcard-badge">-' + p.disc + '%</span>' : '') +
                     '<button type="button" class="pcard-heart" aria-label="Wishlist"><span class="material-symbols-outlined">favorite</span></button></div>' +
                     '<div class="pcard-top"><span class="pcard-cat">' + esc(p.sub || p.cat) + '</span><span class="pcard-sold">' + sold + ' sold</span></div>' +
@@ -381,6 +383,7 @@
         }
 
         function syncDash() {
+            // Revenue + order count are real (server-rendered from delivered orders); only reformat them.
             $('.stat-value', dashCards[0]).textContent = 'Rs ' + fmt(revenue);
             $('.stat-value', dashCards[1]).textContent = orderCount;
             $('.stat-value', dashCards[2]).textContent = P.length;
@@ -394,8 +397,9 @@
             if (bell) { if (al.length) bell.dataset.count = al.length; else delete bell.dataset.count; }
 
             $('.orders-table tbody').innerHTML = O.slice(0, 4).map(o =>
-                '<tr><td class="order-id">' + esc(o.ref) + '</td><td class="customer-name">' + esc(o.cust) + '</td><td class="product-name">' + esc(o.product) +
-                '</td><td class="order-status"><span class="status-badge ' + o.status + '">' + LABEL[o.status] + '</span></td><td class="order-price">Rs ' + fmt(o.total) + '</td></tr>').join('');
+                    '<tr><td class="order-id">' + esc(o.ref) + '</td><td class="customer-name">' + esc(o.cust) + '</td><td class="product-name">' + esc(o.product) +
+                    '</td><td class="order-status"><span class="status-badge ' + esc(o.status) + '">' + (LABEL[o.status] || esc(o.status)) + '</span></td><td class="order-price">Rs ' + fmt(o.total) + '</td></tr>').join('') ||
+                '<tr><td class="empty-note">No orders yet.</td></tr>';
 
             const n = M.filter(m => m.unread).length;
             $('#unreadSubtitle').textContent = n + ' unread';
@@ -432,7 +436,6 @@
             ui.dir = ui.sort === th.dataset.key ? -ui.dir : 1; ui.sort = th.dataset.key; ui.page = 1; renderProducts();
         });
 
-        // PAGINATION: page button / prev / next clicks
         const pager = $('#productsPagination');
         if (pager) pager.addEventListener('click', function (e) {
             const b = e.target.closest('[data-page]');
@@ -450,7 +453,6 @@
 
             if (a.dataset.act === 'edit') productForm(p);
 
-            // The Active/Inactive pill persists to the database via the API
             if (a.dataset.act === 'toggle') {
                 if (!p.id) {
                     toast('Product ID missing. Cannot update.', 'error');
@@ -461,10 +463,7 @@
                 fd.append('id', p.id);
                 fd.append('active', String(target));
 
-                fetch('/api/products/toggleActive', {
-                    method: 'POST',
-                    body: fd
-                })
+                fetch('/api/products/toggleActive', { method: 'POST', body: fd })
                     .then(response => {
                         if (response.ok) {
                             p.active = target;
@@ -489,14 +488,11 @@
                     const deleteData = new FormData();
                     deleteData.append('id', p.id);
 
-                    fetch('/api/products/delete', {
-                        method: 'POST',
-                        body: deleteData
-                    })
+                    fetch('/api/products/delete', { method: 'POST', body: deleteData })
                         .then(response => {
                             if (response.ok) {
                                 P.splice(P.indexOf(p), 1);
-                                refresh();   // renderProducts() moves back a page if this one is now empty
+                                refresh();
                                 toast('Product deleted successfully.', 'ok');
                             } else {
                                 response.text().then(msg => toast('Error: ' + msg, 'error'));
@@ -549,9 +545,9 @@
                 '<div class="fld-row"><label class="fld">Category<select id="f-cat">' + cats.map(c => '<option' + (c === d.cat ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select></label>' +
                 '<label class="fld">Sub-category<select id="f-sub"></select><span class="err"></span></label></div>' +
                 '<div id="f-attrs"></div>' +
-                '<div class="fld-row"><label class="fld">Price (Rs)<input id="f-price" type="number" min="1" value="' + d.price + '"><span class="err"></span></label>' +
-                '<label class="fld">Discount %<input id="f-disc" type="number" min="0" max="90" value="' + (d.disc || 0) + '"><span class="err"></span></label></div>' +
-                '<div class="fld-row"><label class="fld">Stock<input id="f-stock" type="number" min="0" value="' + d.stock + '"><span class="err"></span></label></div>' +
+                '<div class="fld-row"><label class="fld">Price (Rs)<input id="f-price" type="number" min="1" value="' + esc(d.price) + '"><span class="err"></span></label>' +
+                '<label class="fld">Discount %<input id="f-disc" type="number" min="0" max="90" value="' + esc(d.disc || 0) + '"><span class="err"></span></label></div>' +
+                '<div class="fld-row"><label class="fld">Stock<input id="f-stock" type="number" min="0" value="' + esc(d.stock) + '"><span class="err"></span></label></div>' +
 
                 '<div class="rich-editor">' +
                 '<div class="editor-label"><span>DETAILED DESCRIPTION &amp; SPECIFICATIONS</span><span class="editor-support">Supports Rich Text</span></div>' +
@@ -598,7 +594,6 @@
                 '<label class="chk"><input id="f-active" type="checkbox"' + (d.active ? ' checked' : '') + '> Listed as active</label>',
                 [['Cancel', 'btn-outline', closeModal], [isNew ? 'Add product' : 'Save changes', 'btn-primary', save]]);
 
-            // save button + "Adding..." / "Saving..." state
             const saveBtn = $('.modal-foot .btn-primary', m);
             const idleLabel = isNew ? 'Add product' : 'Save changes';
             const busyLabel = isNew ? 'Adding...' : 'Saving...';
@@ -663,7 +658,7 @@
 
             function updateInfoPreview() {
                 if (infoImage) {
-                    infoPreview.innerHTML = '<img src="' + infoImage + '">';
+                    infoPreview.innerHTML = '<img src="' + esc(infoImage) + '">';
                     infoPreview.classList.remove('hidden');
                     infoRemove.classList.remove('hidden');
                     $('.dz-placeholder', infoZone).classList.add('hidden');
@@ -712,7 +707,7 @@
                 } else {
                     $('.dz-placeholder', prodZone).classList.add('hidden');
                     prodGallery.innerHTML = prodImages.map((src, i) =>
-                        '<div class="thumb"><img src="' + src + '"><button type="button" data-idx="' + i + '" class="del">×</button></div>'
+                        '<div class="thumb"><img src="' + esc(src) + '"><button type="button" data-idx="' + i + '" class="del">×</button></div>'
                     ).join('');
                 }
                 $$('.dz-gallery .del', m).forEach(b => b.addEventListener('click', e => {
@@ -809,7 +804,6 @@
                 formData.append('discount', $('#f-disc', m).value || '0');
                 formData.append('description', editor.innerHTML);
                 formData.append('attributes', JSON.stringify(attrs));
-                // Send the "Listed as active" checkbox to the server
                 formData.append('active', $('#f-active', m).checked ? 'true' : 'false');
 
                 const isNewInfoImage = infoImage && infoImage.startsWith('data:');
@@ -846,16 +840,12 @@
                     formData.append('id', currentProductId);
                 }
 
-                fetch(url, {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch(url, { method: 'POST', body: formData })
                     .then(response => {
                         if (response.ok) {
                             try {
                                 sessionStorage.setItem('sellerToast', isNew ? 'Product added successfully.' : 'Product updated successfully.');
-                            } catch (e) {
-                            }
+                            } catch (e) {}
                             if (modalElement) closeModal();
                             location.hash = '#products';
                             location.reload();
@@ -872,230 +862,230 @@
                         toast('Network error. Please try again.', 'error');
                     });
             }
-            }
-            /* ============ Flash Sale ============ */
-            const FS = { MIN_DISC: 10, MAX_DISC: 90, MIN_LEAD: 15 * 60e3, MIN_DUR: 3600e3, MAX_DUR: 72 * 3600e3, MAX_ITEMS: 20 };
-            let F = [];
-            try { F = JSON.parse($('#flashData').textContent) || []; } catch (e) { F = []; }
-            let fsFilter = 'all', fsSig = '';
+        }
 
-            const pad2 = n => String(n).padStart(2, '0');
-            const fsStatus = f => (f.endedEarly || Date.now() >= f.end) ? 'ended' : (Date.now() < f.start ? 'scheduled' : 'live');
-            const fsPrice = (price, disc) => Math.round(price * (100 - disc) / 100);
-            const fsDate = ms => new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-            const toInput = ms => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-            function fsLeft(ms) {
-                let s = Math.max(0, Math.floor(ms / 1000));
-                const d = Math.floor(s / 86400); s %= 86400;
-                const h = Math.floor(s / 3600); s %= 3600;
-                const m = Math.floor(s / 60); s %= 60;
-                return (d ? d + 'd ' : '') + pad2(h) + ':' + pad2(m) + ':' + pad2(s);
-            }
-            function fsCountText(f) {
-                const st = fsStatus(f);
-                if (st === 'live') return 'Ends in ' + fsLeft(f.end - Date.now());
-                if (st === 'scheduled') return 'Starts in ' + fsLeft(f.start - Date.now());
-                return f.endedEarly ? 'Ended early' : 'Finished';
-            }
-            function fsSignature() { return F.map(f => f.id + ':' + fsStatus(f)).join('|'); }
+        /* ============ Flash Sale ============ */
+        const FS = { MIN_DISC: 10, MAX_DISC: 90, MIN_LEAD: 15 * 60e3, MIN_DUR: 3600e3, MAX_DUR: 72 * 3600e3, MAX_ITEMS: 20 };
+        let F = [];
+        try { F = JSON.parse($('#flashData').textContent) || []; } catch (e) { F = []; }
+        let fsFilter = 'all', fsSig = '';
 
-            function renderFlash() {
-                if (!$('#flashList')) return;
-                const by = { live: [], scheduled: [], ended: [] };
-                F.forEach(f => by[fsStatus(f)].push(f));
-                let units = 0, rev = 0;
-                F.forEach(f => f.items.forEach(i => { units += i.sold || 0; rev += (i.sold || 0) * fsPrice(i.price, i.disc); }));
+        const pad2 = n => String(n).padStart(2, '0');
+        const fsStatus = f => (f.endedEarly || Date.now() >= f.end) ? 'ended' : (Date.now() < f.start ? 'scheduled' : 'live');
+        const fsPrice = (price, disc) => Math.round(price * (100 - disc) / 100);
+        const fsDate = ms => new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const toInput = ms => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        function fsLeft(ms) {
+            let s = Math.max(0, Math.floor(ms / 1000));
+            const d = Math.floor(s / 86400); s %= 86400;
+            const h = Math.floor(s / 3600); s %= 3600;
+            const m = Math.floor(s / 60); s %= 60;
+            return (d ? d + 'd ' : '') + pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+        }
+        function fsCountText(f) {
+            const st = fsStatus(f);
+            if (st === 'live') return 'Ends in ' + fsLeft(f.end - Date.now());
+            if (st === 'scheduled') return 'Starts in ' + fsLeft(f.start - Date.now());
+            return f.endedEarly ? 'Ended early' : 'Finished';
+        }
+        function fsSignature() { return F.map(f => f.id + ':' + fsStatus(f)).join('|'); }
 
-                $('#flashStats').innerHTML =
-                    [['Live now', by.live.length, 'bolt', 'ic-orange'], ['Scheduled', by.scheduled.length, 'schedule', 'ic-blue'],
-                        ['Flash units sold', fmt(units), 'shopping_bag', 'ic-green'], ['Flash revenue', 'Rs ' + fmt(rev), 'currency_rupee', 'ic-purple']]
-                        .map(s => '<div class="stat-card"><div class="stat-top"><span class="stat-label">' + s[0] + '</span><span class="stat-icon ' + s[3] +
-                            '"><span class="material-symbols-outlined">' + s[2] + '</span></span></div><div class="stat-value">' + s[1] + '</div></div>').join('');
+        function renderFlash() {
+            if (!$('#flashList')) return;
+            const by = { live: [], scheduled: [], ended: [] };
+            F.forEach(f => by[fsStatus(f)].push(f));
+            let units = 0, rev = 0;
+            F.forEach(f => f.items.forEach(i => { units += i.sold || 0; rev += (i.sold || 0) * fsPrice(i.price, i.disc); }));
 
-                $$('#flashTabs .tab').forEach(t => {
-                    const k = t.dataset.filter;
-                    $('.tab-count', t).textContent = k === 'all' ? F.length : by[k].length;
-                    t.classList.toggle('active', k === fsFilter);
-                });
+            $('#flashStats').innerHTML =
+                [['Live now', by.live.length, 'bolt', 'ic-orange'], ['Scheduled', by.scheduled.length, 'schedule', 'ic-blue'],
+                    ['Flash units sold', fmt(units), 'shopping_bag', 'ic-green'], ['Flash revenue', 'Rs ' + fmt(rev), 'currency_rupee', 'ic-purple']]
+                    .map(s => '<div class="stat-card"><div class="stat-top"><span class="stat-label">' + s[0] + '</span><span class="stat-icon ' + s[3] +
+                        '"><span class="material-symbols-outlined">' + s[2] + '</span></span></div><div class="stat-value">' + s[1] + '</div></div>').join('');
 
-                const order = { live: 0, scheduled: 1, ended: 2 };
-                const list = F.filter(f => fsFilter === 'all' || fsStatus(f) === fsFilter)
-                    .sort((a, b) => order[fsStatus(a)] - order[fsStatus(b)] || (fsStatus(a) === 'ended' ? b.end - a.end : a.start - b.start));
-
-                $('#flashList').innerHTML = list.map(function (f) {
-                    const st = fsStatus(f);
-                    const actions = st === 'scheduled'
-                        ? '<button type="button" class="btn-outline" data-fa="edit"><span class="material-symbols-outlined">edit</span> Edit</button>' +
-                        '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>'
-                        : st === 'live'
-                            ? '<button type="button" class="btn-outline danger" data-fa="end"><span class="material-symbols-outlined">stop_circle</span> End now</button>'
-                            : '<button type="button" class="btn-outline" data-fa="dup"><span class="material-symbols-outlined">content_copy</span> Duplicate</button>' +
-                            '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>';
-                    return '<div class="fs-card ' + st + '" data-id="' + esc(f.id) + '"><div class="fs-head"><div>' +
-                        '<div class="fs-title"><span class="material-symbols-outlined">bolt</span>' + esc(f.name) + '<span class="pill pill-' + st + '">' + st.charAt(0).toUpperCase() + st.slice(1) + '</span></div>' +
-                        '<div class="fs-time">' + fsDate(f.start) + ' → ' + fsDate(f.end) + ' · <span class="fs-count' + (st === 'ended' ? ' muted' : '') + '" data-cd="' + esc(f.id) + '">' + fsCountText(f) + '</span></div></div>' +
-                        '<div class="fs-actions">' + actions + '</div></div>' +
-                        '<div class="fs-card-wrap"><table class="fs-items"><thead><tr><th>PRODUCT</th><th class="num">REGULAR</th><th class="num">FLASH PRICE</th><th>SOLD / QTY</th><th class="num">LIMIT</th></tr></thead><tbody>' +
-                        f.items.map(function (i) {
-                            const pct = i.qty ? Math.min(100, Math.round((i.sold || 0) * 100 / i.qty)) : 0;
-                            return '<tr><td>' + esc(i.name) + '</td><td class="num"><span class="fs-old">Rs ' + fmt(i.price) + '</span></td>' +
-                                '<td class="num"><span class="fs-new">Rs ' + fmt(fsPrice(i.price, i.disc)) + '</span><span class="fs-off">-' + i.disc + '%</span></td>' +
-                                '<td>' + (i.sold || 0) + ' / ' + i.qty + '<div class="fs-bar"><div style="width:' + pct + '%"></div></div></td><td class="num">' + i.limit + '</td></tr>';
-                        }).join('') + '</tbody></table></div></div>';
-                }).join('');
-                $('#flashEmpty').style.display = list.length ? 'none' : 'block';
-                $('#flashSubtitle').textContent = F.length + ' flash sale' + (F.length === 1 ? '' : 's') + (by.live.length ? ' · ' + by.live.length + ' live' : '');
-                fsSig = fsSignature();
-            }
-
-            /* live countdown + automatic status change */
-            setInterval(function () {
-                if (!$('#flashList') || document.hidden) return;
-                if (fsSignature() !== fsSig) return renderFlash();
-                $$('[data-cd]').forEach(s => { const f = F.find(x => String(x.id) === s.dataset.cd); if (f) s.textContent = fsCountText(f); });
-            }, 1000);
-
-            $$('#flashTabs .tab').forEach(t => t.addEventListener('click', function () { fsFilter = t.dataset.filter; renderFlash(); }));
-            $('#newFlashBtn').addEventListener('click', () => flashForm(null));
-
-            function fsPost(url, data, okMsg) {
-                const fd = new FormData(); Object.keys(data).forEach(k => fd.append(k, data[k]));
-                fetch(url, { method: 'POST', body: fd }).then(function (r) {
-                    if (r.ok) {
-                        try { sessionStorage.setItem('sellerToast', okMsg); } catch (e) {}
-                        location.hash = '#flashsale'; location.reload();
-                    } else r.text().then(m => toast('Error: ' + m, 'error'));
-                }).catch(function () { toast('Network error. Please try again.', 'error'); });
-            }
-
-            $('#flashList').addEventListener('click', function (e) {
-                const b = e.target.closest('[data-fa]'); if (!b) return;
-                const f = F.find(x => String(x.id) === b.closest('.fs-card').dataset.id); if (!f) return;
-                const a = b.dataset.fa;
-                if (a === 'edit') flashForm(f);
-                if (a === 'dup') flashForm(Object.assign({}, f, { id: null, name: f.name + ' (copy)', items: f.items.map(i => Object.assign({}, i, { sold: 0 })) }), true);
-                if (a === 'end') confirmBox('End flash sale', 'End <strong>' + esc(f.name) + '</strong> now? Products return to their regular price immediately.', 'End now',
-                    () => fsPost('/api/flashsales/end', { id: f.id }, 'Flash sale ended.'));
-                if (a === 'del') confirmBox('Delete flash sale', 'Delete <strong>' + esc(f.name) + '</strong>? This cannot be undone.', 'Delete',
-                    () => fsPost('/api/flashsales/delete', { id: f.id }, 'Flash sale deleted.'));
+            $$('#flashTabs .tab').forEach(t => {
+                const k = t.dataset.filter;
+                $('.tab-count', t).textContent = k === 'all' ? F.length : by[k].length;
+                t.classList.toggle('active', k === fsFilter);
             });
 
-            function flashForm(f, isCopy) {
-                const isNew = !f || !f.id;
-                const t0 = Math.ceil((Date.now() + 3600e3) / 900e3) * 900e3;           // next quarter-hour, ~1h ahead
-                const d = (f && !isCopy) ? f : { name: f ? f.name : '', start: t0, end: t0 + 6 * 3600e3, items: f ? f.items : [] };
-                const byPid = {}; d.items.forEach(i => { byPid[String(i.pid)] = i; });
-                const pool = P.filter(p => p.id && (byPid[String(p.id)] || (p.active && p.stock > 0)));
+            const order = { live: 0, scheduled: 1, ended: 2 };
+            const list = F.filter(f => fsFilter === 'all' || fsStatus(f) === fsFilter)
+                .sort((a, b) => order[fsStatus(a)] - order[fsStatus(b)] || (fsStatus(a) === 'ended' ? b.end - a.end : a.start - b.start));
 
-                const rows = pool.map(function (p) {
-                    const it = byPid[String(p.id)];
-                    return '<div class="fs-row' + (it ? ' on' : '') + '" data-pid="' + esc(p.id) + '" data-name="' + esc(p.name.toLowerCase()) + '">' +
-                        '<label class="fs-pick"><input type="checkbox" class="fs-chk"' + (it ? ' checked' : '') + '><div class="prod-thumb">' +
-                        (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '">' : esc(p.name.charAt(0))) + '</div><div><div class="prod-name">' + esc(p.name) +
-                        '</div><div class="muted-sm">Rs ' + fmt(p.price) + ' · ' + p.stock + ' in stock</div></div></label>' +
-                        '<div class="fs-fields"><label>Discount %<input type="number" class="fs-disc" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" value="' + (it ? it.disc : '') + '" placeholder="10–90"></label>' +
-                        '<label>Flash qty<input type="number" class="fs-qty" min="1" max="' + p.stock + '" value="' + (it ? it.qty : '') + '"></label>' +
-                        '<label>Limit / customer<input type="number" class="fs-lim" min="1" value="' + (it ? it.limit : '') + '"></label>' +
-                        '<div class="fs-prev">—</div></div></div>';
-                }).join('') || '<div class="pop-empty">No active, in-stock products available. Add or activate a product first.</div>';
+            $('#flashList').innerHTML = list.map(function (f) {
+                const st = fsStatus(f);
+                const actions = st === 'scheduled'
+                    ? '<button type="button" class="btn-outline" data-fa="edit"><span class="material-symbols-outlined">edit</span> Edit</button>' +
+                    '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>'
+                    : st === 'live'
+                        ? '<button type="button" class="btn-outline danger" data-fa="end"><span class="material-symbols-outlined">stop_circle</span> End now</button>'
+                        : '<button type="button" class="btn-outline" data-fa="dup"><span class="material-symbols-outlined">content_copy</span> Duplicate</button>' +
+                        '<button type="button" class="btn-outline danger" data-fa="del"><span class="material-symbols-outlined">delete</span> Delete</button>';
+                return '<div class="fs-card ' + st + '" data-id="' + esc(f.id) + '"><div class="fs-head"><div>' +
+                    '<div class="fs-title"><span class="material-symbols-outlined">bolt</span>' + esc(f.name) + '<span class="pill pill-' + st + '">' + st.charAt(0).toUpperCase() + st.slice(1) + '</span></div>' +
+                    '<div class="fs-time">' + fsDate(f.start) + ' → ' + fsDate(f.end) + ' · <span class="fs-count' + (st === 'ended' ? ' muted' : '') + '" data-cd="' + esc(f.id) + '">' + fsCountText(f) + '</span></div></div>' +
+                    '<div class="fs-actions">' + actions + '</div></div>' +
+                    '<div class="fs-card-wrap"><table class="fs-items"><thead><tr><th>PRODUCT</th><th class="num">REGULAR</th><th class="num">FLASH PRICE</th><th>SOLD / QTY</th><th class="num">LIMIT</th></tr></thead><tbody>' +
+                    f.items.map(function (i) {
+                        const pct = i.qty ? Math.min(100, Math.round((i.sold || 0) * 100 / i.qty)) : 0;
+                        return '<tr><td>' + esc(i.name) + '</td><td class="num"><span class="fs-old">Rs ' + fmt(i.price) + '</span></td>' +
+                            '<td class="num"><span class="fs-new">Rs ' + fmt(fsPrice(i.price, i.disc)) + '</span><span class="fs-off">-' + i.disc + '%</span></td>' +
+                            '<td>' + (i.sold || 0) + ' / ' + i.qty + '<div class="fs-bar"><div style="width:' + pct + '%"></div></div></td><td class="num">' + i.limit + '</td></tr>';
+                    }).join('') + '</tbody></table></div></div>';
+            }).join('');
+            $('#flashEmpty').style.display = list.length ? 'none' : 'block';
+            $('#flashSubtitle').textContent = F.length + ' flash sale' + (F.length === 1 ? '' : 's') + (by.live.length ? ' · ' + by.live.length + ' live' : '');
+            fsSig = fsSignature();
+        }
 
-                const m = modal(isNew ? 'Create flash sale' : 'Edit flash sale',
-                    '<div class="fs-rules"><strong>Flash sale rules:</strong> minimum discount ' + FS.MIN_DISC + '%, maximum ' + FS.MAX_DISC + '%. Starts at least 15 minutes from now, runs 1–72 hours. ' +
-                    'A product can only be in one sale at a time. Flash quantity cannot exceed current stock.</div>' +
-                    '<label class="fld">Campaign name<input id="fs-name" maxlength="60" value="' + esc(d.name) + '" placeholder="e.g. Weekend Mega Deal"></label>' +
-                    '<div class="fld-row"><label class="fld">Starts<input id="fs-start" type="datetime-local" value="' + toInput(d.start) + '"></label>' +
-                    '<label class="fld">Ends<input id="fs-end" type="datetime-local" value="' + toInput(d.end) + '"></label></div>' +
-                    '<div class="editor-label"><span>SELECT PRODUCTS</span><span class="editor-support" id="fs-count">0 selected</span></div>' +
-                    '<div class="fs-bulk"><label class="fld">Discount for all selected<input id="fs-bulk" type="number" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" placeholder="10–90 %"></label>' +
-                    '<button type="button" class="btn-outline" id="fs-bulk-btn">Apply to selected</button>' +
-                    '<div class="search-box" style="flex:1;min-width:160px;width:auto"><span class="material-symbols-outlined">search</span><input type="text" id="fs-search" placeholder="Filter products..."></div></div>' +
-                    '<div class="fs-list" id="fs-list">' + rows + '</div><div class="fs-error" id="fs-error"></div>',
-                    [['Cancel', 'btn-outline', closeModal], [isNew ? 'Schedule sale' : 'Save changes', 'btn-primary', save]]);
-                $('.modal', m).classList.add('modal-lg');
+        /* live countdown + automatic status change */
+        setInterval(function () {
+            if (!$('#flashList') || document.hidden) return;
+            if (fsSignature() !== fsSig) return renderFlash();
+            $$('[data-cd]').forEach(s => { const f = F.find(x => String(x.id) === s.dataset.cd); if (f) s.textContent = fsCountText(f); });
+        }, 1000);
 
-                const list = $('#fs-list', m), saveBtn = $('.modal-foot .btn-primary', m);
-                let busy = false;
-                const rowP = r => P.find(x => String(x.id) === r.dataset.pid);
+        $$('#flashTabs .tab').forEach(t => t.addEventListener('click', function () { fsFilter = t.dataset.filter; renderFlash(); }));
+        $('#newFlashBtn').addEventListener('click', () => flashForm(null));
 
-                function preview(r) {
-                    const p = rowP(r), disc = Number($('.fs-disc', r).value), box = $('.fs-prev', r);
-                    box.innerHTML = (disc >= FS.MIN_DISC && disc <= FS.MAX_DISC)
-                        ? '<strong>Rs ' + fmt(fsPrice(p.price, disc)) + '</strong>save Rs ' + fmt(p.price - fsPrice(p.price, disc)) : '—';
-                }
-                function count() { $('#fs-count', m).textContent = $$('.fs-row.on', m).length + ' selected'; }
-                $$('.fs-row.on', m).forEach(preview); count();
+        function fsPost(url, data, okMsg) {
+            const fd = new FormData(); Object.keys(data).forEach(k => fd.append(k, data[k]));
+            fetch(url, { method: 'POST', body: fd }).then(function (r) {
+                if (r.ok) {
+                    try { sessionStorage.setItem('sellerToast', okMsg); } catch (e) {}
+                    location.hash = '#flashsale'; location.reload();
+                } else r.text().then(m => toast('Error: ' + m, 'error'));
+            }).catch(function () { toast('Network error. Please try again.', 'error'); });
+        }
 
-                list.addEventListener('change', function (e) {
-                    if (!e.target.classList.contains('fs-chk')) return;
-                    const r = e.target.closest('.fs-row'), p = rowP(r);
-                    r.classList.toggle('on', e.target.checked);
-                    if (e.target.checked) {
-                        if (!$('.fs-disc', r).value) $('.fs-disc', r).value = $('#fs-bulk', m).value || FS.MIN_DISC;
-                        if (!$('.fs-qty', r).value) $('.fs-qty', r).value = p.stock;
-                        if (!$('.fs-lim', r).value) $('.fs-lim', r).value = 1;
-                        preview(r);
-                    }
-                    count();
-                });
-                list.addEventListener('input', e => { const r = e.target.closest('.fs-row'); if (r) { e.target.classList.remove('bad'); preview(r); } });
-                $('#fs-bulk-btn', m).onclick = function () {
-                    const v = Number($('#fs-bulk', m).value);
-                    if (!(v >= FS.MIN_DISC && v <= FS.MAX_DISC)) { $('#fs-error', m).textContent = 'Bulk discount must be between ' + FS.MIN_DISC + '% and ' + FS.MAX_DISC + '%.'; return; }
-                    $('#fs-error', m).textContent = '';
-                    $$('.fs-row.on', m).forEach(r => { $('.fs-disc', r).value = v; preview(r); });
-                };
-                $('#fs-search', m).addEventListener('input', function () {
-                    const q = this.value.toLowerCase();
-                    $$('.fs-row', m).forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
-                });
+        $('#flashList').addEventListener('click', function (e) {
+            const b = e.target.closest('[data-fa]'); if (!b) return;
+            const f = F.find(x => String(x.id) === b.closest('.fs-card').dataset.id); if (!f) return;
+            const a = b.dataset.fa;
+            if (a === 'edit') flashForm(f);
+            if (a === 'dup') flashForm(Object.assign({}, f, { id: null, name: f.name + ' (copy)', items: f.items.map(i => Object.assign({}, i, { sold: 0 })) }), true);
+            if (a === 'end') confirmBox('End flash sale', 'End <strong>' + esc(f.name) + '</strong> now? Products return to their regular price immediately.', 'End now',
+                () => fsPost('/api/flashsales/end', { id: f.id }, 'Flash sale ended.'));
+            if (a === 'del') confirmBox('Delete flash sale', 'Delete <strong>' + esc(f.name) + '</strong>? This cannot be undone.', 'Delete',
+                () => fsPost('/api/flashsales/delete', { id: f.id }, 'Flash sale deleted.'));
+        });
 
-                function save() {
-                    if (busy) return;
-                    const errBox = $('#fs-error', m); errBox.textContent = '';
-                    $$('.bad', m).forEach(x => x.classList.remove('bad'));
-                    const fail = msg => { errBox.textContent = msg; return false; };
+        function flashForm(f, isCopy) {
+            const isNew = !f || !f.id;
+            const t0 = Math.ceil((Date.now() + 3600e3) / 900e3) * 900e3;
+            const d = (f && !isCopy) ? f : { name: f ? f.name : '', start: t0, end: t0 + 6 * 3600e3, items: f ? f.items : [] };
+            const byPid = {}; d.items.forEach(i => { byPid[String(i.pid)] = i; });
+            const pool = P.filter(p => p.id && (byPid[String(p.id)] || (p.active && p.stock > 0)));
 
-                    const name = $('#fs-name', m).value.trim();
-                    const start = new Date($('#fs-start', m).value).getTime(), end = new Date($('#fs-end', m).value).getTime();
-                    if (!name) return fail('Campaign name is required.');
-                    if (isNaN(start) || isNaN(end)) return fail('Choose a valid start and end time.');
-                    const timeChanged = isNew || start !== d.start;
-                    if (timeChanged && start < Date.now() + FS.MIN_LEAD) return fail('Sale must start at least 15 minutes from now.');
-                    if (end - start < FS.MIN_DUR) return fail('Sale must run for at least 1 hour.');
-                    if (end - start > FS.MAX_DUR) return fail('Sale can run for at most 72 hours.');
+            const rows = pool.map(function (p) {
+                const it = byPid[String(p.id)];
+                return '<div class="fs-row' + (it ? ' on' : '') + '" data-pid="' + esc(p.id) + '" data-name="' + esc(p.name.toLowerCase()) + '">' +
+                    '<label class="fs-pick"><input type="checkbox" class="fs-chk"' + (it ? ' checked' : '') + '><div class="prod-thumb">' +
+                    (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '">' : esc(p.name.charAt(0))) + '</div><div><div class="prod-name">' + esc(p.name) +
+                    '</div><div class="muted-sm">Rs ' + fmt(p.price) + ' · ' + p.stock + ' in stock</div></div></label>' +
+                    '<div class="fs-fields"><label>Discount %<input type="number" class="fs-disc" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" value="' + (it ? it.disc : '') + '" placeholder="10–90"></label>' +
+                    '<label>Flash qty<input type="number" class="fs-qty" min="1" max="' + p.stock + '" value="' + (it ? it.qty : '') + '"></label>' +
+                    '<label>Limit / customer<input type="number" class="fs-lim" min="1" value="' + (it ? it.limit : '') + '"></label>' +
+                    '<div class="fs-prev">—</div></div></div>';
+            }).join('') || '<div class="pop-empty">No active, in-stock products available. Add or activate a product first.</div>';
 
-                    const rowsOn = $$('.fs-row.on', m);
-                    if (!rowsOn.length) return fail('Select at least one product.');
-                    if (rowsOn.length > FS.MAX_ITEMS) return fail('You can add up to ' + FS.MAX_ITEMS + ' products per sale.');
+            const m = modal(isNew ? 'Create flash sale' : 'Edit flash sale',
+                '<div class="fs-rules"><strong>Flash sale rules:</strong> minimum discount ' + FS.MIN_DISC + '%, maximum ' + FS.MAX_DISC + '%. Starts at least 15 minutes from now, runs 1–72 hours. ' +
+                'A product can only be in one sale at a time. Flash quantity cannot exceed current stock.</div>' +
+                '<label class="fld">Campaign name<input id="fs-name" maxlength="60" value="' + esc(d.name) + '" placeholder="e.g. Weekend Mega Deal"></label>' +
+                '<div class="fld-row"><label class="fld">Starts<input id="fs-start" type="datetime-local" value="' + toInput(d.start) + '"></label>' +
+                '<label class="fld">Ends<input id="fs-end" type="datetime-local" value="' + toInput(d.end) + '"></label></div>' +
+                '<div class="editor-label"><span>SELECT PRODUCTS</span><span class="editor-support" id="fs-count">0 selected</span></div>' +
+                '<div class="fs-bulk"><label class="fld">Discount for all selected<input id="fs-bulk" type="number" min="' + FS.MIN_DISC + '" max="' + FS.MAX_DISC + '" placeholder="10–90 %"></label>' +
+                '<button type="button" class="btn-outline" id="fs-bulk-btn">Apply to selected</button>' +
+                '<div class="search-box" style="flex:1;min-width:160px;width:auto"><span class="material-symbols-outlined">search</span><input type="text" id="fs-search" placeholder="Filter products..."></div></div>' +
+                '<div class="fs-list" id="fs-list">' + rows + '</div><div class="fs-error" id="fs-error"></div>',
+                [['Cancel', 'btn-outline', closeModal], [isNew ? 'Schedule sale' : 'Save changes', 'btn-primary', save]]);
+            $('.modal', m).classList.add('modal-lg');
 
-                    const items = [];
-                    for (const r of rowsOn) {
-                        const p = rowP(r), disc = Number($('.fs-disc', r).value), qty = Number($('.fs-qty', r).value), lim = Number($('.fs-lim', r).value);
-                        if (!Number.isInteger(disc) || disc < FS.MIN_DISC || disc > FS.MAX_DISC) { $('.fs-disc', r).classList.add('bad'); return fail(p.name + ': discount must be ' + FS.MIN_DISC + '–' + FS.MAX_DISC + '%.'); }
-                        if (!Number.isInteger(qty) || qty < 1 || qty > p.stock) { $('.fs-qty', r).classList.add('bad'); return fail(p.name + ': flash quantity must be 1–' + p.stock + ' (current stock).'); }
-                        if (!Number.isInteger(lim) || lim < 1 || lim > qty) { $('.fs-lim', r).classList.add('bad'); return fail(p.name + ': limit per customer must be 1–' + qty + '.'); }
-                        items.push({ productId: p.id, discount: disc, qty: qty, limit: lim });
-                    }
-                    // no product in two overlapping sales
-                    const clash = [];
-                    F.forEach(o => {
-                        if ((!isNew && String(o.id) === String(d.id)) || fsStatus(o) === 'ended') return;
-                        if (start < o.end && end > o.start) o.items.forEach(oi => { if (items.some(i => String(i.productId) === String(oi.pid))) clash.push(oi.name); });
-                    });
-                    if (clash.length) return fail('Already in another sale during this time: ' + [...new Set(clash)].join(', ') + '.');
+            const list = $('#fs-list', m), saveBtn = $('.modal-foot .btn-primary', m);
+            let busy = false;
+            const rowP = r => P.find(x => String(x.id) === r.dataset.pid);
 
-                    busy = true; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
-                    fetch('/api/flashsales/save', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: isNew ? null : d.id, name: name, start: start, end: end, items: items })
-                    }).then(function (r) {
-                        if (r.ok) {
-                            try { sessionStorage.setItem('sellerToast', isNew ? 'Flash sale scheduled.' : 'Flash sale updated.'); } catch (e) {}
-                            closeModal(); location.hash = '#flashsale'; location.reload();
-                        } else r.text().then(function (msg) { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail(msg); });
-                    }).catch(function () { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail('Network error. Please try again.'); });
-                }
+            function preview(r) {
+                const p = rowP(r), disc = Number($('.fs-disc', r).value), box = $('.fs-prev', r);
+                box.innerHTML = (disc >= FS.MIN_DISC && disc <= FS.MAX_DISC)
+                    ? '<strong>Rs ' + fmt(fsPrice(p.price, disc)) + '</strong>save Rs ' + fmt(p.price - fsPrice(p.price, disc)) : '—';
             }
+            function count() { $('#fs-count', m).textContent = $$('.fs-row.on', m).length + ' selected'; }
+            $$('.fs-row.on', m).forEach(preview); count();
+
+            list.addEventListener('change', function (e) {
+                if (!e.target.classList.contains('fs-chk')) return;
+                const r = e.target.closest('.fs-row'), p = rowP(r);
+                r.classList.toggle('on', e.target.checked);
+                if (e.target.checked) {
+                    if (!$('.fs-disc', r).value) $('.fs-disc', r).value = $('#fs-bulk', m).value || FS.MIN_DISC;
+                    if (!$('.fs-qty', r).value) $('.fs-qty', r).value = p.stock;
+                    if (!$('.fs-lim', r).value) $('.fs-lim', r).value = 1;
+                    preview(r);
+                }
+                count();
+            });
+            list.addEventListener('input', e => { const r = e.target.closest('.fs-row'); if (r) { e.target.classList.remove('bad'); preview(r); } });
+            $('#fs-bulk-btn', m).onclick = function () {
+                const v = Number($('#fs-bulk', m).value);
+                if (!(v >= FS.MIN_DISC && v <= FS.MAX_DISC)) { $('#fs-error', m).textContent = 'Bulk discount must be between ' + FS.MIN_DISC + '% and ' + FS.MAX_DISC + '%.'; return; }
+                $('#fs-error', m).textContent = '';
+                $$('.fs-row.on', m).forEach(r => { $('.fs-disc', r).value = v; preview(r); });
+            };
+            $('#fs-search', m).addEventListener('input', function () {
+                const q = this.value.toLowerCase();
+                $$('.fs-row', m).forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+            });
+
+            function save() {
+                if (busy) return;
+                const errBox = $('#fs-error', m); errBox.textContent = '';
+                $$('.bad', m).forEach(x => x.classList.remove('bad'));
+                const fail = msg => { errBox.textContent = msg; return false; };
+
+                const name = $('#fs-name', m).value.trim();
+                const start = new Date($('#fs-start', m).value).getTime(), end = new Date($('#fs-end', m).value).getTime();
+                if (!name) return fail('Campaign name is required.');
+                if (isNaN(start) || isNaN(end)) return fail('Choose a valid start and end time.');
+                const timeChanged = isNew || start !== d.start;
+                if (timeChanged && start < Date.now() + FS.MIN_LEAD) return fail('Sale must start at least 15 minutes from now.');
+                if (end - start < FS.MIN_DUR) return fail('Sale must run for at least 1 hour.');
+                if (end - start > FS.MAX_DUR) return fail('Sale can run for at most 72 hours.');
+
+                const rowsOn = $$('.fs-row.on', m);
+                if (!rowsOn.length) return fail('Select at least one product.');
+                if (rowsOn.length > FS.MAX_ITEMS) return fail('You can add up to ' + FS.MAX_ITEMS + ' products per sale.');
+
+                const items = [];
+                for (const r of rowsOn) {
+                    const p = rowP(r), disc = Number($('.fs-disc', r).value), qty = Number($('.fs-qty', r).value), lim = Number($('.fs-lim', r).value);
+                    if (!Number.isInteger(disc) || disc < FS.MIN_DISC || disc > FS.MAX_DISC) { $('.fs-disc', r).classList.add('bad'); return fail(p.name + ': discount must be ' + FS.MIN_DISC + '–' + FS.MAX_DISC + '%.'); }
+                    if (!Number.isInteger(qty) || qty < 1 || qty > p.stock) { $('.fs-qty', r).classList.add('bad'); return fail(p.name + ': flash quantity must be 1–' + p.stock + ' (current stock).'); }
+                    if (!Number.isInteger(lim) || lim < 1 || lim > qty) { $('.fs-lim', r).classList.add('bad'); return fail(p.name + ': limit per customer must be 1–' + qty + '.'); }
+                    items.push({ productId: p.id, discount: disc, qty: qty, limit: lim });
+                }
+                const clash = [];
+                F.forEach(o => {
+                    if ((!isNew && String(o.id) === String(d.id)) || fsStatus(o) === 'ended') return;
+                    if (start < o.end && end > o.start) o.items.forEach(oi => { if (items.some(i => String(i.productId) === String(oi.pid))) clash.push(oi.name); });
+                });
+                if (clash.length) return fail('Already in another sale during this time: ' + [...new Set(clash)].join(', ') + '.');
+
+                busy = true; saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+                fetch('/api/flashsales/save', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: isNew ? null : d.id, name: name, start: start, end: end, items: items })
+                }).then(function (r) {
+                    if (r.ok) {
+                        try { sessionStorage.setItem('sellerToast', isNew ? 'Flash sale scheduled.' : 'Flash sale updated.'); } catch (e) {}
+                        closeModal(); location.hash = '#flashsale'; location.reload();
+                    } else r.text().then(function (msg) { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail(msg); });
+                }).catch(function () { busy = false; saveBtn.disabled = false; saveBtn.textContent = isNew ? 'Schedule sale' : 'Save changes'; fail('Network error. Please try again.'); });
+            }
+        }
 
 
         /* ============ Orders ============ */
@@ -1113,6 +1103,8 @@
 
         const ORDER_ACTION = { pending: 'confirm', confirmed: 'ship', shipped: 'deliver' };
 
+        // After every status change the page reloads, so the server recalculates
+        // dashboard revenue, order counts, charts and the whole Finance view.
         function orderAction(o, action, okMsg) {
             const fd = new FormData();
             fd.append('ref', o.ref);
@@ -1126,6 +1118,7 @@
         }
 
         function orderDetail(o) {
+            if (!o) return;
             const steps = ['pending', 'confirmed', 'shipped', 'delivered'], idx = steps.indexOf(o.status);
             const off = (o.status === 'cancelled' || o.status === 'return') ? ' off' : '';
             const tl = '<div class="timeline">' + steps.map((s, i) =>
@@ -1146,7 +1139,7 @@
             }
 
             modal(o.ref,
-                '<div class="od-head"><span class="o-badge ' + o.status + '">' + LABEL[o.status] + '</span><span class="muted-sm">' + esc(o.date) + '</span></div>' +
+                '<div class="od-head"><span class="o-badge ' + esc(o.status) + '">' + (LABEL[o.status] || esc(o.status)) + '</span><span class="muted-sm">' + esc(o.date) + '</span></div>' +
                 '<dl class="od"><dt>Customer</dt><dd>' + esc(o.cust) + ' · ' + esc(o.phone) + '</dd>' +
                 '<dt>Deliver to</dt><dd>' + esc(o.address) + '</dd>' +
                 '<dt>Payment</dt><dd>' + esc(o.payment) + '</dd>' +
@@ -1161,6 +1154,7 @@
         $('#messageList').addEventListener('click', function (e) { const i = e.target.closest('.msg-item'); if (i) openThread(M[+i.dataset.i]); });
         function bubbles(m) { return m.thread.map(t => '<div class="bubble ' + (t.me ? 'me' : 'them') + '">' + esc(t.text) + '</div>').join(''); }
         function openThread(m) {
+            if (!m) return;
             m.unread = false; renderMessages(); syncDash();
             const b = modal(m.name + ' · ' + m.subject, '<div class="thread">' + bubbles(m) + '</div><textarea id="reply" rows="3" placeholder="Write a reply..."></textarea>',
                 [['Close', 'btn-outline', closeModal], ['Send reply', 'btn-primary', function () {
@@ -1192,7 +1186,7 @@
             popover(bell, '<div class="pop-title">Notifications</div>' + (al.map(a => '<button type="button" data-go="' + a.go + '"><strong>' + esc(a.title) + '</strong><span>' + esc(a.body) + '</span></button>').join('') || '<div class="pop-empty">You\'re all caught up.</div>'), true);
         });
 
-        /* ============ Live activity (simulated feed – replace with fetch()/WebSocket) ============ */
+        /* ============ Demo message feed (off by default) ============ */
         const NAMES = ['Lena Fischer', 'Arjun Mehta', 'Chloe Martin', 'Omar Haddad', 'Sita Gurung', 'Diego Ramos'];
 
         function newMessage() {
@@ -1201,12 +1195,14 @@
             M.unshift({ name: n, subject: 'Is this item still available?', time: 'Just now', unread: true, thread: [{ me: false, text: 'Hi! Is the ' + P[0].name.toLowerCase() + ' available for delivery this week?' }] });
             refresh(); toast('New message from ' + n, '', 'messages');
         }
-        setInterval(function () {
-            if (!approved || document.hidden || $('.modal-backdrop')) return;
-            newMessage();
-        }, 30000);
+        if (SIMULATE_MESSAGES) {
+            setInterval(function () {
+                if (!approved || document.hidden || $('.modal-backdrop')) return;
+                newMessage();
+            }, 30000);
+        }
 
-        /* ============ Status flow (server-driven, no faking) ============ */
+        /* ============ Status flow (server-driven) ============ */
         function applyServerStatus() {
             $('#reviewState').style.display = 'none';
             $('#rejectedState').style.display = 'none';

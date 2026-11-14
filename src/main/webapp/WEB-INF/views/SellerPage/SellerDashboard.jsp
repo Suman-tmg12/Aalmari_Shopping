@@ -1,34 +1,114 @@
-
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.*" %>
 <%@ page import="com.fasterxml.jackson.databind.ObjectMapper" %>
+<%@ page import="com.fasterxml.jackson.databind.JsonNode" %>
+<%@ page import="com.example.aalmari.dto.SellerFinance" %>
+<%!
+    /** HTML-escape anything that came from a user before printing it. */
+    static String h(String s) {
+        if (s == null) return "";
+        StringBuilder b = new StringBuilder(s.length() + 16);
+        for (int k = 0; k < s.length(); k++) {
+            char c = s.charAt(k);
+            switch (c) {
+                case '&':  b.append("&amp;");  break;
+                case '<':  b.append("&lt;");   break;
+                case '>':  b.append("&gt;");   break;
+                case '"':  b.append("&quot;"); break;
+                case '\'': b.append("&#39;");  break;
+                default:   b.append(c);
+            }
+        }
+        return b.toString();
+    }
+
+    /** First letter for placeholder thumbnails (always safe to put inside a JS string). */
+    static String initial(String s) {
+        if (s == null || s.isEmpty()) return "?";
+        char c = Character.toUpperCase(s.charAt(0));
+        return Character.isLetterOrDigit(c) ? String.valueOf(c) : "?";
+    }
+
+    static String nz(String s) { return s == null ? "" : s; }
+
+    /** JSON used by the Edit form (read by SellerDashboard.js from data-json). */
+    static String editJson(String[] p) {
+        ObjectMapper om = new ObjectMapper();
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", p[0]);
+        m.put("cat", p[2]);
+        m.put("sub", p[8]);
+        m.put("price", Integer.parseInt(p[3]));
+        m.put("disc", p[4].isEmpty() ? 0 : Integer.parseInt(p[4]));
+        m.put("stock", Integer.parseInt(p[5]));
+        m.put("active", "Active".equals(p[7]));
+        m.put("description", p[12]);
+        JsonNode attrs;
+        try { attrs = om.readTree(p[13]); } catch (Exception e) { attrs = om.createObjectNode(); }
+        if (attrs == null || !attrs.isObject()) attrs = om.createObjectNode();
+        m.put("attrs", attrs);
+        m.put("infoImage", p[9]);
+        try { return om.writeValueAsString(m); } catch (Exception e) { return "{}"; }
+    }
+%>
 <%
-    // ✅ EXISTING declarations FIRST (from your original code)
+    // ---------------- Store status ----------------
     String rawStatus = (String) request.getAttribute("status");
     if (rawStatus == null) rawStatus = "pending";
     String storeName = (String) request.getAttribute("storeName");
     if (storeName == null) storeName = "";
     String rejectionReason = (String) request.getAttribute("rejectionReason");
 
-    boolean isApproved   = "approved".equalsIgnoreCase(rawStatus);
-    boolean isRejected   = "rejected".equalsIgnoreCase(rawStatus);
+    boolean isApproved    = "approved".equalsIgnoreCase(rawStatus);
+    boolean isRejected    = "rejected".equalsIgnoreCase(rawStatus);
     boolean isUnderReview = "pending".equalsIgnoreCase(rawStatus);
 
     String status = isApproved ? "Approved" : isRejected ? "Rejected" : "Under Review";
-    int unreadMessages = 2;
     String activeMenu = "Dashboard";
 
-    // ✅ HARDCODED DATA (required for dashboard)
-    String[] months = {"Mar", "Apr", "May", "Jun", "Jul", "Aug"};
-    int[] grossByMonth = {4200, 5800, 4900, 7300, 8100, 9640};
-    double commissionRate = 0.10;
-    int grossTotal = 0;
-    for (int gv : grossByMonth) grossTotal += gv;
-    int commissionTotal = (int) Math.round(grossTotal * commissionRate);
-    int netTotal = grossTotal - commissionTotal;
-    int curGross = grossByMonth[grossByMonth.length - 1];
-    int curCommission = (int) Math.round(curGross * commissionRate);
-    int pendingPayout = curGross - curCommission;
+    // ---------------- REAL finance data (OrderService.sellerFinance) ----------------
+    SellerFinance fin = (SellerFinance) request.getAttribute("finance");
+    if (fin == null) fin = SellerFinance.empty();
+
+    String[] months         = fin.months;
+    long[]   grossByMonth   = fin.gross;
+    int[]    ordersByMonth  = fin.orders;
+    double   commissionRate = fin.commissionRate;
+
+    int last = months.length - 1;
+    long grossTotal = 0;
+    for (long gv : grossByMonth) grossTotal += gv;
+    long commissionTotal = Math.round(grossTotal * commissionRate);
+    long netTotal        = grossTotal - commissionTotal;
+    long curGross        = grossByMonth[last];
+    long curCommission   = Math.round(curGross * commissionRate);
+    long pendingPayout   = curGross - curCommission;
+    int  curOrders       = ordersByMonth[last];
+
+    long prevGross  = last > 0 ? grossByMonth[last - 1] : 0;
+    int  prevOrders = last > 0 ? ordersByMonth[last - 1] : 0;
+    boolean revUp = curGross >= prevGross;
+    boolean ordUp = curOrders >= prevOrders;
+    String revChangeTxt = prevGross > 0
+            ? String.format("%+d%% vs last month", Math.round((curGross - prevGross) * 100.0 / prevGross))
+            : "No sales last month";
+    String ordChangeTxt = prevOrders > 0
+            ? String.format("%+d%% vs last month", Math.round((curOrders - prevOrders) * 100.0 / prevOrders))
+            : "No orders last month";
+
+    // Chart scales adapt to the real numbers
+    long maxGross = 0; for (long gv : grossByMonth) maxGross = Math.max(maxGross, gv);
+    int  maxOrd   = 0; for (int ov : ordersByMonth) maxOrd = Math.max(maxOrd, ov);
+    long tickStep = 2500;
+    if (maxGross > 0) {
+        long rawStep = (long) Math.ceil(maxGross / 4.0);
+        long pow10 = (long) Math.pow(10, Math.floor(Math.log10(rawStep)));
+        double mant = rawStep / (double) pow10;
+        tickStep = (mant <= 1 ? 1 : mant <= 2 ? 2 : mant <= 5 ? 5 : 10) * pow10;
+    }
+    long   axisMax = tickStep * 4;
+    double yScale  = 200.0 / axisMax;
+    double oScale  = 200.0 / Math.max(1, maxOrd);
 
     StringBuilder csvBuilder = new StringBuilder("Month,Gross,Net\n");
     for (int ci = 0; ci < months.length; ci++) {
@@ -37,37 +117,12 @@
     }
     String csvData = csvBuilder.toString().replace("\n", "&#10;");
 
-    // ✅ ORDERS (required for dashboard)
-    String[][] orders = new String[0][];
-    int cPending = 0, cConfirmed = 0, cShipped = 0, cDelivered = 0, cReturn = 0;
-    for (String[] od : orders) {
-        if ("pending".equals(od[4])) cPending++;
-        if ("confirmed".equals(od[4])) cConfirmed++;
-        if ("shipped".equals(od[4])) cShipped++;
-        if ("delivered".equals(od[4])) cDelivered++;
-        if ("return".equals(od[4])) cReturn++;
-    }
+    List<SellerFinance.Earn>   earnings = fin.earnings;
+    List<SellerFinance.Payout> payouts  = fin.payouts;
+    long maxEarn = 0;
+    for (SellerFinance.Earn er : earnings) maxEarn = Math.max(maxEarn, er.amount);
 
-    // ✅ EARNINGS (required for finance view)
-    String[][] earnings = {
-        {"Waxed Canvas Tote Bag", "30260"},
-        {"Full-Grain Leather Wallet", "23625"},
-        {"Hand-Thrown Ceramic Mug", "7560"},
-        {"Merino Wool Scarf", "8959"},
-        {"White Oak Serving Tray", "12540"},
-        {"Brass Pen Holder", "4840"}
-    };
-    int maxEarn = 0;
-    for (String[] er : earnings) maxEarn = Math.max(maxEarn, Integer.parseInt(er[1]));
-
-    // ✅ PAYOUTS (required for finance view)
-    String[][] payouts = {
-        {"Jul 1–31", "PAY-441", "7290", "Aug 5"},
-        {"Jun 1–30", "PAY-398", "6570", "Jul 5"},
-        {"May 1–31", "PAY-352", "4410", "Jun 5"}
-    };
-
-    // ✅ REVIEWS (required for my store view)
+    // ---------------- Demo data that has no backend yet ----------------
     String[][] reviews = {
         {"Priya Nair", "5", "Hand-Thrown Ceramic Mug", "Beautiful glaze and it feels perfect in the hand."},
         {"Søren Lindqvist", "5", "Full-Grain Leather Wallet", "Great quality leather, stitching is flawless."},
@@ -75,57 +130,54 @@
         {"Marta Kowalczyk", "5", "Waxed Canvas Tote Bag", "Sturdy, roomy and looks even better after use."}
     };
 
-    // ✅ MESSAGES (required for messages view)
     String[][] messages = {
         {"Priya Nair", "Question about ceramic mug sizes", "Hi, do you offer the mug in a larger 400ml version?", "2h ago", "1"},
         {"James Okafor", "Shipping to Nigeria", "Is express shipping available to Abuja?", "Yesterday", "1"},
         {"Marta Kowalczyk", "Custom monogram on tote?", "Can I request a monogram on the canvas tote?", "Aug 10", "0"}
     };
+    int unreadMessages = 0;
+    for (String[] mm : messages) if ("1".equals(mm[4])) unreadMessages++;
 
-   // ✅ THEN fetch products from database
-   List<com.example.aalmari.model.SellerProduct> realProducts =
-       (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("products");
-   if (realProducts == null) realProducts = new ArrayList<>();
+    // ---------------- Products from the database ----------------
+    @SuppressWarnings("unchecked")
+    List<com.example.aalmari.model.SellerProduct> realProducts =
+        (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("products");
+    if (realProducts == null) realProducts = new ArrayList<>();
 
-  // UPDATED: INCLUDES FULL DATA (15 columns now)
-  String[][] products = new String[realProducts.size()][15];
-  int i = 0;
-  for (com.example.aalmari.model.SellerProduct p : realProducts) {
-      products[i][0] = p.getName();
-      products[i][1] = p.getSku();
-      products[i][2] = p.getCategory();
-      products[i][3] = String.valueOf(p.getPrice());
-      products[i][4] = String.valueOf(p.getDiscount());
-      products[i][5] = String.valueOf(p.getStock());
-      products[i][6] = String.valueOf(p.getSold());
-      products[i][7] = p.getActive() ? "Active" : "Inactive";
-      products[i][8] = p.getSubCategory();
-      products[i][9] = (p.getInfoImageUrl() != null) ? p.getInfoImageUrl() : "";
-      products[i][10] = (p.getImageUrlsJson() != null) ? p.getImageUrlsJson() : "[]";
-      products[i][11] = String.valueOf(p.getId());
+    // columns: 0 name, 1 sku, 2 category, 3 price, 4 discount, 5 stock, 6 sold, 7 status,
+    //          8 subCategory, 9 infoImage, 10 imagesJson, 11 id, 12 description, 13 attrsJson, 14 thumbnail
+    String[][] products = new String[realProducts.size()][15];
+    int i = 0;
+    for (com.example.aalmari.model.SellerProduct p : realProducts) {
+        products[i][0]  = nz(p.getName());
+        products[i][1]  = nz(p.getSku());
+        products[i][2]  = nz(p.getCategory());
+        products[i][3]  = String.valueOf(p.getPrice() == null ? 0 : p.getPrice());
+        products[i][4]  = String.valueOf(p.getDiscount() == null ? 0 : p.getDiscount());
+        products[i][5]  = String.valueOf(p.getStock() == null ? 0 : p.getStock());
+        products[i][6]  = String.valueOf(p.getSold() == null ? 0 : p.getSold());
+        products[i][7]  = Boolean.TRUE.equals(p.getActive()) ? "Active" : "Inactive";
+        products[i][8]  = nz(p.getSubCategory());
+        products[i][9]  = nz(p.getInfoImageUrl());
+        products[i][10] = (p.getImageUrlsJson() != null && !p.getImageUrlsJson().isEmpty()) ? p.getImageUrlsJson() : "[]";
+        products[i][11] = String.valueOf(p.getId());
+        products[i][12] = nz(p.getDescription());
+        products[i][13] = (p.getAttributesJson() != null && !p.getAttributesJson().isEmpty()) ? p.getAttributesJson() : "{}";
 
-      String desc = (p.getDescription() != null) ? p.getDescription().replace("\"", "\\\"").replace("\n", "\\n") : "";
-      String attrs = (p.getAttributesJson() != null) ? p.getAttributesJson() : "{}";
-      products[i][12] = desc;
-      products[i][13] = attrs;
-
-      // NEW (col 14): THUMBNAIL = galleryImages[0], fallback to info image
-      // (mirrors ProductController's mainImage logic)
-      String thumb = "";
-      String galleryJson = products[i][10];
-      if (galleryJson != null && !galleryJson.trim().equals("[]")) {
-          try {
-              List<String> galleryList = new ObjectMapper().readValue(galleryJson, List.class);
-              if (!galleryList.isEmpty() && galleryList.get(0) != null && !galleryList.get(0).isEmpty()) {
-                  thumb = galleryList.get(0);
-              }
-          } catch (Exception ex) { }
-      }
-      if (thumb.isEmpty()) thumb = products[i][9];
-      products[i][14] = thumb;
-
-      i++;
-  }
+        // Thumbnail = first gallery image, fallback to info image
+        String thumb = "";
+        if (!products[i][10].trim().equals("[]")) {
+            try {
+                List<?> galleryList = new ObjectMapper().readValue(products[i][10], List.class);
+                if (!galleryList.isEmpty() && galleryList.get(0) != null && !galleryList.get(0).toString().isEmpty()) {
+                    thumb = galleryList.get(0).toString();
+                }
+            } catch (Exception ex) { }
+        }
+        if (thumb.isEmpty()) thumb = products[i][9];
+        products[i][14] = thumb;
+        i++;
+    }
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -133,7 +185,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller Hub - Dashboard</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=14">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=15">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names" />
 </head>
@@ -154,7 +206,7 @@
             <div class="store-status" id="sidebarStatus">
                 <span class="dot"></span>
                 <span class="status-text nav-text" id="statusText"><%= status %></span>
-                <span class="store-name nav-text"><%= storeName %></span>
+                <span class="store-name nav-text"><%= h(storeName) %></span>
             </div>
 
             <div class="nav" id="sidebarNav">
@@ -185,276 +237,250 @@
                 </div>
                 <% } %>
             </div>
-
-            <!-- Sidebar Footer -->
-
         </div>
 
         <!-- Main Content Area -->
         <div class="main">
 
-          <!-- ============ VIEW: DASHBOARD ============ -->
-                    <div class="view" id="view-dashboard">
+            <!-- ============ VIEW: DASHBOARD ============ -->
+            <div class="view" id="view-dashboard">
 
-                        <!-- Initial State: Application Under Review -->
-                        <div class="review-card" id="reviewState" style="display:none;">
-                            <div class="review-icon">⏱</div>
-                            <h1>Application under review</h1>
-                            <p>
-                                Your seller application has been submitted. Our team reviews within 2 business days.
-                                We'll notify you by email once a decision is made.
-                            </p>
+                <!-- Under review -->
+                <div class="review-card" id="reviewState" style="display:none;">
+                    <div class="review-icon">⏱</div>
+                    <h1>Application under review</h1>
+                    <p>
+                        Your seller application has been submitted. Our team reviews within 2 business days.
+                        We'll notify you by email once a decision is made.
+                    </p>
+                    <div class="steps">
+                        <div class="step done">
+                            <div class="circle"><span class="material-symbols-outlined">description</span></div>
+                            <span class="label">Application submitted</span>
+                        </div>
+                        <div class="step current">
+                            <div class="circle"><span class="material-symbols-outlined">group</span></div>
+                            <span class="label">Team review</span>
+                        </div>
+                        <div class="step pending">
+                            <div class="circle"><span class="material-symbols-outlined">task_alt</span></div>
+                            <span class="label">Approved &amp; live</span>
+                        </div>
+                    </div>
+                </div>
 
-                            <div class="steps">
-                                <div class="step done">
-                                    <div class="circle"><span class="material-symbols-outlined">description</span></div>
-                                    <span class="label">Application submitted</span>
-                                </div>
-                                <div class="step current">
-                                    <div class="circle"><span class="material-symbols-outlined">group</span></div>
-                                    <span class="label">Team review</span>
-                                </div>
-                                <div class="step pending">
-                                    <div class="circle"><span class="material-symbols-outlined">task_alt</span></div>
-                                    <span class="label">Approved &amp; live</span>
-                                </div>
+                <!-- Rejected -->
+                <div class="review-card" id="rejectedState" style="display:none;">
+                    <div class="review-icon">✕</div>
+                    <h1>Application rejected</h1>
+                    <p>
+                        <% if (rejectionReason != null && !rejectionReason.isEmpty()) { %>
+                            Reason: <%= h(rejectionReason) %>
+                        <% } else { %>
+                            Your seller application was not approved this time.
+                        <% } %>
+                    </p>
+                    <a href="${pageContext.request.contextPath}/seller" class="btn-primary" style="text-decoration:none;">
+                        Re-apply
+                    </a>
+                </div>
+
+                <!-- Approved dashboard -->
+                <div id="approvedDashboard" style="display: none;">
+                    <%
+                        int inactiveCount = 0;
+                        String lowName = null; int lowStock = 0;
+                        for (String[] dp : products) {
+                            if (!"Active".equals(dp[7])) inactiveCount++;
+                            int ds = Integer.parseInt(dp[5]);
+                            if ("Active".equals(dp[7]) && ds > 0 && ds <= 5 && lowName == null) { lowName = dp[0]; lowStock = ds; }
+                        }
+
+                        // ---- Smooth line + area chart geometry ----
+                        int chartLeft = 50, chartStep = 180, chartBase = 220;
+                        int[] rx = new int[months.length], ry = new int[months.length], oy = new int[months.length];
+                        for (int ci2 = 0; ci2 < months.length; ci2++) {
+                            rx[ci2] = chartLeft + ci2 * chartStep;
+                            ry[ci2] = chartBase - (int) Math.round(grossByMonth[ci2] * yScale);
+                            oy[ci2] = chartBase - (int) Math.round(ordersByMonth[ci2] * oScale);
+                        }
+                        StringBuilder revPath = new StringBuilder("M " + rx[0] + "," + ry[0]);
+                        StringBuilder ordPath = new StringBuilder("M " + rx[0] + "," + oy[0]);
+                        for (int ci2 = 1; ci2 < months.length; ci2++) {
+                            int mid = (rx[ci2 - 1] + rx[ci2]) / 2;
+                            revPath.append(" C ").append(mid).append(",").append(ry[ci2 - 1]).append(" ")
+                                   .append(mid).append(",").append(ry[ci2]).append(" ")
+                                   .append(rx[ci2]).append(",").append(ry[ci2]);
+                            ordPath.append(" C ").append(mid).append(",").append(oy[ci2 - 1]).append(" ")
+                                   .append(mid).append(",").append(oy[ci2]).append(" ")
+                                   .append(rx[ci2]).append(",").append(oy[ci2]);
+                        }
+                        String areaPath = revPath + " L " + rx[months.length - 1] + "," + chartBase + " L " + rx[0] + "," + chartBase + " Z";
+
+                        // ---- Top products: real best sellers ----
+                        List<String[]> topProducts = new ArrayList<>(Arrays.asList(products));
+                        topProducts.sort((ta, tb) -> Integer.parseInt(tb[6]) - Integer.parseInt(ta[6]));
+                        if (topProducts.size() > 5) topProducts = new ArrayList<>(topProducts.subList(0, 5));
+                        int topMaxSold = 0;
+                        for (String[] tp : topProducts) topMaxSold = Math.max(topMaxSold, Integer.parseInt(tp[6]));
+                        int topMax = Math.max(4, ((topMaxSold + 3) / 4) * 4);
+                    %>
+
+                    <!-- Page header -->
+                    <div class="page-header center-v">
+                        <div>
+                            <h1 class="page-title">Seller Dashboard</h1>
+                            <div class="page-subtitle"><%= fin.currentMonthLabel %> · <%= h(storeName) %></div>
+                        </div>
+                        <div class="header-actions">
+                            <span class="approved-badge">
+                                <span class="material-symbols-outlined">check_circle</span> Approved seller
+                            </span>
+                            <button type="button" class="icon-btn" aria-label="Notifications">
+                                <span class="material-symbols-outlined">notifications</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stat cards -->
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Revenue (<%= months[last] %>)</span>
+                                <span class="stat-icon ic-orange"><span class="material-symbols-outlined">currency_rupee</span></span>
                             </div>
-
+                            <div class="stat-value">Rs <%= String.format("%,d", curGross) %></div>
+                            <div class="stat-sub <%= revUp ? "up" : "down" %>"><span class="material-symbols-outlined"><%= revUp ? "north_east" : "south_east" %></span> <%= revChangeTxt %></div>
                         </div>
-
-                        <!-- Rejected State -->
-                        <div class="review-card" id="rejectedState" style="display:none;">
-                            <div class="review-icon">✕</div>
-                            <h1>Application rejected</h1>
-                            <p>
-                                <% if (rejectionReason != null && !rejectionReason.isEmpty()) { %>
-                                    Reason: <%= rejectionReason %>
-                                <% } else { %>
-                                    Your seller application was not approved this time.
-                                <% } %>
-                            </p>
-                            <a href="${pageContext.request.contextPath}/seller" class="btn-primary" style="text-decoration:none;">
-                                Re-apply
-                            </a>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Orders</span>
+                                <span class="stat-icon ic-blue"><span class="material-symbols-outlined">shopping_bag</span></span>
+                            </div>
+                            <div class="stat-value"><%= curOrders %></div>
+                            <div class="stat-sub <%= ordUp ? "up" : "down" %>"><span class="material-symbols-outlined"><%= ordUp ? "north_east" : "south_east" %></span> <%= ordChangeTxt %></div>
                         </div>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Products</span>
+                                <span class="stat-icon ic-purple"><span class="material-symbols-outlined">package_2</span></span>
+                            </div>
+                            <div class="stat-value"><%= products.length %></div>
+                            <div class="stat-sub"><%= inactiveCount %> inactive</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <span class="stat-label">Store rating</span>
+                                <span class="stat-icon ic-green"><span class="material-symbols-outlined">star</span></span>
+                            </div>
+                            <div class="stat-value">4.8★</div>
+                            <div class="stat-sub">From 214 reviews</div>
+                        </div>
+                    </div>
 
-                        <!-- Active State: Approved Dashboard Layout -->
-                        <div id="approvedDashboard" style="display: none;">
-                            <%
-                                // ---- Dashboard data ----
-                                int[] ordersByMonth = {40, 55, 47, 70, 78, 91};
-                                int inactiveCount = 0;
-                                String lowName = null; int lowStock = 0;
-                                for (String[] dp : products) {
-                                    if (!"Active".equals(dp[7])) inactiveCount++;
-                                    int ds = Integer.parseInt(dp[5]);
-                                    if (ds > 0 && ds <= 5 && lowName == null) { lowName = dp[0]; lowStock = ds; }
-                                }
-                                String returnCustomer = null, returnProduct = null;
-                                for (String[] dr : orders) {
-                                    if ("return".equals(dr[4])) { returnCustomer = dr[2]; returnProduct = dr[3]; break; }
-                                }
+                    <!-- Alerts (JS keeps these live) -->
+                    <div class="alerts-grid">
+                        <% if (lowName != null) { %>
+                        <div class="alert-card warning">
+                            <span class="material-symbols-outlined alert-icon">warning</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Low stock alert</div>
+                                <div class="alert-body"><%= h(lowName) %> — only <%= lowStock %> units left.</div>
+                            </div>
+                        </div>
+                        <% } %>
+                        <% if (unreadMessages > 0) { %>
+                        <div class="alert-card info">
+                            <span class="material-symbols-outlined alert-icon">inbox</span>
+                            <div class="alert-content">
+                                <div class="alert-title"><%= unreadMessages %> unread messages</div>
+                                <div class="alert-body">Customer inquiries awaiting reply.</div>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
 
-                                // ---- Smooth line + area chart geometry ----
-                                int chartLeft = 50, chartStep = 180, chartBase = 220;
-                                int[] rx = new int[months.length], ry = new int[months.length], oy = new int[months.length];
-                                for (int ci2 = 0; ci2 < months.length; ci2++) {
-                                    rx[ci2] = chartLeft + ci2 * chartStep;
-                                    ry[ci2] = chartBase - (int) Math.round(grossByMonth[ci2] * 0.02);
-                                    oy[ci2] = chartBase - (int) Math.round(ordersByMonth[ci2] * 105 * 0.02);
-                                }
-                                StringBuilder revPath = new StringBuilder("M " + rx[0] + "," + ry[0]);
-                                StringBuilder ordPath = new StringBuilder("M " + rx[0] + "," + oy[0]);
-                                for (int ci2 = 1; ci2 < months.length; ci2++) {
-                                    int mid = (rx[ci2 - 1] + rx[ci2]) / 2;
-                                    revPath.append(" C ").append(mid).append(",").append(ry[ci2 - 1]).append(" ")
-                                           .append(mid).append(",").append(ry[ci2]).append(" ")
-                                           .append(rx[ci2]).append(",").append(ry[ci2]);
-                                    ordPath.append(" C ").append(mid).append(",").append(oy[ci2 - 1]).append(" ")
-                                           .append(mid).append(",").append(oy[ci2]).append(" ")
-                                           .append(rx[ci2]).append(",").append(oy[ci2]);
-                                }
-                                String areaPath = revPath + " L " + rx[months.length - 1] + "," + chartBase + " L " + rx[0] + "," + chartBase + " Z";
-
-                                // ---- Top products (short label, units sold) ----
-                                String[] topLabels = {"Canvas Tote", "Leather Wallet", "Ceramic Mug", "Wool Scarf", "Oak Tray"};
-                                int topMax = 340;
-                            %>
-
-                            <!-- Page header -->
-                            <div class="page-header center-v">
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="card-header">
                                 <div>
-                                    <h1 class="page-title">Seller Dashboard</h1>
-                                    <div class="page-subtitle">August 2026 · <%= storeName %></div>
+                                    <div class="card-title">Revenue &amp; Orders</div>
+                                    <div class="card-subtitle">Last 6 months · delivered orders</div>
                                 </div>
-                                <div class="header-actions">
-                                    <span class="approved-badge">
-                                        <span class="material-symbols-outlined">check_circle</span> Approved seller
-                                    </span>
-                                    <button type="button" class="icon-btn" aria-label="Notifications">
-                                        <span class="material-symbols-outlined">notifications</span>
-                                    </button>
+                                <div class="chart-legend">
+                                    <span><span class="legend-line revenue-line"></span> Revenue</span>
+                                    <span><span class="legend-line orders-line"></span> Orders</span>
                                 </div>
                             </div>
 
-                            <!-- Stat cards -->
-                            <div class="stat-grid">
-                                <div class="stat-card">
-                                    <div class="stat-top">
-                                        <span class="stat-label">Revenue (Aug)</span>
-                                        <span class="stat-icon ic-orange"><span class="material-symbols-outlined">currency_rupee</span></span>
-                                    </div>
-                                    <div class="stat-value">Rs <%= String.format("%,d", curGross) %></div>
-                                    <div class="stat-sub up"><span class="material-symbols-outlined">north_east</span> +19% vs last month</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-top">
-                                        <span class="stat-label">Orders</span>
-                                        <span class="stat-icon ic-blue"><span class="material-symbols-outlined">shopping_bag</span></span>
-                                    </div>
-                                    <div class="stat-value"><%= ordersByMonth[ordersByMonth.length - 1] %></div>
-                                    <div class="stat-sub up"><span class="material-symbols-outlined">north_east</span> +23% vs last month</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-top">
-                                        <span class="stat-label">Products</span>
-                                        <span class="stat-icon ic-purple"><span class="material-symbols-outlined">package_2</span></span>
-                                    </div>
-                                    <div class="stat-value"><%= products.length %></div>
-                                    <div class="stat-sub"><%= inactiveCount %> inactive</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-top">
-                                        <span class="stat-label">Store rating</span>
-                                        <span class="stat-icon ic-green"><span class="material-symbols-outlined">star</span></span>
-                                    </div>
-                                    <div class="stat-value">4.8★</div>
-                                    <div class="stat-sub">From 214 reviews</div>
+                            <svg viewBox="0 0 980 250" class="area-chart-svg" role="img" aria-label="Revenue and orders, last 6 months">
+                                <defs>
+                                    <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#d97213" stop-opacity="0.16" />
+                                        <stop offset="100%" stop-color="#d97213" stop-opacity="0" />
+                                    </linearGradient>
+                                </defs>
+
+                                <% for (int gt2 = 0; gt2 <= 4; gt2++) {
+                                       long gv2 = gt2 * tickStep;
+                                       int gy = chartBase - (int) Math.round(gv2 * yScale); %>
+                                <line x1="50" y1="<%= gy %>" x2="950" y2="<%= gy %>" class="grid-line" />
+                                <text x="40" y="<%= gy + 4 %>" class="axis-text" text-anchor="end"><%= String.format("%,d", gv2) %></text>
+                                <% } %>
+
+                                <% for (int vi = 0; vi < months.length; vi++) { %>
+                                <line x1="<%= rx[vi] %>" y1="20" x2="<%= rx[vi] %>" y2="220" class="grid-line" />
+                                <text x="<%= rx[vi] %>" y="242" class="axis-text" text-anchor="middle"><%= months[vi] %></text>
+                                <% } %>
+
+                                <path d="<%= areaPath %>" fill="url(#revFill)" />
+                                <path d="<%= revPath %>" fill="none" stroke="#d97213" stroke-width="2.5" stroke-linecap="round" />
+                                <path d="<%= ordPath %>" fill="none" stroke="#3b5bdb" stroke-width="2.5" stroke-linecap="round" />
+                            </svg>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">Top products</div>
+                                    <div class="card-subtitle">Units sold all time</div>
                                 </div>
                             </div>
 
-                            <!-- Alerts -->
-                            <div class="alerts-grid">
-                                <% if (lowName != null) { %>
-                                <div class="alert-card warning">
-                                    <span class="material-symbols-outlined alert-icon">warning</span>
-                                    <div class="alert-content">
-                                        <div class="alert-title">Low stock alert</div>
-                                        <div class="alert-body"><%= lowName %> — only <%= lowStock %> units left.</div>
-                                    </div>
+                            <div class="hbar-chart">
+                                <% for (String[] tp : topProducts) {
+                                       int soldTop = Integer.parseInt(tp[6]);
+                                       int tw = (int) Math.round(soldTop * 100.0 / topMax);
+                                       String lbl = tp[0].length() > 16 ? tp[0].substring(0, 15) + "…" : tp[0]; %>
+                                <div class="hbar-row">
+                                    <span class="hbar-label" title="<%= h(tp[0]) %>"><%= h(lbl) %></span>
+                                    <div class="hbar-track"><div class="hbar-fill" style="width: <%= tw %>%;"></div></div>
                                 </div>
                                 <% } %>
-                                <% if (returnCustomer != null) { %>
-                                <div class="alert-card orange">
-                                    <span class="material-symbols-outlined alert-icon">published_with_changes</span>
-                                    <div class="alert-content">
-                                        <div class="alert-title">Return request</div>
-                                        <div class="alert-body"><%= returnCustomer %> — <%= returnProduct %>.</div>
-                                    </div>
-                                </div>
-                                <% } %>
-                                <% if (unreadMessages > 0) { %>
-                                <div class="alert-card info">
-                                    <span class="material-symbols-outlined alert-icon">inbox</span>
-                                    <div class="alert-content">
-                                        <div class="alert-title"><%= unreadMessages %> unread messages</div>
-                                        <div class="alert-body">Customer inquiries awaiting reply.</div>
-                                    </div>
-                                </div>
-                                <% } %>
-                            </div>
-
-                            <!-- Charts -->
-                            <div class="charts-grid">
-                                <div class="chart-card">
-                                    <div class="card-header">
-                                        <div>
-                                            <div class="card-title">Revenue &amp; Orders</div>
-                                            <div class="card-subtitle">Last 6 months</div>
-                                        </div>
-                                        <div class="chart-legend">
-                                            <span><span class="legend-line revenue-line"></span> Revenue</span>
-                                            <span><span class="legend-line orders-line"></span> Orders</span>
-                                        </div>
-                                    </div>
-
-                                    <svg viewBox="0 0 980 250" class="area-chart-svg" role="img" aria-label="Revenue and orders, last 6 months">
-                                        <defs>
-                                            <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stop-color="#d97213" stop-opacity="0.16" />
-                                                <stop offset="100%" stop-color="#d97213" stop-opacity="0" />
-                                            </linearGradient>
-                                        </defs>
-
-                                        <% for (int gv2 = 0; gv2 <= 10000; gv2 += 2500) {
-                                               int gy = chartBase - (int) Math.round(gv2 * 0.02); %>
-                                        <line x1="50" y1="<%= gy %>" x2="950" y2="<%= gy %>" class="grid-line" />
-                                        <text x="40" y="<%= gy + 4 %>" class="axis-text" text-anchor="end"><%= gv2 %></text>
-                                        <% } %>
-
-                                        <% for (int vi = 0; vi < months.length; vi++) { %>
-                                        <line x1="<%= rx[vi] %>" y1="20" x2="<%= rx[vi] %>" y2="220" class="grid-line" />
-                                        <text x="<%= rx[vi] %>" y="242" class="axis-text" text-anchor="middle"><%= months[vi] %></text>
-                                        <% } %>
-
-                                        <path d="<%= areaPath %>" fill="url(#revFill)" />
-                                        <path d="<%= revPath %>" fill="none" stroke="#d97213" stroke-width="2.5" stroke-linecap="round" />
-                                        <path d="<%= ordPath %>" fill="none" stroke="#3b5bdb" stroke-width="2.5" stroke-linecap="round" />
-                                    </svg>
-                                </div>
-
-                                <div class="chart-card">
-                                    <div class="card-header">
-                                        <div>
-                                            <div class="card-title">Top products</div>
-                                            <div class="card-subtitle">Units sold all time</div>
-                                        </div>
-                                    </div>
-
-                                                                                         <div class="hbar-chart">
-                                                                                             <% for (int ti = 0; ti < topLabels.length && ti < products.length; ti++) {
-                                                                                                    // ✅ FIX: Safe access with bounds check
-                                                                                                    String[] p = products[ti];
-                                                                                                    if (p == null || p.length < 7) continue;
-                                                                                                    int sold = Integer.parseInt(p[6]);
-                                                                                                    int tw = (int) Math.round(sold * 100.0 / topMax); %>
-                                                                                             <div class="hbar-row">
-                                                                                                 <span class="hbar-label"><%= topLabels[ti] %></span>
-                                                                                                 <div class="hbar-track"><div class="hbar-fill" style="width: <%= tw %>%;"></div></div>
-                                                                                             </div>
-                                                                                             <% } %>
-                                        <div class="hbar-axis">
-                                            <span>0</span><span>85</span><span>170</span><span>255</span><span>340</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Recent orders -->
-                            <div class="recent-orders-card">
-                                <div class="orders-header">
-                                    <h3>Recent orders</h3>
-                                    <a href="#" class="view-all-link">View all</a>
-                                </div>
-                                <div class="orders-table-wrapper">
-                                    <table class="orders-table">
-                                        <tbody>
-                                       <% for (int ro = 0; ro < Math.min(4, orders.length); ro++) { String[] rod = orders[ro]; %>
-                                            <tr>
-                                                <td class="order-id"><%= rod[0] %></td>
-                                                <td class="customer-name"><%= rod[2] %></td>
-                                                <td class="product-name"><%= rod[3] %></td>
-                                                <td class="order-status"><span class="status-badge <%= rod[4] %>"><%= rod[5] %></span></td>
-                                                <td class="order-price">Rs <%= rod[6] %></td>
-                                            </tr>
-                                        <% } %>
-                                        </tbody>
-                                    </table>
+                                <% if (topProducts.isEmpty()) { %><div class="muted-sm">No products yet.</div><% } %>
+                                <div class="hbar-axis">
+                                    <span>0</span><span><%= topMax / 4 %></span><span><%= topMax / 2 %></span><span><%= topMax * 3 / 4 %></span><span><%= topMax %></span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <!-- ============ END VIEW: DASHBOARD ============ -->
+
+                    <!-- Recent orders (filled by JS from #orderData) -->
+                    <div class="recent-orders-card">
+                        <div class="orders-header">
+                            <h3>Recent orders</h3>
+                            <a href="#" class="view-all-link">View all</a>
+                        </div>
+                        <div class="orders-table-wrapper">
+                            <table class="orders-table">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ============ END VIEW: DASHBOARD ============ -->
 
 
             <!-- ============ VIEW: PRODUCTS ============ -->
@@ -492,78 +518,49 @@
                                 <th></th>
                             </tr>
                         </thead>
-                      <tbody>
-                          <% for (String[] p : products) {
-                              int stock = Integer.parseInt(p[5]);
-                              boolean active = "Active".equals(p[7]);
-                              String sub = p.length > 8 ? p[8] : "";
-
-                              // Build the JSON string for the Edit Form
-                              // We use single quotes for the attribute and double quotes for the JSON keys
-                              String jsonStr = "{\"name\":\"" + p[0].replace("\"", "\\\"") + "\"," +
-                                               "\"cat\":\"" + p[2].replace("\"", "\\\"") + "\"," +
-                                               "\"sub\":\"" + p[8].replace("\"", "\\\"") + "\"," +
-                                               "\"price\":" + p[3] + "," +
-                                               "\"disc\":" + p[4] + "," +
-                                               "\"stock\":" + p[5] + "," +
-                                               "\"active\":" + active + "," +
-                                               "\"description\":\"" + p[12] + "\"," +
-                                               "\"attrs\":" + p[13] + "," +
-                                               "\"infoImage\":\"" + p[9].replace("\"", "\\\"") + "\"}";
-                                // Get the JSON string of image URLs
-                                  String imagesJson = p[10];
-                                  // Escape single quotes for the HTML attribute
-                                  String safeImagesJson = imagesJson.replace("'", "&#39;");
-                          %>
-                          <tr data-id="<%= p[11] %>" data-json='<%= jsonStr %>' data-images='<%= safeImagesJson %>'>
-                              <td>
-                                  <div class="prod-cell">
-                                      <div class="prod-thumb">
-                                          <% if (!p[14].isEmpty()) { %>
-                                              <img src="<%= p[14] %>" alt="Product Image" style="width:100%; height:100%; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:#666; font-weight:bold; border-radius:4px;\'><%= p[0].substring(0, 1) %></div>'">
-                                          <% } else { %>
-                                              <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:#666; font-weight:bold; border-radius:4px;">
-                                                  <%= p[0].substring(0, 1) %>
-                                              </div>
-                                          <% } %>
-                                      </div>
-                                      <div>
-                                          <div class="prod-name"><%= p[0] %></div>
-                                          <div class="prod-sku"><%= p[1] %></div>
-                                      </div>
-                                  </div>
-                              </td>
-                              <td>
-                                  <span class="cat-tag">
-                                      <span class="material-symbols-outlined">sell</span><%= p[2] %>
-                                  </span>
-                                  <% if (!sub.isEmpty()) { %><div class="sub-tag"><%= sub %></div><% } %>
-                              </td>
-                              <td class="num price">
-                                  Rs <%= p[3] %>
-                                  <% if (!p[4].isEmpty() && !p[4].equals("0")) { %><span class="discount">-<%= p[4] %>%</span><% } %>
-                              </td>
-                              <td class="num stock <%= stock == 0 ? "out" : (stock <= 5 ? "low" : "") %>">
-                                  <%= stock %><%= stock == 0 ? " <small>Out</small>" : "" %>
-                              </td>
-                              <td class="num sold"><%= p[6] %></td>
-                              <td>
-                                  <span class="pill <%= active ? "pill-active" : "pill-inactive" %>"><%= p[7] %></span>
-                              </td>
-                              <td class="actions">
-                                  <span class="material-symbols-outlined" data-act="edit">edit</span>
-                                  <span class="material-symbols-outlined" data-act="del">delete</span>
-                              </td>
-                          </tr>
-                          <% } %>
-                      </tbody>
+                        <tbody>
+                        <% for (String[] p : products) {
+                               int stock = Integer.parseInt(p[5]);
+                               boolean active = "Active".equals(p[7]);
+                               String sub = p[8];
+                               String ini = initial(p[0]);
+                        %>
+                        <tr data-id="<%= h(p[11]) %>" data-json="<%= h(editJson(p)) %>" data-images="<%= h(p[10]) %>">
+                            <td>
+                                <div class="prod-cell">
+                                    <div class="prod-thumb">
+                                        <% if (!p[14].isEmpty()) { %>
+                                            <img src="<%= h(p[14]) %>" alt="Product Image" onerror="this.onerror=null;this.parentNode.textContent='<%= ini %>'">
+                                        <% } else { %><%= ini %><% } %>
+                                    </div>
+                                    <div>
+                                        <div class="prod-name"><%= h(p[0]) %></div>
+                                        <div class="prod-sku"><%= h(p[1]) %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="cat-tag"><span class="material-symbols-outlined">sell</span><%= h(p[2]) %></span>
+                                <% if (!sub.isEmpty()) { %><div class="sub-tag"><%= h(sub) %></div><% } %>
+                            </td>
+                            <td class="num price">Rs <%= p[3] %><% if (!p[4].isEmpty() && !p[4].equals("0")) { %><span class="discount">-<%= p[4] %>%</span><% } %></td>
+                            <td class="num stock <%= stock == 0 ? "out" : (stock <= 5 ? "low" : "") %>"><%= stock %><%= stock == 0 ? " <small>Out</small>" : "" %></td>
+                            <td class="num sold"><%= p[6] %></td>
+                            <td><span class="pill <%= active ? "pill-active" : "pill-inactive" %>"><%= p[7] %></span></td>
+                            <td class="actions">
+                                <span class="material-symbols-outlined" data-act="edit">edit</span>
+                                <span class="material-symbols-outlined" data-act="del">delete</span>
+                            </td>
+                        </tr>
+                        <% } %>
+                        </tbody>
                     </table>
 
-                     <!-- Pagination -->
-                     <div class="pagination" id="productsPagination" style="display:none;"></div>
+                    <div class="pagination" id="productsPagination" style="display:none;"></div>
                 </div>
             </div>
             <!-- ============ END VIEW: PRODUCTS ============ -->
+
 
             <!-- ============ VIEW: FLASH SALE ============ -->
             <div class="view" id="view-flashsale" style="display: none;">
@@ -604,17 +601,17 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Order Management</h1>
-                        <div class="page-subtitle"><%= orders.length %> total orders</div>
+                        <div class="page-subtitle">0 total orders</div>
                     </div>
                 </div>
 
                 <div class="tabs" id="orderTabs">
-                    <button type="button" class="tab active" data-filter="all">All <span class="tab-count"><%= orders.length %></span></button>
-                    <button type="button" class="tab" data-filter="pending">Pending <span class="tab-count"><%= cPending %></span></button>
-                    <button type="button" class="tab" data-filter="confirmed">Confirmed <span class="tab-count"><%= cConfirmed %></span></button>
-                    <button type="button" class="tab" data-filter="shipped">Shipped <span class="tab-count"><%= cShipped %></span></button>
-                    <button type="button" class="tab" data-filter="delivered">Delivered <span class="tab-count"><%= cDelivered %></span></button>
-                    <button type="button" class="tab" data-filter="return">Returns <span class="tab-count"><%= cReturn %></span></button>
+                    <button type="button" class="tab active" data-filter="all">All <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="pending">Pending <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="confirmed">Confirmed <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="shipped">Shipped <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="delivered">Delivered <span class="tab-count">0</span></button>
+                    <button type="button" class="tab" data-filter="return">Returns <span class="tab-count">0</span></button>
                 </div>
 
                 <div class="products-card">
@@ -628,23 +625,7 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
-                        <% for (String[] od : orders) { %>
-                            <tr data-status="<%= od[4] %>">
-                                <td>
-                                    <div class="order-ref"><%= od[0] %></div>
-                                    <div class="muted-sm"><%= od[1] %></div>
-                                </td>
-                                <td>
-                                    <div class="cust-name"><%= od[2] %></div>
-                                    <div class="muted-sm"><%= od[3] %></div>
-                                </td>
-                                <td class="center"><span class="o-badge <%= od[4] %>"><%= od[5] %></span></td>
-                                <td class="num price">Rs <%= od[6] %></td>
-                                <td class="chev"><span class="material-symbols-outlined">chevron_right</span></td>
-                            </tr>
-                        <% } %>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                     <div class="empty-note" id="ordersEmpty" style="display:none;">No orders in this category.</div>
                 </div>
@@ -663,7 +644,7 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Sales &amp; Finance</h1>
-                        <div class="page-subtitle">6-month summary · March – August 2026</div>
+                        <div class="page-subtitle">6-month summary · <%= fin.rangeLabel %></div>
                     </div>
                 </div>
 
@@ -674,7 +655,7 @@
                             <span class="stat-icon ic-orange"><span class="material-symbols-outlined">trending_up</span></span>
                         </div>
                         <div class="stat-value">Rs <%= String.format("%,d", grossTotal) %></div>
-                        <div class="stat-sub">All time earnings</div>
+                        <div class="stat-sub">Last 6 months</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-top">
@@ -698,7 +679,7 @@
                             <span class="stat-icon ic-blue"><span class="material-symbols-outlined">schedule</span></span>
                         </div>
                         <div class="stat-value">Rs <%= String.format("%,d", pendingPayout) %></div>
-                        <div class="stat-sub">Releases Aug 5</div>
+                        <div class="stat-sub">Releases <%= fin.nextPayoutDate %></div>
                     </div>
                 </div>
 
@@ -716,11 +697,12 @@
                     <svg viewBox="0 0 900 250" class="bar-chart-svg" role="img" aria-label="Monthly gross and net revenue">
                         <%
                             int plotBottom = 220, groupW = 138, barW = 36;
-                            for (int v = 0; v <= 10000; v += 2500) {
-                                int y = plotBottom - (int) Math.round(v * 0.02);
+                            for (int gt = 0; gt <= 4; gt++) {
+                                long v = gt * tickStep;
+                                int y = plotBottom - (int) Math.round(v * yScale);
                         %>
                         <line x1="50" y1="<%= y %>" x2="878" y2="<%= y %>" class="<%= v == 0 ? "axis-line" : "grid-line" %>" />
-                        <text x="40" y="<%= y + 4 %>" class="axis-text" text-anchor="end"><%= v %></text>
+                        <text x="40" y="<%= y + 4 %>" class="axis-text" text-anchor="end"><%= String.format("%,d", v) %></text>
                         <% } %>
                         <% for (int gi = 0; gi <= months.length; gi++) { %>
                         <line x1="<%= 50 + gi * groupW %>" y1="20" x2="<%= 50 + gi * groupW %>" y2="220" class="grid-line" />
@@ -728,10 +710,10 @@
                         <%
                             for (int bi = 0; bi < months.length; bi++) {
                                 int gx = 50 + bi * groupW;
-                                int grossV = grossByMonth[bi];
-                                int netV = (int) Math.round(grossV * (1 - commissionRate));
-                                int grossH = (int) Math.round(grossV * 0.02);
-                                int netH = (int) Math.round(netV * 0.02);
+                                long grossV = grossByMonth[bi];
+                                long netV = Math.round(grossV * (1 - commissionRate));
+                                int grossH = (int) Math.round(grossV * yScale);
+                                int netH = (int) Math.round(netV * yScale);
                                 int bx = gx + (groupW - 2 * barW - 6) / 2;
                         %>
                         <rect x="<%= bx %>" y="<%= plotBottom - grossH %>" width="<%= barW %>" height="<%= grossH %>" rx="3" fill="#d97213">
@@ -754,18 +736,19 @@
                     <div class="fin-card">
                         <div class="fin-title">Product-wise earnings</div>
                         <div class="earn-list">
-                            <% for (String[] er : earnings) {
-                                   int amt = Integer.parseInt(er[1]);
-                                   int pct = (int) Math.round(amt * 100.0 / maxEarn);
+                            <% for (SellerFinance.Earn er : earnings) {
+                                   long amt = er.amount;
+                                   int pct = maxEarn > 0 ? (int) Math.round(amt * 100.0 / maxEarn) : 0;
                             %>
                             <div class="earn-item">
                                 <div class="earn-row">
-                                    <span><%= er[0] %></span>
+                                    <span><%= h(er.name) %></span>
                                     <span class="earn-amt">Rs <%= String.format("%,d", amt) %></span>
                                 </div>
                                 <div class="earn-track"><div class="earn-fill" style="width: <%= pct %>%;"></div></div>
                             </div>
                             <% } %>
+                            <% if (earnings.isEmpty()) { %><div class="muted-sm">No delivered orders yet.</div><% } %>
                         </div>
                     </div>
 
@@ -774,7 +757,7 @@
 
                         <div class="payout-current">
                             <div class="payout-current-top">
-                                <strong>Aug 1–31 (current)</strong>
+                                <strong><%= fin.currentPeriod %> (current)</strong>
                                 <span class="pill pill-pending">Pending</span>
                             </div>
                             <div class="payout-current-bottom">
@@ -784,19 +767,20 @@
                             </div>
                         </div>
 
-                        <% for (String[] po : payouts) { %>
+                        <% for (SellerFinance.Payout po : payouts) { %>
                         <div class="payout-row">
                             <div>
-                                <div class="payout-period"><%= po[0] %></div>
-                                <div class="muted-sm"><%= po[1] %></div>
+                                <div class="payout-period"><%= po.period %></div>
+                                <div class="muted-sm"><%= po.ref %></div>
                             </div>
                             <div class="payout-mid">
-                                <div class="payout-amt">Rs <%= String.format("%,d", Integer.parseInt(po[2])) %></div>
-                                <div class="muted-sm"><%= po[3] %></div>
+                                <div class="payout-amt">Rs <%= String.format("%,d", po.net) %></div>
+                                <div class="muted-sm"><%= po.date %></div>
                             </div>
-                            <span class="pill pill-active">Paid</span>
+                            <span class="pill <%= po.paid ? "pill-active" : "pill-pending" %>"><%= po.paid ? "Paid" : "Pending" %></span>
                         </div>
                         <% } %>
+                        <% if (payouts.isEmpty()) { %><div class="muted-sm" style="margin-top:12px">No payouts yet.</div><% } %>
                     </div>
                 </div>
             </div>
@@ -810,42 +794,36 @@
                     <a href="#" class="muted-link">Public view</a>
                 </div>
 
-               <div class="store-card">
-                   <div class="store-banner">
+                <div class="store-card">
+                    <div class="store-banner">
                         <%
-                         String bannerUrl = (String) request.getAttribute("storeBanner");
-                         boolean hasBanner = (bannerUrl != null && !bannerUrl.isEmpty());
-                     %>
-                     <% if (hasBanner) { %>
-                         <!-- Added a class 'banner-bg-img' to target it precisely -->
-                         <img src="<%= bannerUrl %>" alt="Store Banner" class="banner-bg-img" />
-                     <% } else { %>
-                         <div class="banner-placeholder">
-                             No Banner
-                         </div>
-                     <% } %>
+                            String bannerUrl = (String) request.getAttribute("storeBanner");
+                            boolean hasBanner = (bannerUrl != null && !bannerUrl.isEmpty());
+                        %>
+                        <% if (hasBanner) { %>
+                            <img src="<%= h(bannerUrl) %>" alt="Store Banner" class="banner-bg-img" />
+                        <% } else { %>
+                            <div class="banner-placeholder">No Banner</div>
+                        <% } %>
 
-                       <div class="store-identity">
-                           <div class="store-logo">
-                               <%
-                                   String logoUrl = (String) request.getAttribute("storeLogo");
-                                   boolean hasLogo = (logoUrl != null && !logoUrl.isEmpty());
-                               %>
-
-                               <% if (hasLogo) { %>
-                                   <img src="<%= logoUrl %>" alt="Store Logo" />
-                               <% } else { %>
-                                   <div style="width:100px; height:100px; background:#ccc; color:#333; display:flex; align-items:center; justify-content:center; font-weight:bold; text-align:center; border-radius:8px;">
-                                       No Logo
-                                   </div>
-                               <% } %>
-                           </div>
-                           <div>
-                               <div class="store-title"><%= storeName %></div>
-                               <div class="store-tagline">${storeTagline}</div>
-                           </div>
-                       </div>
-                   </div>
+                        <div class="store-identity">
+                            <div class="store-logo">
+                                <%
+                                    String logoUrl = (String) request.getAttribute("storeLogo");
+                                    boolean hasLogo = (logoUrl != null && !logoUrl.isEmpty());
+                                %>
+                                <% if (hasLogo) { %>
+                                    <img src="<%= h(logoUrl) %>" alt="Store Logo" />
+                                <% } else { %>
+                                    <div style="width:100px; height:100px; background:#ccc; color:#333; display:flex; align-items:center; justify-content:center; font-weight:bold; text-align:center; border-radius:8px;">No Logo</div>
+                                <% } %>
+                            </div>
+                            <div>
+                                <div class="store-title"><%= h(storeName) %></div>
+                                <div class="store-tagline"><%= h((String) request.getAttribute("storeTagline")) %></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="store-stats-row">
                         <div class="store-stats">
@@ -863,34 +841,7 @@
                     </div>
 
                     <div class="store-panel" id="storeProducts">
-                        <div class="store-grid">
-                            <% for (String[] p : products) {
-                                   int listPrice = Integer.parseInt(p[3]);
-                                   int disc = p[4].isEmpty() ? 0 : Integer.parseInt(p[4]);
-                                   int salePrice = disc > 0 ? (int) Math.round(listPrice * (100 - disc) / 100.0) : listPrice;
-                                   int stk = Integer.parseInt(p[5]);
-                                   int soldN = Integer.parseInt(p[6]);
-                                   String soldTxt = soldN >= 1000 ? String.format("%.1fk", soldN / 1000.0) : String.valueOf(soldN);
-                            %>
-                            <div class="pcard">
-                                <div class="pcard-img">
-                                    <%= p[0].substring(0, 1) %>
-                                    <% if (disc > 0) { %><span class="pcard-badge">-<%= disc %>%</span><% } %>
-                                    <button type="button" class="pcard-heart" aria-label="Wishlist"><span class="material-symbols-outlined">favorite</span></button>
-                                </div>
-                                <div class="pcard-top"><span class="pcard-cat"><%= p[2] %></span><span class="pcard-sold"><%= soldTxt %> sold</span></div>
-                                <h4 class="pcard-name"><%= p[0] %></h4>
-                                <div class="pcard-bottom">
-                                    <div>
-                                        <span class="pcard-price">Rs <%= salePrice %></span>
-                                        <% if (disc > 0) { %><span class="pcard-old">Rs <%= listPrice %></span><% } %>
-                                        <span class="pcard-stock <%= stk == 0 ? "out" : (stk <= 5 ? "low" : "") %>"><%= stk == 0 ? "Out of stock" : (stk <= 5 ? "Only " + stk + " left" : stk + " in stock") %></span>
-                                    </div>
-                                    <button type="button" class="pcard-btn" data-go="products">Edit</button>
-                                </div>
-                            </div>
-                            <% } %>
-                        </div>
+                        <div class="store-grid"></div>
                     </div>
 
                     <div class="store-panel" id="storeReviews" style="display:none;">
@@ -898,14 +849,14 @@
                                int rating = Integer.parseInt(rv[1]);
                         %>
                         <div class="review-item">
-                            <div class="review-avatar"><%= rv[0].substring(0, 1) %></div>
+                            <div class="review-avatar"><%= initial(rv[0]) %></div>
                             <div>
                                 <div class="review-head">
-                                    <strong><%= rv[0] %></strong>
+                                    <strong><%= h(rv[0]) %></strong>
                                     <span class="stars"><%= "★★★★★".substring(0, rating) %><span class="stars-off"><%= "★★★★★".substring(0, 5 - rating) %></span></span>
                                 </div>
-                                <div class="muted-sm"><%= rv[2] %></div>
-                                <p class="review-text"><%= rv[3] %></p>
+                                <div class="muted-sm"><%= h(rv[2]) %></div>
+                                <p class="review-text"><%= h(rv[3]) %></p>
                             </div>
                         </div>
                         <% } %>
@@ -934,14 +885,13 @@
                     <% for (String[] m : messages) {
                            boolean unread = "1".equals(m[4]);
                     %>
-                        <div class="msg-item<%= unread ? " unread" : "" %>"
-                             data-search="<%= (m[0] + " " + m[1] + " " + m[2]).toLowerCase() %>">
+                        <div class="msg-item<%= unread ? " unread" : "" %>">
                             <div class="msg-row">
-                                <span class="msg-name"><%= m[0] %></span>
-                                <span class="msg-time"><%= m[3] %></span>
+                                <span class="msg-name"><%= h(m[0]) %></span>
+                                <span class="msg-time"><%= h(m[3]) %></span>
                             </div>
-                            <div class="msg-subject"><%= m[1] %></div>
-                            <div class="msg-preview"><%= m[2] %></div>
+                            <div class="msg-subject"><%= h(m[1]) %></div>
+                            <div class="msg-preview"><%= h(m[2]) %></div>
                         </div>
                     <% } %>
                     </div>
@@ -949,15 +899,14 @@
             </div>
             <!-- ============ END VIEW: MESSAGES ============ -->
 
-
         </div>
     </div>
 
     <jsp:include page="/WEB-INF/components/footer.jsp" />
 
 <script>
-var SERVER_STATUS = "<%= rawStatus %>"; // "pending" | "approved" | "rejected"
+var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=3"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=4"></script>
 </body>
 </html>

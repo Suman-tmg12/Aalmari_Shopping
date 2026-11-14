@@ -28,6 +28,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import com.example.aalmari.dto.SellerFinance;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class OrderService {
@@ -35,6 +43,8 @@ public class OrderService {
     private static final String S3_BUCKET_URL = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
     private static final String PLACEHOLDER_IMG = "/placeholder.jpg";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
+    /** Platform commission taken from every delivered line. */
+    public static final double COMMISSION_RATE = 0.10;
 
     /** Label, pill colour and filter group for one stored status. */
     private record StatusInfo(String label, String pillClass, String group) {}
@@ -294,6 +304,9 @@ public class OrderService {
 
         for (OrderItem i : items) {
             i.setStatus(target);
+            if (target.equals("DELIVERED")) {
+                i.setDeliveredAt(LocalDateTime.now());
+            }
             if (target.equals("CANCELLED")) {
                 // put the stock back (flash-sale units stay claimed)
                 productRepository.findById(i.getProductId()).ifPresent(p -> {
@@ -304,6 +317,63 @@ public class OrderService {
             }
         }
         rollUpOrderStatus(items.get(0).getOrder());
+    }
+
+    /** Revenue, orders, product earnings and payouts for the last 6 months (delivered lines only). */
+    @Transactional(readOnly = true)
+    public SellerFinance sellerFinance(Long sellerId) {
+        LocalDate today = LocalDate.now();
+        SellerFinance f = SellerFinance.blank(today, COMMISSION_RATE);
+
+        YearMonth cur = YearMonth.from(today);
+        YearMonth first = cur.minusMonths(SellerFinance.MONTHS - 1);
+
+        List<Set<Long>> orderIds = new ArrayList<>();
+        for (int k = 0; k < SellerFinance.MONTHS; k++) orderIds.add(new HashSet<>());
+        Map<Long, SellerFinance.Earn> byProduct = new LinkedHashMap<>();
+
+        for (OrderItem i : orderItemRepository.findDeliveredForSeller(sellerId)) {
+            LocalDateTime when = i.getDeliveredAt() != null ? i.getDeliveredAt() : i.getOrder().getCreatedAt();
+            YearMonth ym = YearMonth.from(when);
+            if (ym.isBefore(first) || ym.isAfter(cur)) continue;
+
+            int idx = (int) ChronoUnit.MONTHS.between(first, ym);
+            f.gross[idx] += i.getLineTotal();
+            orderIds.get(idx).add(i.getOrder().getId());
+
+            SellerFinance.Earn e = byProduct.computeIfAbsent(i.getProductId(), pid -> {
+                SellerFinance.Earn x = new SellerFinance.Earn();
+                x.name = i.getName();
+                return x;
+            });
+            e.amount += i.getLineTotal();
+        }
+
+        for (int k = 0; k < SellerFinance.MONTHS; k++) f.orders[k] = orderIds.get(k).size();
+
+        // product-wise earnings, net of commission, best first
+        for (SellerFinance.Earn e : byProduct.values()) {
+            e.amount = e.amount - Math.round(e.amount * COMMISSION_RATE);
+            f.earnings.add(e);
+        }
+        f.earnings.sort(Comparator.comparingLong((SellerFinance.Earn e) -> e.amount).reversed());
+        if (f.earnings.size() > 6) f.earnings = new ArrayList<>(f.earnings.subList(0, 6));
+
+        // payouts: one per finished month that had sales, newest first
+        for (int k = SellerFinance.MONTHS - 2; k >= 0 && f.payouts.size() < 5; k--) {
+            if (f.gross[k] <= 0) continue;
+            YearMonth ym = cur.minusMonths(SellerFinance.MONTHS - 1 - k);
+            LocalDate payDay = SellerFinance.payoutDate(ym);
+
+            SellerFinance.Payout p = new SellerFinance.Payout();
+            p.period = SellerFinance.periodLabel(ym);
+            p.ref = "PAY-" + String.format("%d%02d", ym.getYear(), ym.getMonthValue());
+            p.date = payDay.format(java.time.format.DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH));
+            p.net = f.gross[k] - Math.round(f.gross[k] * COMMISSION_RATE);
+            p.paid = !today.isBefore(payDay);
+            f.payouts.add(p);
+        }
+        return f;
     }
 
     /** Customer-facing order status, worked out from all items (every seller). */

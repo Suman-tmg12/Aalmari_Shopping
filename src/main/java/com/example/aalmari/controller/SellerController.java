@@ -213,6 +213,7 @@ public class SellerController {
         // --- Flash sales for the Flash Sale tab (JSON read by SellerDashboard.js) ---
         model.addAttribute("flashSalesJson", flashSaleService.sellerJson(userId));
         model.addAttribute("sellerOrdersJson", orderService.sellerOrdersJson(userId));
+        model.addAttribute("finance", orderService.sellerFinance(userId));
 
         return "SellerPage/SellerDashboard";
     }
