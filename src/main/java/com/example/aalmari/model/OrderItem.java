@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 
 /** A product line inside an order. Name, image and prices are copied at purchase time. */
 @Entity
-@Table(name = "order_items")
+@Table(name = "order_items",
+        indexes = @Index(name = "idx_oi_seller", columnList = "seller_id"))
 public class OrderItem {
 
     @Id
@@ -35,6 +36,14 @@ public class OrderItem {
 
     @Column(name = "line_total", nullable = false)
     private long lineTotal;
+
+    /** The seller who owns the product, copied at purchase time. Null on old rows. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    private User seller;
+
+    public User getSeller() { return seller; }
+    public void setSeller(User seller) { this.seller = seller; }
 
     public OrderItem() {}
 

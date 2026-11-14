@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import com.example.aalmari.service.OrderService;
 
 @Controller
 public class SellerController {
@@ -30,17 +31,20 @@ public class SellerController {
     private final SellerProductRepository sellerProductRepository;
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
+    private final OrderService orderService;
 
     public SellerController(S3Service s3Service,
                             SellerDocumentationRepository sellerDocumentationRepository,
                             SellerProductRepository sellerProductRepository,
                             UserRepository userRepository,
-                            FlashSaleService flashSaleService) {
+                            FlashSaleService flashSaleService,
+                            OrderService orderService) {
         this.s3Service = s3Service;
         this.sellerDocumentationRepository = sellerDocumentationRepository;
         this.sellerProductRepository = sellerProductRepository;
         this.userRepository = userRepository;
         this.flashSaleService = flashSaleService;
+        this.orderService = orderService;
     }
 
     // S3 Bucket URL - Replace with your actual bucket URL
@@ -208,6 +212,7 @@ public class SellerController {
 
         // --- Flash sales for the Flash Sale tab (JSON read by SellerDashboard.js) ---
         model.addAttribute("flashSalesJson", flashSaleService.sellerJson(userId));
+        model.addAttribute("sellerOrdersJson", orderService.sellerOrdersJson(userId));
 
         return "SellerPage/SellerDashboard";
     }

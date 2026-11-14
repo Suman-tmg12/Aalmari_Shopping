@@ -38,14 +38,7 @@
     String csvData = csvBuilder.toString().replace("\n", "&#10;");
 
     // ✅ ORDERS (required for dashboard)
-    String[][] orders = {
-        {"#ORD-8821", "Aug 12, 2026", "Marta Kowalczyk", "Waxed Canvas Tote Bag", "pending", "Pending", "178"},
-        {"#ORD-8819", "Aug 11, 2026", "James Okafor", "Merino Wool Scarf", "confirmed", "Confirmed", "58"},
-        {"#ORD-8814", "Aug 10, 2026", "Priya Nair", "Hand-Thrown Ceramic Mug", "shipped", "Shipped", "126"},
-        {"#ORD-8808", "Aug 8, 2026", "Søren Lindqvist", "Full-Grain Leather Wallet", "delivered", "Delivered", "113"},
-        {"#ORD-8802", "Aug 6, 2026", "Ana Ferreira", "White Oak Serving Tray", "return", "Return Req.", "95"},
-        {"#ORD-8798", "Aug 5, 2026", "Tomás García", "Merino Wool Scarf", "cancelled", "Cancelled", "116"}
-    };
+    String[][] orders = new String[0][];
     int cPending = 0, cConfirmed = 0, cShipped = 0, cDelivered = 0, cReturn = 0;
     for (String[] od : orders) {
         if ("pending".equals(od[4])) cPending++;
@@ -446,7 +439,7 @@
                                 <div class="orders-table-wrapper">
                                     <table class="orders-table">
                                         <tbody>
-                                        <% for (int ro = 0; ro < 4; ro++) { String[] rod = orders[ro]; %>
+                                       <% for (int ro = 0; ro < Math.min(4, orders.length); ro++) { String[] rod = orders[ro]; %>
                                             <tr>
                                                 <td class="order-id"><%= rod[0] %></td>
                                                 <td class="customer-name"><%= rod[2] %></td>
@@ -655,6 +648,12 @@
                     </table>
                     <div class="empty-note" id="ordersEmpty" style="display:none;">No orders in this category.</div>
                 </div>
+                <%
+                    String ordersJson = (String) request.getAttribute("sellerOrdersJson");
+                    if (ordersJson == null || ordersJson.trim().isEmpty()) ordersJson = "[]";
+                    ordersJson = ordersJson.replace("<", "\\u003c");
+                %>
+                <script type="application/json" id="orderData"><%= ordersJson %></script>
             </div>
             <!-- ============ END VIEW: ORDERS ============ -->
 

@@ -219,12 +219,12 @@
                 images: imagesList
             };
         });
-        const O = $$('#ordersTable tbody tr').map(function (r) {
-            return {
-                ref: $('.order-ref', r).textContent.trim(), date: $('.order-ref', r).nextElementSibling.textContent.trim(),
-                cust: $('.cust-name', r).textContent.trim(), product: $('.cust-name', r).nextElementSibling.textContent.trim(),
-                status: r.dataset.status, total: num($('.price', r).textContent)
-            };
+        let O = [];
+        try { O = JSON.parse($('#orderData').textContent) || []; } catch (e) { O = []; }
+        O.forEach(function (o) {
+            o.product = o.items.length > 1
+                ? o.items[0].name + ' +' + (o.items.length - 1) + ' more'
+                : (o.items[0] ? o.items[0].name : '');
         });
         const M = $$('#messageList .msg-item').map(function (i) {
             return {
@@ -1110,23 +1110,24 @@
             const r = e.target.closest('tr[data-ref]'); if (r) orderDetail(O.find(o => o.ref === r.dataset.ref));
         });
 
-        function setStatus(o, s) {
-            const prev = o.status, p = P.find(x => x.name === o.product); o.status = s;
-            if (p) { if (s === 'cancelled' && prev !== 'cancelled') p.stock++; if (s === 'delivered' && prev !== 'delivered') p.sold++; }
-            refresh();
-        }
+
         function orderDetail(o) {
             const steps = ['pending', 'confirmed', 'shipped', 'delivered'], idx = steps.indexOf(o.status);
-            const tl = '<div class="timeline">' + steps.map((s, i) => '<div class="tl-step' + (idx >= i ? ' done' : '') + (o.status === 'cancelled' || o.status === 'return' ? ' off' : '') + '"><span></span>' + LABEL[s] + '</div>').join('') + '</div>';
-            const btns = [['Close', 'btn-outline', closeModal]];
-            if (NEXT[o.status]) btns.push([NEXT_BTN[o.status], 'btn-primary', function () { setStatus(o, NEXT[o.status]); toast(o.ref + ' → ' + LABEL[o.status], 'ok'); orderDetail(o); }]);
-            if (o.status === 'pending' || o.status === 'confirmed') btns.splice(1, 0, ['Cancel order', 'btn-outline danger', () => confirmBox('Cancel order', 'Cancel <strong>' + esc(o.ref) + '</strong>? Stock will be restored.', 'Cancel order', () => { setStatus(o, 'cancelled'); toast(o.ref + ' cancelled.'); })]);
-            if (o.status === 'return') {
-                btns.splice(1, 0, ['Reject return', 'btn-outline danger', () => { setStatus(o, 'delivered'); toast('Return rejected.'); closeModal(); }]);
-                btns.push(['Approve return', 'btn-primary', () => { setStatus(o, 'cancelled'); toast('Return approved · Rs ' + fmt(o.total) + ' refund queued.', 'ok'); closeModal(); }]);
-            }
-            modal(o.ref, '<div class="od-head"><span class="o-badge ' + o.status + '">' + LABEL[o.status] + '</span><span class="muted-sm">' + esc(o.date) + '</span></div>' +
-                '<dl class="od"><dt>Customer</dt><dd>' + esc(o.cust) + '</dd><dt>Product</dt><dd>' + esc(o.product) + '</dd><dt>Total</dt><dd>Rs ' + fmt(o.total) + '</dd></dl>' + tl, btns);
+            const off = (o.status === 'cancelled' || o.status === 'return') ? ' off' : '';
+            const tl = '<div class="timeline">' + steps.map((s, i) =>
+                '<div class="tl-step' + (idx >= i ? ' done' : '') + off + '"><span></span>' + LABEL[s] + '</div>').join('') + '</div>';
+            const lines = o.items.map(i =>
+                '<div class="muted-sm" style="display:flex;justify-content:space-between;padding:4px 0"><span>' +
+                esc(i.name) + ' × ' + i.qty + '</span><span>Rs ' + fmt(i.line) + '</span></div>').join('');
+            modal(o.ref,
+                '<div class="od-head"><span class="o-badge ' + o.status + '">' + LABEL[o.status] + '</span><span class="muted-sm">' + esc(o.date) + '</span></div>' +
+                '<dl class="od"><dt>Customer</dt><dd>' + esc(o.cust) + ' · ' + esc(o.phone) + '</dd>' +
+                '<dt>Deliver to</dt><dd>' + esc(o.address) + '</dd>' +
+                '<dt>Payment</dt><dd>' + esc(o.payment) + '</dd>' +
+                (o.note ? '<dt>Note</dt><dd>' + esc(o.note) + '</dd>' : '') + '</dl>' +
+                '<div class="muted-sm" style="margin:12px 0 6px">Your items in this order</div>' + lines +
+                '<dl class="od"><dt>Your total</dt><dd>Rs ' + fmt(o.total) + '</dd></dl>' + tl,
+                [['Close', 'btn-outline', closeModal]]);
         }
 
         /* ============ Messages ============ */
@@ -1167,15 +1168,7 @@
 
         /* ============ Live activity (simulated feed – replace with fetch()/WebSocket) ============ */
         const NAMES = ['Lena Fischer', 'Arjun Mehta', 'Chloe Martin', 'Omar Haddad', 'Sita Gurung', 'Diego Ramos'];
-        function newOrder() {
-            const pool = P.filter(p => p.active && p.stock > 0); if (!pool.length) return;
-            const p = pool[Math.floor(Math.random() * pool.length)], d = new Date();
-            const ref = '#ORD-' + (Math.max.apply(null, O.map(o => num(o.ref))) + 1 + Math.floor(Math.random() * 4));
-            const o = { ref: ref, date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), cust: NAMES[Math.floor(Math.random() * NAMES.length)],
-                product: p.name, status: 'pending', total: Math.round(p.price * (1 - p.disc / 100)) };
-            O.unshift(o); p.stock--; revenue += o.total; orderCount++; refresh();
-            toast('New order ' + o.ref + ' from ' + o.cust, 'ok', 'orders');
-        }
+
         function newMessage() {
             if (!P.length) return;
             const n = NAMES[Math.floor(Math.random() * NAMES.length)];
@@ -1184,7 +1177,7 @@
         }
         setInterval(function () {
             if (!approved || document.hidden || $('.modal-backdrop')) return;
-            Math.random() < 0.6 ? newOrder() : newMessage();
+            newMessage();
         }, 30000);
 
         /* ============ Status flow (server-driven, no faking) ============ */

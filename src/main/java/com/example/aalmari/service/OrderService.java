@@ -9,15 +9,19 @@ import com.example.aalmari.model.OrderItem;
 import com.example.aalmari.model.SellerProduct;
 import com.example.aalmari.model.User;
 import com.example.aalmari.repository.CartItemRepository;
+import com.example.aalmari.repository.OrderItemRepository;
 import com.example.aalmari.repository.OrderRepository;
 import com.example.aalmari.repository.SellerProductRepository;
 import com.example.aalmari.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -33,20 +37,47 @@ public class OrderService {
     /** Label, pill colour and filter group for one stored status. */
     private record StatusInfo(String label, String pillClass, String group) {}
 
+    /** One product line of an order, as the seller sees it (serialized to JSON). */
+    public static class SellerLineRow {
+        public String name;
+        public String img;
+        public int qty;
+        public long unit;
+        public long line;
+    }
+
+    /** One order as the seller sees it: only this seller's lines (serialized to JSON). */
+    public static class SellerOrderRow {
+        public String ref;
+        public String date;
+        public String cust;
+        public String phone;
+        public String address;
+        public String note;
+        public String payment;
+        public String status;
+        public long total;                       // sum of this seller's lines only
+        public List<SellerLineRow> items = new ArrayList<>();
+    }
+
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;
     private final SellerProductRepository productRepository;
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public OrderService(OrderRepository orderRepository,
+                        OrderItemRepository orderItemRepository,
                         CartService cartService,
                         CartItemRepository cartItemRepository,
                         SellerProductRepository productRepository,
                         UserRepository userRepository,
                         FlashSaleService flashSaleService) {
         this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
@@ -125,6 +156,7 @@ public class OrderService {
 
             OrderItem item = new OrderItem();
             item.setProductId(line.getProductId());
+            item.setSeller(p.getSeller());                 // the seller who owns this product
             item.setName(line.getName());
             item.setImageUrl(line.getImageUrl());
             item.setUnitPrice(unitPrice);
@@ -160,6 +192,72 @@ public class OrderService {
         }
         return out;
     }
+
+    /* ====================================================================== */
+    /*  Seller dashboard: orders that contain this seller's products          */
+    /* ====================================================================== */
+
+    /**
+     * JSON read by SellerDashboard.js (#orderData). Newest order first. Each order lists
+     * only the lines that belong to this seller, and its total covers only those lines.
+     */
+    @Transactional(readOnly = true)
+    public String sellerOrdersJson(Long sellerId) {
+        Map<Long, SellerOrderRow> byOrder = new LinkedHashMap<>();
+
+        for (OrderItem i : orderItemRepository.findForSeller(sellerId)) {
+            Order o = i.getOrder();
+            SellerOrderRow row = byOrder.get(o.getId());
+
+            if (row == null) {
+                row = new SellerOrderRow();
+                row.ref = o.getOrderNumber() != null ? o.getOrderNumber() : "AAL-" + o.getId();
+                row.date = o.getCreatedAt().format(DATE_FMT);
+                row.cust = nz(o.getReceiverName());
+                row.phone = nz(o.getReceiverPhone());
+
+                String addr = nz(o.getAddress()) + ", " + nz(o.getCity()) + ", " + nz(o.getProvince());
+                if (!nz(o.getLandmark()).isEmpty()) {
+                    addr += " (near " + o.getLandmark() + ")";
+                }
+                row.address = addr;
+                row.note = nz(o.getNote());
+                row.payment = paymentLabel(o.getPaymentMethod());
+                row.status = sellerStatus(o.getStatus());
+                byOrder.put(o.getId(), row);
+            }
+
+            SellerLineRow l = new SellerLineRow();
+            l.name = i.getName();
+            l.img = imageSrc(i.getImageUrl());
+            l.qty = i.getQuantity();
+            l.unit = i.getUnitPrice();
+            l.line = i.getLineTotal();
+            row.items.add(l);
+            row.total += i.getLineTotal();
+        }
+
+        try {
+            return mapper.writeValueAsString(byOrder.values());
+        } catch (JsonProcessingException e) {
+            return "[]";
+        }
+    }
+
+    /** Maps the stored order status to the status keys used by the seller dashboard. */
+    private static String sellerStatus(String s) {
+        if (s == null) return "pending";
+        return switch (s) {
+            case "SHIPPED"   -> "shipped";
+            case "DELIVERED" -> "delivered";
+            case "CANCELLED" -> "cancelled";
+            default          -> "pending";   // PLACED, PENDING_PAYMENT
+        };
+    }
+
+    /* ====================================================================== */
+    /*  Helpers for the customer's My Orders page                             */
+    /* ====================================================================== */
 
     private OrderCard toCard(Order o) {
         StatusInfo st = statusInfo(o.getStatus());
