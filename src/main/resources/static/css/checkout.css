@@ -312,3 +312,91 @@
 .ok-line.muted { color: var(--co-muted); font-size: 13.5px; }
 .ok-btn { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }
 .ok-btn:hover { color: #fff; }
+
+/* ---------- saved addresses ---------- */
+[hidden] { display: none !important; }
+
+.addr-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.addr-head .co-card-title { margin: 0; }
+.link-btn {
+    background: none; border: 0; padding: 0;
+    font: inherit; font-size: 14px; font-weight: 600;
+    color: var(--co-ink); cursor: pointer; text-decoration: underline;
+}
+
+.addr-list { display: flex; flex-direction: column; gap: 10px; }
+.addr-card {
+    display: flex; gap: 12px;
+    border: 1px solid var(--co-line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.addr-card:hover { border-color: var(--color-meta); }
+.addr-card.selected { border-color: var(--co-accent); background: var(--co-accent-soft); }
+
+.addr-radio {
+    position: relative;
+    width: 18px; height: 18px;
+    border: 2px solid var(--color-meta);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.addr-card.selected .addr-radio { border-color: var(--co-accent); }
+.addr-card.selected .addr-radio::after {
+    content: ""; position: absolute; inset: 3px;
+    border-radius: 50%; background: var(--co-accent);
+}
+
+.addr-body { flex: 1; min-width: 0; }
+.addr-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.addr-badge {
+    font-size: 11.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 6px; color: #fff; background: #6b7280;
+}
+.addr-badge.home   { background: #0f766e; }
+.addr-badge.office { background: #1d4ed8; }
+.addr-badge.other  { background: #6b7280; }
+.addr-default { font-size: 12px; font-weight: 600; color: var(--co-green); }
+.addr-name { font-weight: 600; font-size: 14.5px; margin-bottom: 2px; }
+.addr-line { font-size: 14px; line-height: 1.45; }
+.addr-line.muted { color: var(--co-muted); font-size: 13px; }
+
+.addr-actions { display: flex; gap: 14px; margin-top: 10px; }
+.addr-actions button {
+    background: none; border: 0; padding: 0;
+    font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--co-muted); cursor: pointer; text-decoration: underline;
+}
+.addr-actions button:hover { color: var(--co-ink); }
+
+.err-block { display: none; color: var(--co-red); font-size: 12.5px; margin-top: 8px; }
+
+.addr-editor { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--color-bg-mid); }
+.addr-list:empty + .err-block + .addr-editor { margin-top: 0; padding-top: 0; border-top: 0; }
+.addr-editor-title { font-size: 15px; font-weight: 650; margin: 0 0 12px; }
+.addr-editor .co-alert { margin: 12px 0; }
+
+.chips { display: flex; gap: 8px; }
+.chip {
+    padding: 8px 18px;
+    border: 1px solid var(--co-line);
+    background: #fff;
+    border-radius: 999px;
+    font: inherit; font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+}
+.chip.active { background: var(--co-accent); color: #fff; border-color: var(--co-accent); }
+
+.addr-editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.btn-ghost, .btn-dark {
+    padding: 11px 20px; border-radius: 8px;
+    font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+}
+.btn-ghost { background: #fff; color: var(--co-ink); border: 1px solid var(--co-line); }
+.btn-ghost:hover { border-color: var(--co-ink); }
+.btn-dark { background: var(--co-accent); color: #fff; border: 1px solid var(--co-accent); }
+.btn-dark:hover { background: var(--co-accent-dark); }
+.btn-dark:disabled { background: #8a8a8a; border-color: #8a8a8a; cursor: wait; }

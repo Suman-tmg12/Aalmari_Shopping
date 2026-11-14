@@ -18,7 +18,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout - Aalmari Store</title>
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/checkout.css?v=2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/checkout.css?v=3">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -44,60 +44,87 @@
         <!-- ============ LEFT: details ============ -->
         <div class="co-main">
 
-            <!-- 1. Delivery address -->
+            <!-- 1. Delivery address (address book) -->
             <section class="co-card">
-                <h2 class="co-card-title">Delivery address</h2>
+                <div class="addr-head">
+                    <h2 class="co-card-title">Delivery address</h2>
+                    <button type="button" class="link-btn" id="addAddrBtn">+ Add new address</button>
+                </div>
 
-                <div class="grid-2">
+                <input type="hidden" name="addressId" id="addressId" value="">
+
+                <div class="addr-list" id="addrList"></div>
+                <small class="err-block" id="addrErr">Choose a delivery address.</small>
+
+                <!-- Add / edit form. These inputs have no name attribute on purpose: they are never posted with the order. -->
+                <div class="addr-editor" id="addrEditor" hidden
+                     data-name="<c:out value='${prefill.fullName}'/>"
+                     data-phone="<c:out value='${prefill.phone}'/>">
+                    <h3 class="addr-editor-title" id="addrEditorTitle">Add new address</h3>
+
                     <div class="field">
-                        <label for="fullName">Full name</label>
-                        <input id="fullName" name="fullName" type="text" autocomplete="name" required
-                               value="<c:out value='${prefill.fullName}'/>">
-                        <small class="err">Enter the receiver's name.</small>
+                        <span class="lbl">Save as</span>
+                        <div class="chips" id="addrChips">
+                            <button type="button" class="chip active" data-label="Home">Home</button>
+                            <button type="button" class="chip" data-label="Office">Office</button>
+                            <button type="button" class="chip" data-label="Other">Other</button>
+                        </div>
                     </div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label for="addrName">Full name</label>
+                            <input id="addrName" type="text" autocomplete="name">
+                        </div>
+                        <div class="field">
+                            <label for="addrPhone">Mobile number</label>
+                            <input id="addrPhone" type="tel" inputmode="numeric" autocomplete="tel"
+                                   placeholder="98XXXXXXXX" maxlength="10">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label for="addrProvince">Province</label>
+                            <select id="addrProvince">
+                                <option value="" selected disabled>Select province</option>
+                                <option>Koshi</option>
+                                <option>Madhesh</option>
+                                <option>Bagmati</option>
+                                <option>Gandaki</option>
+                                <option>Lumbini</option>
+                                <option>Karnali</option>
+                                <option>Sudurpashchim</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="addrCity">City / municipality</label>
+                            <input id="addrCity" type="text" autocomplete="address-level2" placeholder="e.g. Kathmandu">
+                        </div>
+                    </div>
+
                     <div class="field">
-                        <label for="phone">Mobile number</label>
-                        <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel"
-                               placeholder="98XXXXXXXX" maxlength="10" pattern="9[678][0-9]{8}" required
-                               value="<c:out value='${prefill.phone}'/>">
-                        <small class="err">Enter a 10-digit mobile number starting with 96, 97 or 98.</small>
+                        <label for="addrStreet">Street address</label>
+                        <input id="addrStreet" type="text" autocomplete="street-address"
+                               placeholder="Ward no., tole, house number">
+                    </div>
+
+                    <div class="field">
+                        <label for="addrLandmark">Landmark <span class="opt">(optional)</span></label>
+                        <input id="addrLandmark" type="text" placeholder="Near a temple, school, shop...">
+                    </div>
+
+                    <label class="check"><input type="checkbox" id="addrDefault"> Make this my default address</label>
+
+                    <div class="co-alert" id="addrFormErr" role="alert" hidden></div>
+
+                    <div class="addr-editor-actions">
+                        <button type="button" class="btn-ghost" id="addrCancel">Cancel</button>
+                        <button type="button" class="btn-dark" id="addrSave">Save and deliver here</button>
                     </div>
                 </div>
 
-                <div class="grid-2">
-                    <div class="field">
-                        <label for="province">Province</label>
-                        <select id="province" name="province" required>
-                            <option value="" selected disabled>Select province</option>
-                            <option>Koshi</option>
-                            <option>Madhesh</option>
-                            <option>Bagmati</option>
-                            <option>Gandaki</option>
-                            <option>Lumbini</option>
-                            <option>Karnali</option>
-                            <option>Sudurpashchim</option>
-                        </select>
-                        <small class="err">Select a province.</small>
-                    </div>
-                    <div class="field">
-                        <label for="city">City / municipality</label>
-                        <input id="city" name="city" type="text" autocomplete="address-level2"
-                               placeholder="e.g. Kathmandu" required>
-                        <small class="err">Enter your city or municipality.</small>
-                    </div>
-                </div>
-
-                <div class="field">
-                    <label for="address">Street address</label>
-                    <input id="address" name="address" type="text" autocomplete="street-address"
-                           placeholder="Ward no., tole, house number" required>
-                    <small class="err">Enter your street address.</small>
-                </div>
-
-                <div class="field">
-                    <label for="landmark">Landmark <span class="opt">(optional)</span></label>
-                    <input id="landmark" name="landmark" type="text" placeholder="Near a temple, school, shop...">
-                </div>
+                <script type="application/json" id="addrData">${addressesJson}</script>
             </section>
 
             <!-- 2. Delivery -->
@@ -269,11 +296,222 @@
 
 <script>
 (function () {
+    var CTX = '${pageContext.request.contextPath}';
     var form = document.getElementById('checkoutForm');
     var placeBtn = document.getElementById('placeBtn');
     var label = placeBtn.querySelector('.btn-label');
 
-    /* ---------- payment option: show the details of the chosen method ---------- */
+    /* ====================================================================== */
+    /*  Address book                                                          */
+    /* ====================================================================== */
+    var addrList = document.getElementById('addrList');
+    var addrIdInput = document.getElementById('addressId');
+    var addrErr = document.getElementById('addrErr');
+    var addBtn = document.getElementById('addAddrBtn');
+    var editor = document.getElementById('addrEditor');
+    var editorTitle = document.getElementById('addrEditorTitle');
+    var editorErr = document.getElementById('addrFormErr');
+    var saveBtn = document.getElementById('addrSave');
+    var cancelBtn = document.getElementById('addrCancel');
+    var chips = document.querySelectorAll('#addrChips .chip');
+
+    var f = {
+        name: document.getElementById('addrName'),
+        phone: document.getElementById('addrPhone'),
+        province: document.getElementById('addrProvince'),
+        city: document.getElementById('addrCity'),
+        street: document.getElementById('addrStreet'),
+        landmark: document.getElementById('addrLandmark'),
+        makeDefault: document.getElementById('addrDefault')
+    };
+
+    var addresses = [];
+    try { addresses = JSON.parse(document.getElementById('addrData').textContent) || []; } catch (e) { addresses = []; }
+    var selectedId = null;
+    var editingId = null;
+    var chosenLabel = 'Home';
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function findAddr(id) {
+        for (var i = 0; i < addresses.length; i++) if (addresses[i].id === id) return addresses[i];
+        return null;
+    }
+
+    function pickDefault() {
+        var d = null;
+        for (var i = 0; i < addresses.length; i++) if (addresses[i].primary) { d = addresses[i]; break; }
+        if (!d && addresses.length) d = addresses[0];
+        selectedId = d ? d.id : null;
+    }
+
+    function showListErr(msg) {
+        addrErr.textContent = msg;
+        addrErr.style.display = 'block';
+    }
+    function hideListErr() { addrErr.style.display = 'none'; }
+
+    function renderAddresses() {
+        addrIdInput.value = selectedId == null ? '' : selectedId;
+        addrList.innerHTML = addresses.map(function (a) {
+            var sel = a.id === selectedId;
+            return '<div class="addr-card' + (sel ? ' selected' : '') + '" data-id="' + a.id + '">' +
+                '<span class="addr-radio" aria-hidden="true"></span>' +
+                '<div class="addr-body">' +
+                '<div class="addr-top"><span class="addr-badge ' + esc(a.label).toLowerCase() + '">' + esc(a.label) + '</span>' +
+                (a.primary ? '<span class="addr-default">Default</span>' : '') + '</div>' +
+                '<div class="addr-name">' + esc(a.name) + ' &middot; ' + esc(a.phone) + '</div>' +
+                '<div class="addr-line">' + esc(a.street) + ', ' + esc(a.city) + ', ' + esc(a.province) + '</div>' +
+                (a.landmark ? '<div class="addr-line muted">Landmark: ' + esc(a.landmark) + '</div>' : '') +
+                '<div class="addr-actions">' +
+                '<button type="button" data-act="edit">Edit</button>' +
+                '<button type="button" data-act="delete">Delete</button>' +
+                (a.primary ? '' : '<button type="button" data-act="default">Set as default</button>') +
+                '</div></div></div>';
+        }).join('');
+    }
+
+    function setChip(name) {
+        chosenLabel = name;
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].classList.toggle('active', chips[i].getAttribute('data-label') === name);
+        }
+    }
+    for (var c = 0; c < chips.length; c++) {
+        chips[c].addEventListener('click', function () { setChip(this.getAttribute('data-label')); });
+    }
+
+    function openEditor(a) {
+        editingId = a ? a.id : null;
+        editorTitle.textContent = a ? 'Edit address' : 'Add new address';
+        f.name.value = a ? a.name : (editor.getAttribute('data-name') || '');
+        f.phone.value = a ? a.phone : (editor.getAttribute('data-phone') || '');
+        f.province.value = a ? a.province : '';
+        f.city.value = a ? a.city : '';
+        f.street.value = a ? a.street : '';
+        f.landmark.value = a ? a.landmark : '';
+        f.makeDefault.checked = a ? a.primary : addresses.length === 0;
+        setChip(a ? a.label : 'Home');
+        editorErr.hidden = true;
+        cancelBtn.hidden = addresses.length === 0;      // first address: nothing to go back to
+        saveBtn.disabled = false;
+        saveBtn.textContent = a ? 'Save changes' : 'Save and deliver here';
+        editor.hidden = false;
+        addBtn.hidden = true;
+        f.name.focus();
+    }
+
+    function closeEditor() {
+        editor.hidden = true;
+        addBtn.hidden = false;
+        editingId = null;
+    }
+
+    function post(path, data) {
+        var p = new URLSearchParams();
+        Object.keys(data).forEach(function (k) { if (data[k] != null) p.append(k, data[k]); });
+        return fetch(CTX + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: p.toString(),
+            credentials: 'same-origin'
+        }).then(function (r) {
+            if (r.ok) return r.json();
+            return r.text().then(function (t) { throw new Error(t || 'Something went wrong. Please try again.'); });
+        });
+    }
+
+    addBtn.addEventListener('click', function () { openEditor(null); });
+    cancelBtn.addEventListener('click', closeEditor);
+
+    // Enter inside the address form must not submit the whole order
+    editor.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+            e.preventDefault();
+            saveBtn.click();
+        }
+    });
+    f.phone.addEventListener('input', function () { f.phone.value = f.phone.value.replace(/\D/g, ''); });
+
+    saveBtn.addEventListener('click', function () {
+        var d = {
+            id: editingId,
+            label: chosenLabel,
+            fullName: f.name.value.trim(),
+            phone: f.phone.value.trim(),
+            province: f.province.value,
+            city: f.city.value.trim(),
+            address: f.street.value.trim(),
+            landmark: f.landmark.value.trim(),
+            makeDefault: f.makeDefault.checked ? 'true' : 'false'
+        };
+        var msg = '';
+        if (d.fullName.length < 2) msg = "Enter the receiver's name.";
+        else if (!/^9[678][0-9]{8}$/.test(d.phone)) msg = 'Enter a 10-digit mobile number starting with 96, 97 or 98.';
+        else if (!d.province) msg = 'Select a province.';
+        else if (d.city.length < 2) msg = 'Enter your city or municipality.';
+        else if (d.address.length < 3) msg = 'Enter your street address.';
+        if (msg) { editorErr.textContent = msg; editorErr.hidden = false; return; }
+
+        editorErr.hidden = true;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        post('/checkout/address/save', d).then(function (res) {
+            addresses = res.addresses;
+            selectedId = res.id;
+            closeEditor();
+            hideListErr();
+            renderAddresses();
+        }).catch(function (err) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = editingId ? 'Save changes' : 'Save and deliver here';
+            editorErr.textContent = err.message;
+            editorErr.hidden = false;
+        });
+    });
+
+    addrList.addEventListener('click', function (e) {
+        var card = e.target.closest('.addr-card');
+        if (!card) return;
+        var id = Number(card.getAttribute('data-id'));
+        var btn = e.target.closest('button[data-act]');
+
+        if (!btn) {                                   // clicking the card selects it
+            selectedId = id;
+            hideListErr();
+            renderAddresses();
+            return;
+        }
+        var act = btn.getAttribute('data-act');
+        if (act === 'edit') {
+            openEditor(findAddr(id));
+        } else if (act === 'delete') {
+            if (!window.confirm('Delete this address?')) return;
+            post('/checkout/address/delete', { id: id }).then(function (res) {
+                addresses = res.addresses;
+                if (selectedId === id) pickDefault();
+                renderAddresses();
+                if (!addresses.length) openEditor(null);
+            }).catch(function (err) { showListErr(err.message); });
+        } else if (act === 'default') {
+            post('/checkout/address/default', { id: id }).then(function (res) {
+                addresses = res.addresses;
+                renderAddresses();
+            }).catch(function (err) { showListErr(err.message); });
+        }
+    });
+
+    pickDefault();
+    renderAddresses();
+    if (!addresses.length) openEditor(null);          // first order: show the form straight away
+
+    /* ====================================================================== */
+    /*  Payment option: show the details of the chosen method                 */
+    /* ====================================================================== */
     var radios = form.querySelectorAll('input[name="paymentMethod"]');
     function syncPay() {
         radios.forEach(function (r) {
@@ -301,19 +539,8 @@
     document.getElementById('cardCvv').addEventListener('input', function (e) {
         e.target.value = e.target.value.replace(/\D/g, '');
     });
-    document.getElementById('phone').addEventListener('input', function (e) {
-        e.target.value = e.target.value.replace(/\D/g, '');
-    });
 
     /* ---------- validation ---------- */
-    function setErr(field, bad) {
-        if (field) field.classList.toggle('invalid', bad);
-    }
-    form.querySelectorAll('.field input[required], .field select[required]').forEach(function (el) {
-        el.addEventListener('blur', function () { setErr(el.closest('.field'), !el.checkValidity()); });
-        el.addEventListener('input', function () { if (el.checkValidity()) setErr(el.closest('.field'), false); });
-    });
-
     function cardOk() {
         var n = num.value.replace(/\s/g, '');
         var m = /^(\d{2})\/(\d{2})$/.exec(exp.value);
@@ -340,11 +567,15 @@
 
     form.addEventListener('submit', function (e) {
         var ok = true, first = null;
-        form.querySelectorAll('.field input[required], .field select[required]').forEach(function (el) {
-            var bad = !el.checkValidity();
-            setErr(el.closest('.field'), bad);
-            if (bad) { ok = false; if (!first) first = el; }
-        });
+
+        // a saved address must be chosen
+        if (!addrIdInput.value) {
+            ok = false;
+            showListErr(editor.hidden ? 'Choose a delivery address.'
+                                      : 'Save this address first, then place your order.');
+            first = editor.hidden ? addBtn : saveBtn;
+        }
+
         if (form.querySelector('input[name="paymentMethod"]:checked').value === 'CARD' && !cardOk()) {
             ok = false;
             if (!first) first = num;
@@ -361,7 +592,7 @@
         label.textContent = 'Placing your order...';
     });
 
-    // Card fields must never be posted to your own server. They have no name attribute on purpose.
+    // Card fields and the address form must never be posted to your own server. They have no name attribute on purpose.
 })();
 </script>
 </body>

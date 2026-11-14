@@ -3,16 +3,21 @@ package com.example.aalmari.controller;
 import com.example.aalmari.dto.CartView;
 import com.example.aalmari.dto.CheckoutForm;
 import com.example.aalmari.model.Order;
+import com.example.aalmari.service.AddressService;
 import com.example.aalmari.service.CartService;
 import com.example.aalmari.service.OrderService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.Map;
 
 /** cart.jsp -> GET /checkout -> POST /checkout/place -> GET /checkout/success */
 @Controller
@@ -20,10 +25,14 @@ public class CheckoutController {
 
     private final CartService cartService;
     private final OrderService orderService;
+    private final AddressService addressService;
 
-    public CheckoutController(CartService cartService, OrderService orderService) {
+    public CheckoutController(CartService cartService,
+                              OrderService orderService,
+                              AddressService addressService) {
         this.cartService = cartService;
         this.orderService = orderService;
+        this.addressService = addressService;
     }
 
     private Long currentUserId(HttpSession session) {
@@ -47,8 +56,76 @@ public class CheckoutController {
         model.addAttribute("deliveryFee", cart.getDeliveryFee());
         model.addAttribute("total", cart.getTotal());
         model.addAttribute("prefill", orderService.checkoutPrefill(userId));
+        // saved addresses as JSON for checkout.jsp ("<" escaped so it is safe inside <script>)
+        model.addAttribute("addressesJson", addressService.listJson(userId).replace("<", "\\u003c"));
         return "checkout";
     }
+
+    /* ====================================================================== */
+    /*  Address book (called with fetch() from checkout.jsp)                  */
+    /* ====================================================================== */
+
+    @PostMapping("/checkout/address/save")
+    @ResponseBody
+    public ResponseEntity<?> saveAddress(@RequestParam(value = "id", required = false) Long id,
+                                         @RequestParam("label") String label,
+                                         @RequestParam("fullName") String fullName,
+                                         @RequestParam("phone") String phone,
+                                         @RequestParam("province") String province,
+                                         @RequestParam("city") String city,
+                                         @RequestParam("address") String address,
+                                         @RequestParam(value = "landmark", required = false) String landmark,
+                                         @RequestParam(value = "makeDefault", defaultValue = "false") boolean makeDefault,
+                                         HttpSession session) {
+        Long userId = currentUserId(session);
+        if (userId == null) return ResponseEntity.status(401).body("Please log in again.");
+        try {
+            Long savedId = addressService.save(userId, id, label, fullName, phone,
+                    province, city, address, landmark, makeDefault);
+            return ResponseEntity.ok(Map.of("id", savedId, "addresses", addressService.list(userId)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Could not save the address. Please try again.");
+        }
+    }
+
+    @PostMapping("/checkout/address/delete")
+    @ResponseBody
+    public ResponseEntity<?> deleteAddress(@RequestParam("id") Long id, HttpSession session) {
+        Long userId = currentUserId(session);
+        if (userId == null) return ResponseEntity.status(401).body("Please log in again.");
+        try {
+            addressService.delete(userId, id);
+            return ResponseEntity.ok(Map.of("addresses", addressService.list(userId)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Could not delete the address. Please try again.");
+        }
+    }
+
+    @PostMapping("/checkout/address/default")
+    @ResponseBody
+    public ResponseEntity<?> defaultAddress(@RequestParam("id") Long id, HttpSession session) {
+        Long userId = currentUserId(session);
+        if (userId == null) return ResponseEntity.status(401).body("Please log in again.");
+        try {
+            addressService.setDefault(userId, id);
+            return ResponseEntity.ok(Map.of("addresses", addressService.list(userId)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Could not update the address. Please try again.");
+        }
+    }
+
+    /* ====================================================================== */
+    /*  Place order                                                           */
+    /* ====================================================================== */
 
     /** "Place order" button */
     @PostMapping("/checkout/place")
@@ -94,11 +171,8 @@ public class CheckoutController {
     }
 
     private String validate(CheckoutForm f) {
-        if (blank(f.getFullName()) || blank(f.getProvince()) || blank(f.getCity()) || blank(f.getAddress())) {
-            return "Fill in all the delivery address fields.";
-        }
-        if (f.getPhone() == null || !f.getPhone().trim().matches("9[678][0-9]{8}")) {
-            return "Enter a valid 10-digit mobile number.";
+        if (f.getAddressId() == null) {
+            return "Choose a delivery address.";
         }
         String pm = f.getPaymentMethod();
         if (!("COD".equals(pm) || "ESEWA".equals(pm) || "KHALTI".equals(pm) || "CARD".equals(pm))) {
@@ -106,6 +180,4 @@ public class CheckoutController {
         }
         return null;
     }
-
-    private boolean blank(String s) { return s == null || s.trim().isEmpty(); }
 }

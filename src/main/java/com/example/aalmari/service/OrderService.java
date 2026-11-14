@@ -4,10 +4,12 @@ import com.example.aalmari.dto.CartView;
 import com.example.aalmari.dto.CheckoutForm;
 import com.example.aalmari.dto.OrderCard;
 import com.example.aalmari.dto.OrderLineCard;
+import com.example.aalmari.model.Address;
 import com.example.aalmari.model.Order;
 import com.example.aalmari.model.OrderItem;
 import com.example.aalmari.model.SellerProduct;
 import com.example.aalmari.model.User;
+import com.example.aalmari.repository.AddressRepository;
 import com.example.aalmari.repository.CartItemRepository;
 import com.example.aalmari.repository.OrderItemRepository;
 import com.example.aalmari.repository.OrderRepository;
@@ -67,6 +69,7 @@ public class OrderService {
     private final SellerProductRepository productRepository;
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
+    private final AddressRepository addressRepository;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public OrderService(OrderRepository orderRepository,
@@ -75,7 +78,8 @@ public class OrderService {
                         CartItemRepository cartItemRepository,
                         SellerProductRepository productRepository,
                         UserRepository userRepository,
-                        FlashSaleService flashSaleService) {
+                        FlashSaleService flashSaleService,
+                        AddressRepository addressRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
@@ -83,9 +87,10 @@ public class OrderService {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.flashSaleService = flashSaleService;
+        this.addressRepository = addressRepository;
     }
 
-    /** Name and phone to pre-fill the checkout form (keys: fullName, phone). */
+    /** Name and phone to pre-fill the checkout address form (keys: fullName, phone). */
     @Transactional(readOnly = true)
     public Map<String, String> checkoutPrefill(Long userId) {
         Map<String, String> m = new HashMap<>();
@@ -111,6 +116,13 @@ public class OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("Please log in again."));
 
+        // The chosen saved address must belong to this customer.
+        if (f.getAddressId() == null) {
+            throw new IllegalStateException("Please choose a delivery address.");
+        }
+        Address addr = addressRepository.findByIdAndUser_Id(f.getAddressId(), userId)
+                .orElseThrow(() -> new IllegalStateException("Please choose a delivery address."));
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus("PLACED");
@@ -120,12 +132,14 @@ public class OrderService {
         order.setDiscountAmount(cart.getDiscountAmount());
         order.setDeliveryFee(cart.getDeliveryFee());
         order.setTotal(cart.getTotal());
-        order.setReceiverName(f.getFullName().trim());
-        order.setReceiverPhone(f.getPhone().trim());
-        order.setProvince(f.getProvince().trim());
-        order.setCity(f.getCity().trim());
-        order.setAddress(f.getAddress().trim());
-        order.setLandmark(blankToNull(f.getLandmark()));
+
+        // The order keeps its own copy, so editing or deleting the saved address never changes it.
+        order.setReceiverName(addr.getReceiverName());
+        order.setReceiverPhone(addr.getPhone());
+        order.setProvince(addr.getProvince());
+        order.setCity(addr.getCity());
+        order.setAddress(addr.getStreet());
+        order.setLandmark(blankToNull(addr.getLandmark()));
         order.setNote(blankToNull(f.getOrderNote()));
 
         for (CartView.Line line : cart.getItems()) {

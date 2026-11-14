@@ -11,6 +11,10 @@ public class CheckoutForm {
     private String paymentMethod;
     private String orderNote;
     private String promoCode;
+    private Long addressId;
+
+    public Long getAddressId() { return addressId; }
+    public void setAddressId(Long addressId) { this.addressId = addressId; }
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
