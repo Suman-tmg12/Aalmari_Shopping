@@ -490,4 +490,26 @@ public class SellerController {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
+
+    @PostMapping("/api/orders/status")
+    public ResponseEntity<?> updateOrderStatus(@RequestParam("ref") String ref,
+                                               @RequestParam("action") String action,
+                                               HttpSession session) {
+        Object userIdAttr = session.getAttribute("userId");
+        if (userIdAttr == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+        Long userId = Long.valueOf(userIdAttr.toString());
+        try {
+            orderService.updateSellerOrderStatus(userId, ref, action);
+            return ResponseEntity.ok("ok");
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
 }

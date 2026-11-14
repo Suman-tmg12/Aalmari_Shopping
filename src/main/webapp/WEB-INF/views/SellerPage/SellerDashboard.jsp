@@ -958,6 +958,6 @@
 <script>
 var SERVER_STATUS = "<%= rawStatus %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=2"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=3"></script>
 </body>
 </html>

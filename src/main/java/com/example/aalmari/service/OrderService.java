@@ -55,7 +55,7 @@ public class OrderService {
         public String address;
         public String note;
         public String payment;
-        public String status;
+        public String status;                    // pending, confirmed, shipped, delivered, cancelled
         public long total;                       // sum of this seller's lines only
         public List<SellerLineRow> items = new ArrayList<>();
     }
@@ -157,6 +157,7 @@ public class OrderService {
             OrderItem item = new OrderItem();
             item.setProductId(line.getProductId());
             item.setSeller(p.getSeller());                 // the seller who owns this product
+            item.setStatus("PENDING");                     // each seller moves their own lines
             item.setName(line.getName());
             item.setImageUrl(line.getImageUrl());
             item.setUnitPrice(unitPrice);
@@ -200,6 +201,7 @@ public class OrderService {
     /**
      * JSON read by SellerDashboard.js (#orderData). Newest order first. Each order lists
      * only the lines that belong to this seller, and its total covers only those lines.
+     * The status is the status of this seller's lines.
      */
     @Transactional(readOnly = true)
     public String sellerOrdersJson(Long sellerId) {
@@ -223,7 +225,7 @@ public class OrderService {
                 row.address = addr;
                 row.note = nz(o.getNote());
                 row.payment = paymentLabel(o.getPaymentMethod());
-                row.status = sellerStatus(o.getStatus());
+                row.status = i.getStatus().toLowerCase();   // pending, confirmed, shipped, delivered, cancelled
                 byOrder.put(o.getId(), row);
             }
 
@@ -244,15 +246,77 @@ public class OrderService {
         }
     }
 
-    /** Maps the stored order status to the status keys used by the seller dashboard. */
-    private static String sellerStatus(String s) {
-        if (s == null) return "pending";
-        return switch (s) {
-            case "SHIPPED"   -> "shipped";
-            case "DELIVERED" -> "delivered";
-            case "CANCELLED" -> "cancelled";
-            default          -> "pending";   // PLACED, PENDING_PAYMENT
+    /**
+     * The seller moves all of their lines in one order.
+     * action: confirm, ship, deliver, cancel.
+     */
+    @Transactional
+    public void updateSellerOrderStatus(Long sellerId, String ref, String action) {
+        List<OrderItem> items = orderItemRepository.findForSellerByRef(ref, sellerId);
+        if (items.isEmpty()) {
+            throw new SecurityException("Order not found.");
+        }
+        String current = items.get(0).getStatus();
+
+        String target = switch (action == null ? "" : action) {
+            case "confirm" -> "CONFIRMED";
+            case "ship"    -> "SHIPPED";
+            case "deliver" -> "DELIVERED";
+            case "cancel"  -> "CANCELLED";
+            default -> throw new IllegalArgumentException("Unknown action.");
         };
+
+        boolean allowed = switch (target) {
+            case "CONFIRMED" -> current.equals("PENDING");
+            case "SHIPPED"   -> current.equals("CONFIRMED");
+            case "DELIVERED" -> current.equals("SHIPPED");
+            case "CANCELLED" -> current.equals("PENDING") || current.equals("CONFIRMED");
+            default -> false;
+        };
+        if (!allowed) {
+            throw new IllegalArgumentException("This order is " + current.toLowerCase()
+                    + " and cannot be changed that way.");
+        }
+
+        for (OrderItem i : items) {
+            i.setStatus(target);
+            if (target.equals("CANCELLED")) {
+                // put the stock back (flash-sale units stay claimed)
+                productRepository.findById(i.getProductId()).ifPresent(p -> {
+                    p.setStock((p.getStock() == null ? 0 : p.getStock()) + i.getQuantity());
+                    p.setSold(Math.max(0, (p.getSold() == null ? 0 : p.getSold()) - i.getQuantity()));
+                    productRepository.save(p);
+                });
+            }
+        }
+        rollUpOrderStatus(items.get(0).getOrder());
+    }
+
+    /** Customer-facing order status, worked out from all items (every seller). */
+    private void rollUpOrderStatus(Order o) {
+        int active = 0, delivered = 0;
+        boolean anyShipped = false;
+
+        for (OrderItem i : o.getItems()) {
+            String s = i.getStatus();
+            if (s.equals("CANCELLED")) continue;
+            active++;
+            if (s.equals("DELIVERED")) delivered++;
+            if (s.equals("SHIPPED") || s.equals("DELIVERED")) anyShipped = true;
+        }
+
+        if (active == 0) {
+            o.setStatus("CANCELLED");
+        } else if (delivered == active) {
+            o.setStatus("DELIVERED");
+            if ("COD".equals(o.getPaymentMethod())) {
+                o.setPaymentStatus("PAID");   // cash was collected on delivery
+            }
+        } else if (anyShipped) {
+            o.setStatus("SHIPPED");
+        } else {
+            o.setStatus("PLACED");
+        }
     }
 
     /* ====================================================================== */

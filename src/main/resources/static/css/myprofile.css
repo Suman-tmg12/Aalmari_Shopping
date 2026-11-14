@@ -323,43 +323,6 @@ main { flex: 1; min-width: 0; width: 100%; }
 .btn-cart { margin-top: 16px; width: 100%; padding: 10px; background: var(--brand-50); color: var(--brand-600); border-radius: 12px; font-size: 12px; font-weight: 700; transition: all .2s; }
 .btn-cart:hover { background: var(--brand-600); color: #fff; }
 
-/* ===== Addresses ===== */
-.address-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-.address-card { position: relative; background: #fff; border-radius: 24px; border: 1px solid var(--g200); padding: 24px; box-shadow: var(--shadow-xs); }
-.address-card.default { border: 2px solid var(--brand-600); }
-.default-tag { position: absolute; top: 24px; right: 24px; padding: 4px 12px; background: var(--brand-100); color: #5b21b6; font-size: 12px; font-weight: 700; border-radius: 9999px; }
-.address-card h3 { font-weight: 700; color: var(--g900); font-size: 16px; margin-bottom: 8px; }
-.addr-name { font-weight: 600; color: var(--g800); font-size: 14px; }
-.addr-line { font-size: 12px; color: var(--g600); }
-.addr-line.first { margin-top: 4px; }
-.addr-phone { font-size: 12px; color: var(--g500); margin-top: 8px; display: flex; align-items: center; }
-.addr-phone svg { width: 14px; height: 14px; margin-right: 4px; color: var(--g400); }
-.card-actions { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g100); display: flex; align-items: center; gap: 12px; }
-.dot-sep { color: var(--g300); }
-
-/* ===== Payments ===== */
-.pay-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-.credit-card {
-    position: relative; height: 192px; padding: 24px; color: #fff; border-radius: 24px; box-shadow: var(--shadow-xl);
-    background: linear-gradient(to bottom right, #0f172a, #1e1b4b, #312e81);
-    display: flex; flex-direction: column; justify-content: space-between;
-}
-.cc-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.cc-label { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #a5b4fc; font-weight: 700; }
-.cc-title { font-weight: 700; font-size: 16px; margin-top: 2px; }
-.cc-brand { background: rgba(255, 255, 255, .1); backdrop-filter: blur(8px); padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; }
-.cc-number { font-family: ui-monospace, Menlo, monospace; font-size: 16px; letter-spacing: .1em; }
-.cc-foot { display: flex; justify-content: space-between; font-size: 12px; color: #c7d2fe; border-top: 1px solid rgba(255, 255, 255, .1); padding-top: 12px; }
-.wallet-card { height: 192px; background: #fff; border-radius: 24px; border: 1px solid var(--g200); padding: 24px; box-shadow: var(--shadow-xs); display: flex; flex-direction: column; justify-content: space-between; }
-.wallet-tag { display: inline-block; padding: 4px 10px; background: var(--emerald-100); color: var(--emerald-800); font-size: 10px; font-weight: 700; border-radius: 9999px; }
-.wallet-card h4 { font-weight: 700; color: var(--g900); font-size: 16px; margin-top: 8px; }
-.wallet-ic { width: 40px; height: 40px; border-radius: 16px; background: var(--g100); color: var(--g800); display: flex; align-items: center; justify-content: center; }
-.wallet-ic svg { width: 20px; height: 20px; }
-.wallet-note { font-size: 12px; color: var(--g500); }
-.wallet-foot { border-top: 1px solid var(--g100); padding-top: 12px; display: flex; justify-content: space-between; align-items: center; }
-.active-state { font-size: 12px; color: var(--emerald-600); font-weight: 700; display: flex; align-items: center; }
-.active-state svg { width: 14px; height: 14px; margin-right: 4px; }
-
 /* ===== Settings ===== */
 .settings-card { background: #fff; border-radius: 24px; border: 1px solid var(--g200); padding: 24px; box-shadow: var(--shadow-xs); }
 .settings-head { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--g100); }
@@ -379,15 +342,12 @@ main { flex: 1; min-width: 0; width: 100%; }
 .form { display: flex; flex-direction: column; gap: 16px; }
 .form.narrow { max-width: 42rem; }
 .form-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-.form-grid.two { grid-template-columns: 1fr 1fr; gap: 12px; }
 .label { display: block; font-size: 12px; font-weight: 700; color: var(--g700); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
-.label.tight { letter-spacing: 0; margin-bottom: 4px; }
 .input {
     width: 100%; padding: 10px 16px; font-size: 14px;
     background: var(--g50); border: 1px solid var(--g200); border-radius: 12px; transition: all .2s;
 }
 .input:focus { outline: none; box-shadow: 0 0 0 2px var(--brand-500); background: #fff; }
-.input.sm { padding: 8px 16px; font-size: 12px; }
 .input-wrap { position: relative; }
 .input-wrap .input.pad-right { padding-right: 90px; }
 .verified { position: absolute; right: 12px; top: 10px; background: var(--emerald-100); color: var(--emerald-800); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; display: flex; align-items: center; }
@@ -458,7 +418,6 @@ main { flex: 1; min-width: 0; width: 100%; }
 .total-box .tl { font-weight: 700; color: var(--g900); font-size: 14px; }
 .total-box .tv { font-weight: 800; color: var(--brand-600); font-size: 18px; }
 .modal-foot { margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px; }
-.modal .form-foot { padding-top: 16px; gap: 12px; }
 .warn-ic { width: 48px; height: 48px; background: var(--rose-100); color: var(--rose-600); border-radius: 9999px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
 .warn-ic svg { width: 24px; height: 24px; }
 .modal.sm h3.modal-title { margin-bottom: 8px; }
@@ -502,7 +461,6 @@ main { flex: 1; min-width: 0; width: 100%; }
     .hero h2 { font-size: 30px; }
     .hero p { font-size: 16px; }
     .points-box { width: auto; }
-    .address-grid, .pay-grid { grid-template-columns: repeat(2, 1fr); }
     .settings-card { padding: 32px; }
     .danger { padding: 32px; }
     .modal { padding: 32px; }
@@ -514,6 +472,6 @@ main { flex: 1; min-width: 0; width: 100%; }
 
 @media (min-width: 1024px) {
     .page { padding-left: 32px; padding-right: 32px; }
-    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .product-grid { grid-template-columns: repeat(3, 1fr); }
 }

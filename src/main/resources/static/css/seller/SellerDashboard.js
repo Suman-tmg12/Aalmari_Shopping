@@ -1111,6 +1111,20 @@
         });
 
 
+        const ORDER_ACTION = { pending: 'confirm', confirmed: 'ship', shipped: 'deliver' };
+
+        function orderAction(o, action, okMsg) {
+            const fd = new FormData();
+            fd.append('ref', o.ref);
+            fd.append('action', action);
+            fetch('/api/orders/status', { method: 'POST', body: fd }).then(function (r) {
+                if (r.ok) {
+                    try { sessionStorage.setItem('sellerToast', okMsg); } catch (e) {}
+                    closeModal(); location.hash = '#orders'; location.reload();
+                } else r.text().then(msg => toast('Error: ' + msg, 'error'));
+            }).catch(function () { toast('Network error. Please try again.', 'error'); });
+        }
+
         function orderDetail(o) {
             const steps = ['pending', 'confirmed', 'shipped', 'delivered'], idx = steps.indexOf(o.status);
             const off = (o.status === 'cancelled' || o.status === 'return') ? ' off' : '';
@@ -1119,6 +1133,18 @@
             const lines = o.items.map(i =>
                 '<div class="muted-sm" style="display:flex;justify-content:space-between;padding:4px 0"><span>' +
                 esc(i.name) + ' × ' + i.qty + '</span><span>Rs ' + fmt(i.line) + '</span></div>').join('');
+
+            const btns = [['Close', 'btn-outline', closeModal]];
+            if (o.status === 'pending' || o.status === 'confirmed') {
+                btns.push(['Cancel order', 'btn-outline danger', () =>
+                    confirmBox('Cancel order', 'Cancel <strong>' + esc(o.ref) + '</strong>? Stock will be restored.', 'Cancel order',
+                        () => orderAction(o, 'cancel', o.ref + ' cancelled.'))]);
+            }
+            if (NEXT[o.status]) {
+                btns.push([NEXT_BTN[o.status], 'btn-primary', () =>
+                    orderAction(o, ORDER_ACTION[o.status], o.ref + ' → ' + LABEL[NEXT[o.status]])]);
+            }
+
             modal(o.ref,
                 '<div class="od-head"><span class="o-badge ' + o.status + '">' + LABEL[o.status] + '</span><span class="muted-sm">' + esc(o.date) + '</span></div>' +
                 '<dl class="od"><dt>Customer</dt><dd>' + esc(o.cust) + ' · ' + esc(o.phone) + '</dd>' +
@@ -1127,7 +1153,7 @@
                 (o.note ? '<dt>Note</dt><dd>' + esc(o.note) + '</dd>' : '') + '</dl>' +
                 '<div class="muted-sm" style="margin:12px 0 6px">Your items in this order</div>' + lines +
                 '<dl class="od"><dt>Your total</dt><dd>Rs ' + fmt(o.total) + '</dd></dl>' + tl,
-                [['Close', 'btn-outline', closeModal]]);
+                btns);
         }
 
         /* ============ Messages ============ */

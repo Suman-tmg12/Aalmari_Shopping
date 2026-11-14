@@ -42,6 +42,13 @@ public class OrderItem {
     @JoinColumn(name = "seller_id")
     private User seller;
 
+    /** PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED. Each seller moves their own lines. */
+    @Column(nullable = false, length = 20)
+    private String status = "PENDING";
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     public User getSeller() { return seller; }
     public void setSeller(User seller) { this.seller = seller; }
 

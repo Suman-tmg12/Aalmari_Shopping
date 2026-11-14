@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile &amp; Account Settings - Luma Store</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=12">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=13">
     <%-- Product card styles (.ar-card ...) shared with the home page Products section --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
     <style>
@@ -63,12 +63,6 @@
                             <i data-lucide="heart"></i><span>Wishlist</span>
                             <span class="nav-count" id="wishlistNavCount" <c:if test="${wishlistCount == 0}">style="display:none"</c:if>>${wishlistCount}</span>
                         </button>
-                        <button onclick="switchTab('addresses')" data-tab="addresses" class="nav-btn">
-                            <i data-lucide="map-pin"></i><span>Saved Addresses</span>
-                        </button>
-                        <button onclick="switchTab('payments')" data-tab="payments" class="nav-btn">
-                            <i data-lucide="credit-card"></i><span>Payment Methods</span>
-                        </button>
                         <button onclick="switchTab('settings')" data-tab="settings" class="nav-btn">
                             <i data-lucide="settings"></i><span>Account Settings</span>
                         </button>
@@ -106,22 +100,6 @@
                                 <span class="stat-note note-rose"><i data-lucide="heart"></i>&nbsp; <span id="wishlistSaleCount">${wishlistSaleCount}</span>&nbsp;items on sale</span>
                             </div>
                             <div class="stat-icon tone-rose"><i data-lucide="heart"></i></div>
-                        </div>
-                        <div class="stat">
-                            <div>
-                                <p class="stat-label">Addresses</p>
-                                <p class="stat-value">2</p>
-                                <span class="stat-note note-gray">1 Primary Default</span>
-                            </div>
-                            <div class="stat-icon tone-amber"><i data-lucide="map-pin"></i></div>
-                        </div>
-                        <div class="stat">
-                            <div>
-                                <p class="stat-label">Saved Cards</p>
-                                <p class="stat-value">2</p>
-                                <span class="stat-note note-brand">Visa &amp; Mastercard</span>
-                            </div>
-                            <div class="stat-icon tone-emerald"><i data-lucide="credit-card"></i></div>
                         </div>
                     </div>
 
@@ -388,103 +366,14 @@
                     </div>
                 </div>
 
-                <!-- ===== 4. ADDRESSES (static until the address table exists) ===== -->
-                <div id="tab-addresses" class="tab-content hidden">
-                    <div class="row-between">
-                        <div>
-                            <h2 class="page-title">Saved Addresses</h2>
-                            <p class="page-sub">Manage shipping destinations for faster checkout</p>
-                        </div>
-                        <button class="btn btn-primary" onclick="openAddressModal()">
-                            <i data-lucide="plus"></i><span>Add Address</span>
-                        </button>
-                    </div>
-
-                    <div id="address-grid" class="address-grid">
-                        <div class="address-card default">
-                            <span class="default-tag">Default</span>
-                            <h3>Home Address</h3>
-                            <p class="addr-name">Sarah Jenkins</p>
-                            <p class="addr-line first">742 Evergreen Terrace, Apt 4B</p>
-                            <p class="addr-line">Springfield, OR 97477</p>
-                            <p class="addr-phone"><i data-lucide="phone"></i> +1 (555) 234-5678</p>
-                            <div class="card-actions">
-                                <button class="link-brand" onclick="openAddressModal()">Edit</button>
-                                <span class="dot-sep">•</span>
-                                <button class="link-faint" onclick="showToast('Cannot delete default address')">Remove</button>
-                            </div>
-                        </div>
-
-                        <div class="address-card">
-                            <h3>Office Address</h3>
-                            <p class="addr-name">Sarah Jenkins</p>
-                            <p class="addr-line first">100 Tech Park Way, Suite 300</p>
-                            <p class="addr-line">Seattle, WA 98101</p>
-                            <p class="addr-phone"><i data-lucide="phone"></i> +1 (555) 987-6543</p>
-                            <div class="card-actions">
-                                <button class="link-brand" onclick="openAddressModal()">Edit</button>
-                                <span class="dot-sep">•</span>
-                                <button class="link-rose" onclick="this.closest('.address-card').remove(); showToast('Address deleted')">Remove</button>
-                                <span class="dot-sep">•</span>
-                                <button class="link-dark" onclick="showToast('Set as default address')">Make Default</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== 5. PAYMENTS (static until the payment table exists) ===== -->
-                <div id="tab-payments" class="tab-content hidden">
-                    <div class="row-between">
-                        <div>
-                            <h2 class="page-title">Payment Methods</h2>
-                            <p class="page-sub">Saved credit/debit cards and digital wallets</p>
-                        </div>
-                        <button class="btn btn-primary" onclick="openPaymentModal()">
-                            <i data-lucide="plus"></i><span>Add Method</span>
-                        </button>
-                    </div>
-
-                    <div class="pay-grid">
-                        <div class="credit-card">
-                            <div class="cc-top">
-                                <div>
-                                    <p class="cc-label">Primary Card</p>
-                                    <h4 class="cc-title">Visa Platinum</h4>
-                                </div>
-                                <span class="cc-brand">VISA</span>
-                            </div>
-                            <p class="cc-number">•••• •••• •••• 4892</p>
-                            <div class="cc-foot">
-                                <span>Sarah Jenkins</span>
-                                <span>Exp: 08/28</span>
-                            </div>
-                        </div>
-
-                        <div class="wallet-card">
-                            <div class="cc-top">
-                                <div>
-                                    <span class="wallet-tag">Digital Wallet</span>
-                                    <h4>Apple Pay / Digital Wallet</h4>
-                                </div>
-                                <div class="wallet-ic"><i data-lucide="wallet"></i></div>
-                            </div>
-                            <p class="wallet-note">Connected to sarah.j@example.com</p>
-                            <div class="wallet-foot">
-                                <span class="active-state"><i data-lucide="check-circle-2"></i> Active</span>
-                                <button class="link-rose" onclick="showToast('Wallet disconnected')">Disconnect</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== 6. SETTINGS ===== -->
+                <!-- ===== 4. SETTINGS ===== -->
                 <div id="tab-settings" class="tab-content gap-lg hidden">
                     <div>
                         <h2 class="page-title">Account Settings</h2>
                         <p class="page-sub">Manage your profile info, security credentials, and communication preferences</p>
                     </div>
 
-                    <!-- 6A. Personal details -->
+                    <!-- 4A. Personal details -->
                     <div class="settings-card">
                         <div class="settings-head">
                             <div class="section-icon tone-indigo"><i data-lucide="user"></i></div>
@@ -552,7 +441,7 @@
                         </form>
                     </div>
 
-                    <!-- 6B. Security -->
+                    <!-- 4B. Security -->
                     <div class="settings-card">
                         <div class="settings-head">
                             <div class="section-icon tone-amber"><i data-lucide="shield-alert"></i></div>
@@ -609,7 +498,7 @@
                         </div>
                     </div>
 
-                    <!-- 6C. Notifications -->
+                    <!-- 4C. Notifications -->
                     <div class="settings-card">
                         <div class="settings-head">
                             <div class="section-icon tone-emerald"><i data-lucide="bell-ring"></i></div>
@@ -652,7 +541,7 @@
                         </div>
                     </div>
 
-                    <!-- 6D. Danger zone -->
+                    <!-- 4D. Danger zone -->
                     <div class="danger">
                         <div class="danger-head">
                             <div class="section-icon" style="background: var(--rose-100); color: var(--rose-600);"><i data-lucide="alert-triangle"></i></div>
@@ -661,7 +550,7 @@
                                 <p>Irreversible actions regarding your customer account</p>
                             </div>
                         </div>
-                        <p class="danger-text">Deleting your account will permanently clear your reward points, order history, and saved addresses. This action cannot be undone.</p>
+                        <p class="danger-text">Deleting your account will permanently clear your reward points and order history. This action cannot be undone.</p>
                         <button class="btn btn-danger" onclick="openDeleteModal()">
                             <i data-lucide="trash-2"></i><span>Deactivate or Delete Account</span>
                         </button>
@@ -703,76 +592,12 @@
         </div>
     </div>
 
-    <!-- Add address -->
-    <div id="address-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <button class="modal-close" onclick="closeAddressModal()" aria-label="Close"><i data-lucide="x"></i></button>
-            <h3 class="modal-title">Add Shipping Address</h3>
-            <form class="form" onsubmit="handleAddressSubmit(event)">
-                <div>
-                    <label class="label tight">Address Label</label>
-                    <input type="text" class="input sm" placeholder="e.g. Home, Office, Vacation House" required>
-                </div>
-                <div>
-                    <label class="label tight">Street Address</label>
-                    <input type="text" class="input sm" placeholder="123 Main Street" required>
-                </div>
-                <div class="form-grid two">
-                    <div>
-                        <label class="label tight">City</label>
-                        <input type="text" class="input sm" placeholder="Seattle" required>
-                    </div>
-                    <div>
-                        <label class="label tight">Zip Code</label>
-                        <input type="text" class="input sm" placeholder="98101" required>
-                    </div>
-                </div>
-                <div class="form-foot">
-                    <button type="button" class="btn btn-gray" onclick="closeAddressModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Address</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add payment -->
-    <div id="payment-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <button class="modal-close" onclick="closePaymentModal()" aria-label="Close"><i data-lucide="x"></i></button>
-            <h3 class="modal-title">Add Payment Method</h3>
-            <form class="form" onsubmit="handlePaymentSubmit(event)">
-                <div>
-                    <label class="label tight">Cardholder Name</label>
-                    <input type="text" class="input sm" placeholder="Sarah Jenkins" required>
-                </div>
-                <div>
-                    <label class="label tight">Card Number</label>
-                    <input type="text" class="input sm" placeholder="4532 •••• •••• 8912" required>
-                </div>
-                <div class="form-grid two">
-                    <div>
-                        <label class="label tight">Expiry Date</label>
-                        <input type="text" class="input sm" placeholder="MM/YY" required>
-                    </div>
-                    <div>
-                        <label class="label tight">CVC / CVV</label>
-                        <input type="password" class="input sm" maxlength="4" placeholder="123" required>
-                    </div>
-                </div>
-                <div class="form-foot">
-                    <button type="button" class="btn btn-gray" onclick="closePaymentModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Card</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Delete account -->
     <div id="delete-modal" class="modal-overlay hidden">
         <div class="modal sm">
             <div class="warn-ic"><i data-lucide="octagon-alert"></i></div>
             <h3 class="modal-title">Delete Account?</h3>
-            <p class="modal-text">Are you sure you want to delete your profile? All purchase records, saved addresses, and loyalty reward points will be permanently lost.</p>
+            <p class="modal-text">Are you sure you want to delete your profile? All purchase records and loyalty reward points will be permanently lost.</p>
             <div class="modal-foot center">
                 <button class="btn btn-gray btn-lg" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn btn-danger" onclick="closeDeleteModal(); showToast('Account deactivation request submitted');">Confirm Delete</button>
@@ -956,24 +781,6 @@
             document.getElementById('order-modal').classList.remove('hidden');
         }
         function closeOrderModal() { document.getElementById('order-modal').classList.add('hidden'); }
-
-        function openAddressModal() { document.getElementById('address-modal').classList.remove('hidden'); }
-        function closeAddressModal() { document.getElementById('address-modal').classList.add('hidden'); }
-        function handleAddressSubmit(e) {
-            e.preventDefault();
-            e.target.reset();
-            closeAddressModal();
-            showToast('New shipping address saved!');
-        }
-
-        function openPaymentModal() { document.getElementById('payment-modal').classList.remove('hidden'); }
-        function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
-        function handlePaymentSubmit(e) {
-            e.preventDefault();
-            e.target.reset();
-            closePaymentModal();
-            showToast('New payment card added!');
-        }
 
         function openDeleteModal() { document.getElementById('delete-modal').classList.remove('hidden'); }
         function closeDeleteModal() { document.getElementById('delete-modal').classList.add('hidden'); }
