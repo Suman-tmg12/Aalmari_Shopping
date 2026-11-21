@@ -42,6 +42,8 @@ public class AccountController {
             @RequestParam(required = false) String terms,
             Model model) {
 
+        email = email.trim().toLowerCase(java.util.Locale.ROOT);
+
         if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || country.isBlank()
                 || phone.isBlank() || password.isBlank()) {
             model.addAttribute("error", "All fields are required.");
@@ -87,6 +89,8 @@ public class AccountController {
             @RequestParam String password,
             HttpSession session,
             Model model) {
+
+        email = email.trim().toLowerCase(java.util.Locale.ROOT);
 
         User user = userService.findByEmail(email).orElse(null);
 

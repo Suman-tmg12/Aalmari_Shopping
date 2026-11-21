@@ -108,26 +108,41 @@ public class S3Service {
     }
 
     public String generateProfilePicUrl(String key) {
-        if (key == null || key.isEmpty()) return null;
+        if (key == null || key.isBlank() || key.toLowerCase(java.util.Locale.ROOT).endsWith("null")
+                || key.contains("../") || key.contains("\\\\")) return null;
 
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(profileBucket)
-                .key(key)
-                .build();
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(profileBucket)
+                    .key(key)
+                    .build();
 
-        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(30))
-                .getObjectRequest(getObjectRequest)
-                .build();
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(30))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
 
-        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
-        return presignedRequest.url().toString();
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+            return presignedRequest.url().toString();
+        } catch (Exception e) {
+            return String.format("https://%s.s3.%s.amazonaws.com/%s",
+                    profileBucket, region, key);
+        }
     }
 
     private String getExtension(String filename) {
-        return null;
+        if (filename == null) return "";
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) return "";
+        String extension = filename.substring(dot).toLowerCase(java.util.Locale.ROOT);
+        return extension.matches("\\.[a-z0-9]{1,10}") ? extension : "";
     }
 
     public void deleteFile(String path) {
+        if (path == null || path.isBlank()) return;
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            return;
+        }
+        s3Client.deleteObject(builder -> builder.bucket(bucket).key(path));
     }
 }

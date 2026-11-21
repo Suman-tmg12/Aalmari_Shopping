@@ -75,18 +75,18 @@
     int[]    ordersByMonth  = fin.orders;
     double   commissionRate = fin.commissionRate;
 
-    int last = months.length - 1;
+    int lastMonthIndex = months.length - 1;
     long grossTotal = 0;
     for (long gv : grossByMonth) grossTotal += gv;
     long commissionTotal = Math.round(grossTotal * commissionRate);
     long netTotal        = grossTotal - commissionTotal;
-    long curGross        = grossByMonth[last];
+    long curGross        = grossByMonth[lastMonthIndex];
     long curCommission   = Math.round(curGross * commissionRate);
     long pendingPayout   = curGross - curCommission;
-    int  curOrders       = ordersByMonth[last];
+    int  curOrders       = ordersByMonth[lastMonthIndex];
 
-    long prevGross  = last > 0 ? grossByMonth[last - 1] : 0;
-    int  prevOrders = last > 0 ? ordersByMonth[last - 1] : 0;
+    long prevGross  = lastMonthIndex > 0 ? grossByMonth[lastMonthIndex - 1] : 0;
+    int  prevOrders = lastMonthIndex > 0 ? ordersByMonth[lastMonthIndex - 1] : 0;
     boolean revUp = curGross >= prevGross;
     boolean ordUp = curOrders >= prevOrders;
     String revChangeTxt = prevGross > 0
@@ -122,21 +122,31 @@
     long maxEarn = 0;
     for (SellerFinance.Earn er : earnings) maxEarn = Math.max(maxEarn, er.amount);
 
-    // ---------------- Demo data that has no backend yet ----------------
-    String[][] reviews = {
-        {"Priya Nair", "5", "Hand-Thrown Ceramic Mug", "Beautiful glaze and it feels perfect in the hand."},
-        {"Søren Lindqvist", "5", "Full-Grain Leather Wallet", "Great quality leather, stitching is flawless."},
-        {"James Okafor", "4", "Merino Wool Scarf", "Very soft and warm. Colour was slightly darker."},
-        {"Marta Kowalczyk", "5", "Waxed Canvas Tote Bag", "Sturdy, roomy and looks even better after use."}
-    };
+    // ---------------- Real store review data ----------------
+    @SuppressWarnings("unchecked")
+    List<com.example.aalmari.model.ProductReview> realStoreReviews =
+        (List<com.example.aalmari.model.ProductReview>) request.getAttribute("storeReviews");
+    if (realStoreReviews == null) realStoreReviews = new ArrayList<>();
 
-    String[][] messages = {
-        {"Priya Nair", "Question about ceramic mug sizes", "Hi, do you offer the mug in a larger 400ml version?", "2h ago", "1"},
-        {"James Okafor", "Shipping to Nigeria", "Is express shipping available to Abuja?", "Yesterday", "1"},
-        {"Marta Kowalczyk", "Custom monogram on tote?", "Can I request a monogram on the canvas tote?", "Aug 10", "0"}
-    };
-    int unreadMessages = 0;
-    for (String[] mm : messages) if ("1".equals(mm[4])) unreadMessages++;
+    String[][] reviews = new String[realStoreReviews.size()][4];
+    for (int reviewIndex = 0; reviewIndex < realStoreReviews.size(); reviewIndex++) {
+        com.example.aalmari.model.ProductReview rv = realStoreReviews.get(reviewIndex);
+        String first = rv.getUser() == null ? "Customer" : nz(rv.getUser().getFirstName());
+        String lastName = rv.getUser() == null ? "" : nz(rv.getUser().getLastName());
+        reviews[reviewIndex][0] = (first + " " + lastName).trim();
+        reviews[reviewIndex][1] = String.valueOf(rv.getRating());
+        reviews[reviewIndex][2] = rv.getProduct() == null ? "Product" : nz(rv.getProduct().getName());
+        reviews[reviewIndex][3] = nz(rv.getComment());
+    }
+
+    Double storeRatingObj = (Double) request.getAttribute("storeRating");
+    double storeRating = storeRatingObj == null ? 0.0 : storeRatingObj;
+    Object reviewCountObj = request.getAttribute("storeReviewCount");
+    long storeReviewCount = reviewCountObj instanceof Number ? ((Number) reviewCountObj).longValue() : 0L;
+    Object followerCountObj = request.getAttribute("followerCount");
+    long followerCount = followerCountObj instanceof Number ? ((Number) followerCountObj).longValue() : 0L;
+    Object unreadMessagesObj = request.getAttribute("unreadMessagesCount");
+    long unreadMessages = unreadMessagesObj instanceof Number ? ((Number) unreadMessagesObj).longValue() : 0L;
 
     // ---------------- Products from the database ----------------
     @SuppressWarnings("unchecked")
@@ -147,36 +157,36 @@
     // columns: 0 name, 1 sku, 2 category, 3 price, 4 discount, 5 stock, 6 sold, 7 status,
     //          8 subCategory, 9 infoImage, 10 imagesJson, 11 id, 12 description, 13 attrsJson, 14 thumbnail
     String[][] products = new String[realProducts.size()][15];
-    int i = 0;
+    int productIndex = 0;
     for (com.example.aalmari.model.SellerProduct p : realProducts) {
-        products[i][0]  = nz(p.getName());
-        products[i][1]  = nz(p.getSku());
-        products[i][2]  = nz(p.getCategory());
-        products[i][3]  = String.valueOf(p.getPrice() == null ? 0 : p.getPrice());
-        products[i][4]  = String.valueOf(p.getDiscount() == null ? 0 : p.getDiscount());
-        products[i][5]  = String.valueOf(p.getStock() == null ? 0 : p.getStock());
-        products[i][6]  = String.valueOf(p.getSold() == null ? 0 : p.getSold());
-        products[i][7]  = Boolean.TRUE.equals(p.getActive()) ? "Active" : "Inactive";
-        products[i][8]  = nz(p.getSubCategory());
-        products[i][9]  = nz(p.getInfoImageUrl());
-        products[i][10] = (p.getImageUrlsJson() != null && !p.getImageUrlsJson().isEmpty()) ? p.getImageUrlsJson() : "[]";
-        products[i][11] = String.valueOf(p.getId());
-        products[i][12] = nz(p.getDescription());
-        products[i][13] = (p.getAttributesJson() != null && !p.getAttributesJson().isEmpty()) ? p.getAttributesJson() : "{}";
+        products[productIndex][0]  = nz(p.getName());
+        products[productIndex][1]  = nz(p.getSku());
+        products[productIndex][2]  = nz(p.getCategory());
+        products[productIndex][3]  = String.valueOf(p.getPrice() == null ? 0 : p.getPrice());
+        products[productIndex][4]  = String.valueOf(p.getDiscount() == null ? 0 : p.getDiscount());
+        products[productIndex][5]  = String.valueOf(p.getStock() == null ? 0 : p.getStock());
+        products[productIndex][6]  = String.valueOf(p.getSold() == null ? 0 : p.getSold());
+        products[productIndex][7]  = Boolean.TRUE.equals(p.getActive()) ? "Active" : "Inactive";
+        products[productIndex][8]  = nz(p.getSubCategory());
+        products[productIndex][9]  = nz(p.getInfoImageUrl());
+        products[productIndex][10] = (p.getImageUrlsJson() != null && !p.getImageUrlsJson().isEmpty()) ? p.getImageUrlsJson() : "[]";
+        products[productIndex][11] = String.valueOf(p.getId());
+        products[productIndex][12] = nz(p.getDescription());
+        products[productIndex][13] = (p.getAttributesJson() != null && !p.getAttributesJson().isEmpty()) ? p.getAttributesJson() : "{}";
 
         // Thumbnail = first gallery image, fallback to info image
         String thumb = "";
-        if (!products[i][10].trim().equals("[]")) {
+        if (!products[productIndex][10].trim().equals("[]")) {
             try {
-                List<?> galleryList = new ObjectMapper().readValue(products[i][10], List.class);
+                List<?> galleryList = new ObjectMapper().readValue(products[productIndex][10], List.class);
                 if (!galleryList.isEmpty() && galleryList.get(0) != null && !galleryList.get(0).toString().isEmpty()) {
                     thumb = galleryList.get(0).toString();
                 }
             } catch (Exception ex) { }
         }
-        if (thumb.isEmpty()) thumb = products[i][9];
-        products[i][14] = thumb;
-        i++;
+        if (thumb.isEmpty()) thumb = products[productIndex][9];
+        products[productIndex][14] = thumb;
+        productIndex++;
     }
 %>
 <!DOCTYPE html>
@@ -185,7 +195,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller Hub - Dashboard</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=15">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=16">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names" />
 </head>
@@ -346,7 +356,7 @@
                     <div class="stat-grid">
                         <div class="stat-card">
                             <div class="stat-top">
-                                <span class="stat-label">Revenue (<%= months[last] %>)</span>
+                                <span class="stat-label">Revenue (<%= months[lastMonthIndex] %>)</span>
                                 <span class="stat-icon ic-orange"><span class="material-symbols-outlined">currency_rupee</span></span>
                             </div>
                             <div class="stat-value">Rs <%= String.format("%,d", curGross) %></div>
@@ -373,8 +383,8 @@
                                 <span class="stat-label">Store rating</span>
                                 <span class="stat-icon ic-green"><span class="material-symbols-outlined">star</span></span>
                             </div>
-                            <div class="stat-value">4.8★</div>
-                            <div class="stat-sub">From 214 reviews</div>
+                            <div class="stat-value"><%= storeReviewCount == 0 ? "0.0" : String.format(Locale.US, "%.1f", storeRating) %>★</div>
+                            <div class="stat-sub">From <%= storeReviewCount %> reviews</div>
                         </div>
                     </div>
 
@@ -791,7 +801,7 @@
             <div class="view" id="view-mystore" style="display: none;">
                 <div class="page-header center-v">
                     <h1 class="page-title">My Store</h1>
-                    <a href="#" class="muted-link">Public view</a>
+                    <a href="${pageContext.request.contextPath}/store/<%= request.getAttribute("sellerId") %>" class="muted-link">Public view</a>
                 </div>
 
                 <div class="store-card">
@@ -828,11 +838,11 @@
                     <div class="store-stats-row">
                         <div class="store-stats">
                             <div class="s-stat"><strong><%= products.length %></strong><span>Products</span></div>
-                            <div class="s-stat"><strong>214</strong><span>Reviews</span></div>
-                            <div class="s-stat"><strong>4.8★</strong><span>Rating</span></div>
-                            <div class="s-stat"><strong>1.2k</strong><span>Followers</span></div>
+                            <div class="s-stat"><strong><%= storeReviewCount %></strong><span>Reviews</span></div>
+                            <div class="s-stat"><strong><%= storeReviewCount == 0 ? "0.0" : String.format(Locale.US, "%.1f", storeRating) %>★</strong><span>Rating</span></div>
+                            <div class="s-stat"><strong><%= followerCount %></strong><span>Followers</span></div>
                         </div>
-                        <button type="button" class="btn-primary" id="followBtn">Follow store</button>
+                        <a href="${pageContext.request.contextPath}/store/<%= request.getAttribute("sellerId") %>" class="btn-primary" style="text-decoration:none;">View public store</a>
                     </div>
 
                     <div class="tabs store-tabs" id="storeTabs">
@@ -845,6 +855,9 @@
                     </div>
 
                     <div class="store-panel" id="storeReviews" style="display:none;">
+                        <% if (reviews.length == 0) { %>
+                            <div class="muted-sm" style="padding:24px;text-align:center">No customer reviews yet.</div>
+                        <% } else { %>
                         <% for (String[] rv : reviews) {
                                int rating = Integer.parseInt(rv[1]);
                         %>
@@ -855,10 +868,11 @@
                                     <strong><%= h(rv[0]) %></strong>
                                     <span class="stars"><%= "★★★★★".substring(0, rating) %><span class="stars-off"><%= "★★★★★".substring(0, 5 - rating) %></span></span>
                                 </div>
-                                <div class="muted-sm"><%= h(rv[2]) %></div>
-                                <p class="review-text"><%= h(rv[3]) %></p>
+                                <div class="muted-sm"><%= h(rv[2]) %> · Verified purchase</div>
+                                <p class="review-text"><%= h(rv[3].isEmpty() ? "Rated this product." : rv[3]) %></p>
                             </div>
                         </div>
+                        <% } %>
                         <% } %>
                     </div>
                 </div>
@@ -882,18 +896,6 @@
                     </div>
 
                     <div id="messageList">
-                    <% for (String[] m : messages) {
-                           boolean unread = "1".equals(m[4]);
-                    %>
-                        <div class="msg-item<%= unread ? " unread" : "" %>">
-                            <div class="msg-row">
-                                <span class="msg-name"><%= h(m[0]) %></span>
-                                <span class="msg-time"><%= h(m[3]) %></span>
-                            </div>
-                            <div class="msg-subject"><%= h(m[1]) %></div>
-                            <div class="msg-preview"><%= h(m[2]) %></div>
-                        </div>
-                    <% } %>
                     </div>
                 </div>
             </div>
@@ -907,6 +909,6 @@
 <script>
 var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=4"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=6"></script>
 </body>
 </html>

@@ -1,6 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.List" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%!
     private static final String S3_BASE = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
@@ -35,7 +37,7 @@
     <title><c:out value="${empty store ? 'My Store' : store.storeName}"/> - Aalmari Store</title>
     <!-- Google Material Symbols for Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/mystore.css?v=6">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/mystore.css?v=7">
 </head>
 <body>
    <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -61,30 +63,73 @@
                 <span class="label">Products</span>
             </div>
             <div class="stat-item">
-                <span class="value">214</span>
+                <span class="value">${storeReviewCount}</span>
                 <span class="label">Reviews</span>
             </div>
             <div class="stat-item">
-                <span class="value">4.8 ★</span>
+                <span class="value"><fmt:formatNumber value="${storeRating}" maxFractionDigits="1"/> ★</span>
                 <span class="label">Rating</span>
             </div>
             <div class="stat-item">
-                <span class="value">1.2k</span>
+                <span class="value" id="storeFollowerCount">${followerCount}</span>
                 <span class="label">Followers</span>
             </div>
         </div>
 
-        <button class="follow-btn">Follow store</button>
+        <c:choose>
+            <c:when test="${not empty sellerId}">
+                <button type="button" class="follow-btn ${isFollowing ? 'following' : ''}" id="followStoreBtn"
+                        data-seller-id="${sellerId}" data-following="${isFollowing}">
+                    ${isFollowing ? 'Following' : 'Follow store'}
+                </button>
+            </c:when>
+            <c:otherwise>
+                <button type="button" class="follow-btn" disabled style="opacity:.55">Follow store</button>
+            </c:otherwise>
+        </c:choose>
     </div>
 
     <!-- Tabs Navigation -->
     <div class="store-tabs">
-        <span class="tab active">Products</span>
-        <span class="tab">Reviews</span>
+        <button type="button" class="tab active" data-store-tab="products">Products</button>
+        <button type="button" class="tab" data-store-tab="reviews">Reviews <span class="tab-count">${storeReviewCount}</span></button>
     </div>
 
+    <section class="store-review-panel hidden" id="storeReviewsPanel">
+        <c:choose>
+            <c:when test="${not empty storeReviews}">
+                <div class="store-review-summary">
+                    <strong><fmt:formatNumber value="${storeRating}" maxFractionDigits="1"/></strong>
+                    <span>★ average from ${storeReviewCount} reviews</span>
+                </div>
+                <div class="store-review-list">
+                    <c:forEach var="review" items="${storeReviews}">
+                        <article class="store-review-card">
+                            <div class="store-review-head">
+                                <div class="store-review-avatar">${not empty review.user.firstName ? fn:substring(review.user.firstName,0,1) : 'A'}</div>
+                                <div>
+                                    <b><c:out value="${review.user.firstName}"/> <c:out value="${review.user.lastName}"/></b>
+                                    <small>✓ Verified purchase · <c:out value="${review.product.name}"/></small>
+                                </div>
+                                <strong class="store-review-rating">${review.rating}.0 ★</strong>
+                            </div>
+                            <p><c:out value="${empty review.comment ? 'Rated this product.' : review.comment}"/></p>
+                        </article>
+                    </c:forEach>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="store-review-empty">
+                    <span class="material-symbols-outlined">reviews</span>
+                    <h3>No store reviews yet</h3>
+                    <p>Reviews appear after customers receive products from this store.</p>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </section>
+
     <!-- Main Content / Product Grid Container -->
-    <div class="ar-page">
+    <div class="ar-page" id="storeProductsPanel">
         <div class="ar-grid" id="productGrid">
 
             <%
@@ -320,6 +365,43 @@
     <jsp:include page="/WEB-INF/components/footer.jsp" />
 
     <script>
+        // Store tabs and follow action
+        document.querySelectorAll('[data-store-tab]').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('[data-store-tab]').forEach(function (item) { item.classList.remove('active'); });
+                tab.classList.add('active');
+                var isReviews = tab.dataset.storeTab === 'reviews';
+                document.getElementById('storeProductsPanel').classList.toggle('hidden', isReviews);
+                document.getElementById('storeReviewsPanel').classList.toggle('hidden', !isReviews);
+            });
+        });
+
+        var followBtn = document.getElementById('followStoreBtn');
+        if (followBtn) {
+            followBtn.addEventListener('click', async function () {
+                if (followBtn.disabled) return;
+                followBtn.disabled = true;
+                try {
+                    var response = await fetch('${pageContext.request.contextPath}/api/store/' + followBtn.dataset.sellerId + '/follow', { method: 'POST' });
+                    var data = await response.json().catch(function () { return {}; });
+                    if (response.status === 401) {
+                        window.location.href = '${pageContext.request.contextPath}/login';
+                        return;
+                    }
+                    if (!response.ok) throw new Error(data.error || 'Could not update follow status.');
+                    followBtn.classList.toggle('following', data.following);
+                    followBtn.textContent = data.following ? 'Following' : 'Follow store';
+                    followBtn.dataset.following = data.following;
+                    var count = document.getElementById('storeFollowerCount');
+                    if (count) count.textContent = data.followers;
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    followBtn.disabled = false;
+                }
+            });
+        }
+
         // Wishlist heart toggle
         document.querySelectorAll('#productGrid .ar-wish').forEach(function (btn) {
             btn.addEventListener('click', function (e) {

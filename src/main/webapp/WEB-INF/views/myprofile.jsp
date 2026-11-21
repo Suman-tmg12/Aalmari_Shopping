@@ -14,13 +14,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile &amp; Account Settings - Luma Store</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=13">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/myprofile.css?v=16">
     <%-- Product card styles (.ar-card ...) shared with the home page Products section --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
     <style>
         /* Wishlist uses the shared product card (.ar-card) from produc.css */
         #tab-wishlist .ar-page { max-width: none; margin: 0; padding: 0; }
         #tab-wishlist .ar-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+        .wishlist-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: 24px 0 clamp(32px, 5vw, 48px);
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .wishlist-pagination span {
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .wishlist-pagination span:hover { background: rgba(255, 123, 0, 0.08); }
+        .wishlist-pagination span.active {
+            font-weight: bold;
+            color: #fff;
+            background: #ff7b00;
+        }
+        .wishlist-pagination span.disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .wishlist-pagination span.pg-dots {
+            cursor: default;
+            pointer-events: none;
+        }
+        .wishlist-pagination span.pg-dots:hover { background: none; }
+
     </style>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -37,7 +70,15 @@
 
                     <div class="profile-badge">
                         <div class="profile-avatar">
-                            <img id="sidebar-avatar" src="${not empty profilePicUrl ? profilePicUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="Avatar">
+                            <c:choose>
+                                <c:when test="${not empty profilePicUrl}">
+                                    <img id="sidebar-avatar" src="<c:out value='${profilePicUrl}'/>"
+                                         onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/images/default-avatar.svg';" alt="Avatar">
+                                </c:when>
+                                <c:otherwise>
+                                    <img id="sidebar-avatar" src="${pageContext.request.contextPath}/images/default-avatar.svg" alt="Avatar">
+                                </c:otherwise>
+                            </c:choose>
                             <span class="online-dot"></span>
                         </div>
                         <div class="profile-info">
@@ -364,6 +405,9 @@
                             <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Continue shopping</a>
                         </div>
                     </div>
+
+                    <!-- Pagination (built by JavaScript, matching the product grid) -->
+                    <div class="pagination wishlist-pagination" id="wishlistPagination"></div>
                 </div>
 
                 <!-- ===== 4. SETTINGS ===== -->
@@ -386,7 +430,15 @@
                         <form class="form" action="${pageContext.request.contextPath}/myprofile/update" method="post" enctype="multipart/form-data">
 
                             <div class="avatar-upload">
-                                <img id="settings-avatar-preview" src="${not empty profilePicUrl ? profilePicUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="Avatar">
+                                <c:choose>
+                                    <c:when test="${not empty profilePicUrl}">
+                                        <img id="settings-avatar-preview" src="<c:out value='${profilePicUrl}'/>"
+                                             onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/images/default-avatar.svg';" alt="Avatar">
+                                    </c:when>
+                                    <c:otherwise>
+                                        <img id="settings-avatar-preview" src="${pageContext.request.contextPath}/images/default-avatar.svg" alt="Avatar">
+                                    </c:otherwise>
+                                </c:choose>
                                 <div>
                                     <div class="avatar-actions">
                                         <label class="file-label">
@@ -617,8 +669,9 @@
 
             // Show a success toast after redirect back from the profile-save POST
             var params = new URLSearchParams(window.location.search);
-            if (params.get('saved') === 'true') {
-                showToast('Personal profile saved successfully!');
+            var requestedTab = params.get('tab');
+            if (requestedTab === 'orders' || requestedTab === 'wishlist' || requestedTab === 'settings') {
+                switchTab(requestedTab);
             }
         });
 
@@ -652,6 +705,7 @@
             if (stat) stat.textContent = n;
             if (saleEl) saleEl.textContent = sale;
             if (empty) empty.style.display = n === 0 ? '' : 'none';
+            if (typeof updateWishlistPagination === 'function') updateWishlistPagination();
         }
 
         document.addEventListener('wishlist:change', function (e) {
@@ -818,6 +872,102 @@
                 setTimeout(function () { toast.remove(); }, 300);
             }, 3000);
         }
+
+        // ===== Wishlist pagination (matches product.jsp) =====
+        (function () {
+            var PER_PAGE = 6;
+            var grid = document.getElementById('wishlistGrid');
+            var nav = document.getElementById('wishlistPagination');
+            if (!grid || !nav) return;
+
+            var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
+            var total = Math.ceil(cards.length / PER_PAGE);
+            var current = 1;
+
+            if (total <= 1) {
+                cards.forEach(function (card) { card.style.display = ''; });
+                nav.style.display = 'none';
+                return;
+            }
+
+            function pageItems() {
+                if (total <= 7) return Array.from({ length: total }, function (_, i) { return i + 1; });
+                var items = [1];
+                var start = Math.max(2, current - 1);
+                var end = Math.min(total - 1, current + 1);
+                if (start > 2) items.push('...');
+                for (var i = start; i <= end; i++) items.push(i);
+                if (end < total - 1) items.push('...');
+                items.push(total);
+                return items;
+            }
+
+            function makeItem(label, page, options) {
+                options = options || {};
+                var item = document.createElement('span');
+                item.innerHTML = label;
+                if (options.active) {
+                    item.className = 'active';
+                    item.setAttribute('aria-current', 'page');
+                } else if (options.disabled) {
+                    item.className = 'disabled';
+                    item.setAttribute('aria-disabled', 'true');
+                } else {
+                    item.setAttribute('role', 'button');
+                    item.tabIndex = 0;
+                    item.addEventListener('click', function () { showPage(page); });
+                    item.addEventListener('keydown', function (event) {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            showPage(page);
+                        }
+                    });
+                }
+                return item;
+            }
+
+            function renderNav() {
+                nav.innerHTML = '';
+                nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
+                pageItems().forEach(function (item) {
+                    if (item === '...') {
+                        var dots = document.createElement('span');
+                        dots.className = 'pg-dots';
+                        dots.textContent = '...';
+                        nav.appendChild(dots);
+                    } else {
+                        nav.appendChild(makeItem(item, item, { active: item === current }));
+                    }
+                });
+                nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
+            }
+
+            function showPage(page) {
+                if (page < 1 || page > total) return;
+                current = page;
+                var start = (page - 1) * PER_PAGE;
+                var end = start + PER_PAGE;
+                cards.forEach(function (card, index) {
+                    card.style.display = (index >= start && index < end) ? '' : 'none';
+                });
+                renderNav();
+                var top = grid.getBoundingClientRect().top;
+                if (top < 100) window.scrollTo({ top: top + window.pageYOffset - 100, behavior: 'smooth' });
+            }
+
+            window.updateWishlistPagination = function () {
+                cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
+                total = Math.ceil(cards.length / PER_PAGE);
+                if (total <= 1) {
+                    cards.forEach(function (card) { card.style.display = ''; });
+                    nav.style.display = 'none';
+                    return;
+                }
+                if (current > total) current = total;
+                showPage(current);
+            };
+            showPage(1);
+        })();
     </script>
 </body>
 </html>

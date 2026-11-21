@@ -23,7 +23,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean emailExists(String email) {
-        return userRepository.existsByEmail(email);
+        String normalizedEmail = normalizeEmail(email);
+        return userRepository.existsByEmailIgnoreCase(normalizedEmail);
     }
 
     @Override
@@ -33,7 +34,7 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
-        user.setEmail(email);
+        user.setEmail(normalizeEmail(email));
         user.setCountry(country);
         user.setPhone(phone);
         user.setPassword(passwordEncoder.encode(rawPassword));
@@ -43,14 +44,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean checkLogin(String email, String rawPassword) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .map(user -> passwordEncoder.matches(rawPassword, user.getPassword()))
                 .orElse(false);
     }
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(email));
     }
 
     @Override
@@ -73,5 +74,9 @@ public class UserServiceImpl implements UserService {
         }
 
         return userRepository.save(user);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

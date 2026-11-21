@@ -44,7 +44,9 @@
                         <div class="account-trigger">
                             <c:choose>
                                 <c:when test="${not empty headerPicUrl}">
-                                    <img src="<c:out value='${headerPicUrl}'/>" alt="Account" class="header-avatar" id="header-avatar">
+                                    <img src="<c:out value='${headerPicUrl}'/>" alt="Account"
+                                         class="header-avatar" id="header-avatar"
+                                         onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/images/default-avatar.svg';">
                                 </c:when>
                                 <c:otherwise>
                                     <span class="material-symbols-outlined icon-item">account_circle</span>
@@ -117,10 +119,7 @@
             <nav class="menu-links">
                 <c:choose>
                     <c:when test="${not empty sessionScope.userId}">
-                    <a href="${pageContext.request.contextPath}/myprofile?tab=wishlist" class="menu-link">
-                        <span class="material-symbols-outlined">favorite</span>
-                        Wishlist
-                    </a>
+
                         <a href="${pageContext.request.contextPath}/myprofile" class="menu-link user-mobile-card">
                             <span class="material-symbols-outlined">account_circle</span>
                             <div>
@@ -153,7 +152,10 @@
                     <span class="material-symbols-outlined chevron">expand_more</span>
                 </div>
                 <div class="mobile-categories-accordion" id="mobileCategoriesAccordion"></div>
-
+                 <a href="${pageContext.request.contextPath}/myprofile?tab=wishlist" class="menu-link">
+                                        <span class="material-symbols-outlined">favorite</span>
+                                        Wishlist
+                                    </a>
                 <a href="${pageContext.request.contextPath}/cart" class="menu-link">
                     <span class="material-symbols-outlined">local_mall</span>
                     Cart

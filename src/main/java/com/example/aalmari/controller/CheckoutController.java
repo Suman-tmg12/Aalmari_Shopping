@@ -40,13 +40,49 @@ public class CheckoutController {
         return (v instanceof Number n) ? n.longValue() : null;
     }
 
+    @PostMapping("/checkout/buy-now")
+    @ResponseBody
+    public ResponseEntity<?> startBuyNow(@RequestParam("productId") Long productId,
+                                         @RequestParam(value = "quantity", defaultValue = "1") int quantity,
+                                         HttpSession session) {
+        Long userId = currentUserId(session);
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Please log in first."));
+        }
+        try {
+            cartService.buyNowView(userId, productId, quantity);
+            session.setAttribute("buyNowProductId", productId);
+            session.setAttribute("buyNowQuantity", quantity);
+            return ResponseEntity.ok(Map.of("redirect", "/checkout"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Could not start checkout. Please try again."));
+        }
+    }
+
     /** "Go to Checkout" button on cart.jsp */
     @GetMapping("/checkout")
     public String showCheckout(HttpSession session, Model model) {
         Long userId = currentUserId(session);
         if (userId == null) return "redirect:/login";
 
-        CartView cart = cartService.view(userId);
+        CartView cart;
+        Object buyProduct = session.getAttribute("buyNowProductId");
+        Object buyQuantity = session.getAttribute("buyNowQuantity");
+        if (buyProduct instanceof Number productNumber && buyQuantity instanceof Number quantityNumber) {
+            try {
+                cart = cartService.buyNowView(userId, productNumber.longValue(), quantityNumber.intValue());
+            } catch (IllegalArgumentException e) {
+                session.removeAttribute("buyNowProductId");
+                session.removeAttribute("buyNowQuantity");
+                model.addAttribute("checkoutError", e.getMessage());
+                return "redirect:/cart";
+            }
+        } else {
+            cart = cartService.view(userId);
+        }
         if (cart.getItems().isEmpty()) return "redirect:/cart";
 
         model.addAttribute("cartItems", cart.getItems());
@@ -149,7 +185,16 @@ public class CheckoutController {
         }
 
         try {
-            Order order = orderService.placeCodOrder(userId, form);
+            Order order;
+            Object buyProduct = session.getAttribute("buyNowProductId");
+            Object buyQuantity = session.getAttribute("buyNowQuantity");
+            if (buyProduct instanceof Number productNumber && buyQuantity instanceof Number quantityNumber) {
+                order = orderService.placeCodBuyNow(userId, productNumber.longValue(), quantityNumber.intValue(), form);
+                session.removeAttribute("buyNowProductId");
+                session.removeAttribute("buyNowQuantity");
+            } else {
+                order = orderService.placeCodOrder(userId, form);
+            }
             return "redirect:/checkout/success?orderId=" + order.getId();
         } catch (IllegalStateException e) {
             redirect.addFlashAttribute("checkoutError", e.getMessage());

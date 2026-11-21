@@ -35,7 +35,8 @@ public class MyProfileController {
 
     @GetMapping("/myprofile")
     public String showMyProfile(HttpSession session, Model model) {
-        Long userId = (Long) session.getAttribute("userId");
+        Object sessionUserId = session.getAttribute("userId");
+        Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
 
         // Safe defaults so the page shows 0 and empty lists instead of blanks
         model.addAttribute("orders", List.of());
@@ -82,7 +83,8 @@ public class MyProfileController {
                                 @RequestParam(value = "profilePic", required = false) MultipartFile profilePic,
                                 HttpSession session) {
 
-        Long userId = (Long) session.getAttribute("userId");
+        Object sessionUserId = session.getAttribute("userId");
+        Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
         if (userId == null) {
             return "redirect:/login";
         }

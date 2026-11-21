@@ -14,9 +14,6 @@
     const NEXT = { pending: 'confirmed', confirmed: 'shipped', shipped: 'delivered' };
     const NEXT_BTN = { pending: 'Confirm order', confirmed: 'Mark as shipped', shipped: 'Mark as delivered' };
 
-    // Set to true only to demo the fake "new message" popups.
-    const SIMULATE_MESSAGES = false;
-
     /* ============ Category → Sub-category → Attribute fields ============ */
     const A_BRAND = 'Brand', A_COLOR = 'Color', A_MATERIAL = 'Material', A_EXPIRY = 'Expiry date@date';
     const A_RAM = 'RAM:2 GB|4 GB|6 GB|8 GB|12 GB|16 GB|32 GB|64 GB';
@@ -230,13 +227,24 @@
                 ? o.items[0].name + ' +' + (o.items.length - 1) + ' more'
                 : (o.items[0] ? o.items[0].name : '');
         });
-        const M = $$('#messageList .msg-item').map(function (i) {
-            return {
-                name: $('.msg-name', i).textContent.trim(), subject: $('.msg-subject', i).textContent.trim(),
-                time: $('.msg-time', i).textContent.trim(), unread: i.classList.contains('unread'),
-                thread: [{ me: false, text: $('.msg-preview', i).textContent.trim() }]
-            };
-        });
+        let M = [];
+
+        function loadConversations() {
+            fetch('/api/seller/messages/conversations')
+                .then(function (r) { if (!r.ok) throw new Error('Unable to load messages'); return r.json(); })
+                .then(function (items) {
+                    M = (items || []).map(function (item) {
+                        return {
+                            name: item.name, subject: item.subject, time: item.time,
+                            unread: !!item.unread, preview: item.preview,
+                            customerId: item.customerId, productId: item.productId,
+                            productName: item.productName, thread: []
+                        };
+                    });
+                    refresh();
+                })
+                .catch(function (error) { console.error(error); });
+        }
         const dashCards = $$('#approvedDashboard .stat-card');
         // Revenue and order count come from the server (delivered orders), so they are not recomputed here.
         let revenue = num($('.stat-value', dashCards[0]).textContent);
@@ -375,10 +383,10 @@
 
         function renderMessages() {
             const q = ui.mq.toLowerCase();
-            const html = M.map((m, i) => ({ m: m, i: i })).filter(x => !q || (x.m.name + ' ' + x.m.subject + ' ' + x.m.thread.map(t => t.text).join(' ')).toLowerCase().includes(q))
+            const html = M.map((m, i) => ({ m: m, i: i })).filter(x => !q || (x.m.name + ' ' + x.m.subject + ' ' + (x.m.preview || '') + ' ' + x.m.thread.map(t => t.text).join(' ')).toLowerCase().includes(q))
                 .map(x => '<div class="msg-item' + (x.m.unread ? ' unread' : '') + '" data-i="' + x.i + '"><div class="msg-row"><span class="msg-name">' + esc(x.m.name) +
                     '</span><span class="msg-time">' + esc(x.m.time) + '</span></div><div class="msg-subject">' + esc(x.m.subject) + '</div><div class="msg-preview">' +
-                    esc((x.m.thread[x.m.thread.length - 1].me ? 'You: ' : '') + x.m.thread[x.m.thread.length - 1].text) + '</div></div>').join('');
+                    esc((x.m.thread.length && x.m.thread[x.m.thread.length - 1].me ? 'You: ' : '') + (x.m.thread.length ? x.m.thread[x.m.thread.length - 1].text : (x.m.preview || ''))) + '</div></div>').join('');
             $('#messageList').innerHTML = html || '<div class="empty-note">No messages found.</div>';
         }
 
@@ -1155,15 +1163,30 @@
         function bubbles(m) { return m.thread.map(t => '<div class="bubble ' + (t.me ? 'me' : 'them') + '">' + esc(t.text) + '</div>').join(''); }
         function openThread(m) {
             if (!m) return;
-            m.unread = false; renderMessages(); syncDash();
-            const b = modal(m.name + ' · ' + m.subject, '<div class="thread">' + bubbles(m) + '</div><textarea id="reply" rows="3" placeholder="Write a reply..."></textarea>',
-                [['Close', 'btn-outline', closeModal], ['Send reply', 'btn-primary', function () {
-                    const ta = $('#reply', b), t = ta.value.trim(); if (!t) { ta.classList.add('bad'); return; }
-                    m.thread.push({ me: true, text: t }); m.time = 'Just now';
-                    $('.thread', b).innerHTML = bubbles(m); ta.value = ''; renderMessages(); toast('Reply sent to ' + m.name + '.', 'ok');
+            m.unread = false;
+            fetch('/api/seller/messages/thread?customerId=' + encodeURIComponent(m.customerId) + '&productId=' + encodeURIComponent(m.productId))
+                .then(function (r) { if (!r.ok) throw new Error('Unable to load conversation'); return r.json(); })
+                .then(function (items) {
+                    m.thread = (items || []).map(function (item) { return { me: !!item.me, text: item.text }; });
+                    renderMessages(); syncDash();
+                    const b = modal(m.name + ' · ' + m.subject + ' · ' + m.productName,
+                        '<div class="thread">' + bubbles(m) + '</div><textarea id="reply" rows="3" maxlength="2000" placeholder="Write a reply..."></textarea>',
+                        [['Close', 'btn-outline', closeModal], ['Send reply', 'btn-primary', function () {
+                            const ta = $('#reply', b), text = ta.value.trim();
+                            if (!text) { ta.classList.add('bad'); return; }
+                            fetch('/api/seller/messages/reply', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ customerId: m.customerId, productId: m.productId, body: text })
+                            }).then(function (r) { return r.json().then(function (body) { if (!r.ok) throw new Error(body.error || 'Unable to send reply'); return body; }); })
+                              .then(function () {
+                                  m.thread.push({ me: true, text: text }); m.preview = text; m.time = 'Just now';
+                                  $('.thread', b).innerHTML = bubbles(m); ta.value = ''; renderMessages(); syncDash();
+                                  toast('Reply sent to ' + m.name + '.', 'ok'); $('.thread', b).scrollTop = 9999;
+                              }).catch(function (error) { toast(error.message, 'error'); });
+                        }]]);
                     $('.thread', b).scrollTop = 9999;
-                }]]);
-            $('.thread', b).scrollTop = 9999;
+                })
+                .catch(function (error) { toast(error.message, 'error'); });
         }
 
         /* ============ Finance / My Store ============ */
@@ -1186,21 +1209,6 @@
             popover(bell, '<div class="pop-title">Notifications</div>' + (al.map(a => '<button type="button" data-go="' + a.go + '"><strong>' + esc(a.title) + '</strong><span>' + esc(a.body) + '</span></button>').join('') || '<div class="pop-empty">You\'re all caught up.</div>'), true);
         });
 
-        /* ============ Demo message feed (off by default) ============ */
-        const NAMES = ['Lena Fischer', 'Arjun Mehta', 'Chloe Martin', 'Omar Haddad', 'Sita Gurung', 'Diego Ramos'];
-
-        function newMessage() {
-            if (!P.length) return;
-            const n = NAMES[Math.floor(Math.random() * NAMES.length)];
-            M.unshift({ name: n, subject: 'Is this item still available?', time: 'Just now', unread: true, thread: [{ me: false, text: 'Hi! Is the ' + P[0].name.toLowerCase() + ' available for delivery this week?' }] });
-            refresh(); toast('New message from ' + n, '', 'messages');
-        }
-        if (SIMULATE_MESSAGES) {
-            setInterval(function () {
-                if (!approved || document.hidden || $('.modal-backdrop')) return;
-                newMessage();
-            }, 30000);
-        }
 
         /* ============ Status flow (server-driven) ============ */
         function applyServerStatus() {
@@ -1224,6 +1232,8 @@
             show(location.hash.slice(1), false);
         }
         refresh();
+        loadConversations();
+        setInterval(loadConversations, 15000);
         applyServerStatus();
 
         // Show the success message saved before the page reloaded

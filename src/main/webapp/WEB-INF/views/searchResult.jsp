@@ -93,7 +93,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=4">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/searchResult.css?v=6">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 
     <!-- Pagination styles (your design). Fallback values are used if the CSS variables are not defined. -->
@@ -190,6 +190,7 @@
                                         <option value="low-high">Price: Low to High</option>
                                         <option value="high-low">Price: High to Low</option>
                                         <option value="popular">Most Popular</option>
+                                        <option value="stock">In Stock First</option>
                                     </select>
                                 </div>
                                 <div class="ar-view-switch">
@@ -247,9 +248,9 @@
                             <h3 class="ar-section-title">Categories</h3>
                             <ul class="ar-cat-list">
                                 <li>
-                                    <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>" style="background: #ffe5cf"
+                                    <a href="${pageContext.request.contextPath}/searchResult?q=<%= qEnc %>"
                                        class="ar-cat-btn<%= hasCategoryFilter ? "" : " ar-active" %>">
-                                        <span style="color: #FF7B00">All Categories</span>
+                                        <span>All Categories</span>
                                         <small><%= totalSearchCount %></small>
                                     </a>
                                 </li>
@@ -298,6 +299,14 @@
                         </div>
                         <% } %>
 
+                        <!-- Availability (client-side) -->
+                        <div class="ar-section">
+                            <h3 class="ar-section-title">Availability</h3>
+                            <div class="ar-radio-list">
+                                <label class="ar-check"><input type="checkbox" id="arInStockOnly"><span>In-stock items only</span></label>
+                            </div>
+                        </div>
+
                         <!-- Discount (client-side) -->
                         <div class="ar-section">
                             <h3 class="ar-section-title">Minimum Discount</h3>
@@ -345,6 +354,7 @@
                                  data-price="<%= price %>"
                                  data-sold="<%= p.getSold() %>"
                                  data-discount="<%= discount %>"
+                                 data-stock="<%= p.getStock() == null ? 0 : p.getStock() %>"
                                  data-sub="<%= escapeHtml(sub) %>"
                                  data-name="<%= escapeHtml(p.getName()) %>">
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
@@ -357,6 +367,12 @@
                                          loading="lazy"
                                          onerror="this.onerror=null;this.src='${pageContext.request.contextPath}/placeholder.jpg'">
                                     <% if (discount > 0) { %><span class="ar-badge">-<%= discount %>%</span><% } %>
+                                    <%
+                                        int stock = p.getStock() == null ? 0 : p.getStock();
+                                    %>
+                                    <span class="ar-stock-badge<%= stock == 0 ? " out" : (stock <= 5 ? " low" : "") %>">
+                                        <%= stock == 0 ? "Out of stock" : (stock <= 5 ? "Only " + stock + " left" : "In stock") %>
+                                    </span>
                                 </div>
                                 <div class="ar-card-body">
                                     <div>
@@ -372,8 +388,12 @@
                                             <% if (oldPrice > 0) { %><div class="ar-old">Rs.<%= oldPrice %></div><% } %>
                                             <div class="ar-sub-muted"><%= escapeHtml(sub) %></div>
                                         </div>
+                                        <% if (p.getStock() != null && p.getStock() > 0) { %>
                                         <span class="ar-view js-add-to-cart" role="button" tabindex="0"
-                                                                      data-product-id="<%= p.getId() %>">Add to cart</span>
+                                              data-product-id="<%= p.getId() %>">Add to cart</span>
+                                        <% } else { %>
+                                        <span class="ar-view" style="opacity:.5;pointer-events:none;">Unavailable</span>
+                                        <% } %>
                                     </div>
                                 </div>
                             </a>
@@ -449,7 +469,7 @@
                 var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 8;
                 var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
                 var CEILING = parseFloat($('arPriceRange').max) || 0;
-                var state = { min: 0, max: CEILING, types: [], discount: 0, sort: 'best', page: 1 };
+                var state = { min: 0, max: CEILING, types: [], discount: 0, inStockOnly: false, sort: 'best', page: 1 };
 
                 var priceRange = $('arPriceRange'), minInput = $('arMinPrice'), maxInput = $('arMaxPrice');
                 var hasServerCat = $('arActiveFilters').getAttribute('data-has-cat') === 'true';
@@ -487,9 +507,11 @@
                     var sorted = cards.slice().sort(function (a, b) {
                         var pa = parseFloat(a.dataset.price) || 0, pb = parseFloat(b.dataset.price) || 0;
                         var sa = parseFloat(a.dataset.sold) || 0, sb = parseFloat(b.dataset.sold) || 0;
+                        var sta = parseFloat(a.dataset.stock) || 0, stb = parseFloat(b.dataset.stock) || 0;
                         if (state.sort === 'low-high') return pa - pb;
                         if (state.sort === 'high-low') return pb - pa;
                         if (state.sort === 'popular') return sb - sa;
+                        if (state.sort === 'stock') return stb - sta;
                         return (parseInt(a.dataset.index, 10) || 0) - (parseInt(b.dataset.index, 10) || 0);
                     });
 
@@ -497,7 +519,9 @@
                     sorted.forEach(function (card) {
                         var price = parseFloat(card.dataset.price) || 0;
                         var disc = parseFloat(card.dataset.discount) || 0;
+                        var stock = parseFloat(card.dataset.stock) || 0;
                         var ok = price >= state.min && price <= state.max
+                              && (!state.inStockOnly || stock > 0)
                               && (state.types.length === 0 || state.types.indexOf(card.dataset.sub) !== -1)
                               && disc >= state.discount;
                         (ok ? matches : rest).push(card);
@@ -667,6 +691,15 @@
                             syncTypeBoxes(); change();
                         }));
                     });
+                    if (state.inStockOnly) {
+                        count++;
+                        box.appendChild(chip('In stock only', function () {
+                            state.inStockOnly = false;
+                            var inStock = $('arInStockOnly');
+                            if (inStock) inStock.checked = false;
+                            change();
+                        }));
+                    }
                     if (state.discount > 0) {
                         count++;
                         box.appendChild(chip(state.discount + '%+ off', function () {
@@ -705,7 +738,9 @@
                 }
 
                 function resetAll() {
-                    state.min = 0; state.max = CEILING; state.types = []; state.discount = 0;
+                    state.min = 0; state.max = CEILING; state.types = []; state.discount = 0; state.inStockOnly = false;
+                    var inStock = $('arInStockOnly');
+                    if (inStock) inStock.checked = false;
                     var ts = $('arTypeSearch');
                     if (ts) { ts.value = ''; filterTypeList(''); }
                     syncPriceInputs(); syncTypeBoxes(); syncDiscountRadios();
@@ -743,6 +778,11 @@
                 }
                 var typeSearch = $('arTypeSearch');
                 if (typeSearch) typeSearch.addEventListener('input', function () { filterTypeList(this.value); });
+
+                var inStockOnly = $('arInStockOnly');
+                if (inStockOnly) {
+                    inStockOnly.addEventListener('change', function () { state.inStockOnly = this.checked; change(); });
+                }
 
                 document.querySelectorAll('input[name="arDiscount"]').forEach(function (r) {
                     r.addEventListener('change', function () { state.discount = parseInt(r.value, 10) || 0; change(); });

@@ -22,4 +22,9 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     @Query("select i from OrderItem i join fetch i.order o " +
             "where i.seller.id = :sellerId and i.status = 'DELIVERED'")
     List<OrderItem> findDeliveredForSeller(@Param("sellerId") Long sellerId);
+
+    /** Check if there's a delivered purchase for verification eligibility. */
+    @Query("select count(i) > 0 from OrderItem i join i.order o " +
+            "where o.user.id = :userId and i.productId = :productId and i.status = 'DELIVERED'")
+    boolean existsDeliveredPurchase(@Param("userId") Long userId, @Param("productId") Long productId);
 }

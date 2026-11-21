@@ -6,6 +6,9 @@ import com.example.aalmari.model.User;
 import com.example.aalmari.repository.UserRepository;
 import com.example.aalmari.repository.SellerDocumentationRepository;
 import com.example.aalmari.repository.SellerProductRepository;
+import com.example.aalmari.repository.ProductReviewRepository;
+import com.example.aalmari.repository.StoreFollowRepository;
+import com.example.aalmari.repository.StoreMessageRepository;
 import com.example.aalmari.service.FlashSaleService;
 import com.example.aalmari.service.impl.S3Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,19 +35,28 @@ public class SellerController {
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
     private final OrderService orderService;
+    private final ProductReviewRepository productReviewRepository;
+    private final StoreFollowRepository storeFollowRepository;
+    private final StoreMessageRepository storeMessageRepository;
 
     public SellerController(S3Service s3Service,
                             SellerDocumentationRepository sellerDocumentationRepository,
                             SellerProductRepository sellerProductRepository,
                             UserRepository userRepository,
                             FlashSaleService flashSaleService,
-                            OrderService orderService) {
+                            OrderService orderService,
+                            ProductReviewRepository productReviewRepository,
+                            StoreFollowRepository storeFollowRepository,
+                            StoreMessageRepository storeMessageRepository) {
         this.s3Service = s3Service;
         this.sellerDocumentationRepository = sellerDocumentationRepository;
         this.sellerProductRepository = sellerProductRepository;
         this.userRepository = userRepository;
         this.flashSaleService = flashSaleService;
         this.orderService = orderService;
+        this.productReviewRepository = productReviewRepository;
+        this.storeFollowRepository = storeFollowRepository;
+        this.storeMessageRepository = storeMessageRepository;
     }
 
     // S3 Bucket URL - Replace with your actual bucket URL
@@ -169,6 +181,7 @@ public class SellerController {
 
         model.addAttribute("storeLogo", storeLogoUrl);
         model.addAttribute("storeBanner", storeBannerUrl);
+        model.addAttribute("sellerId", userId);
         model.addAttribute("storeName", doc.getStoreName());
         model.addAttribute("storeTagline", doc.getStoreTagline());
         model.addAttribute("status", doc.getStatus());
@@ -214,6 +227,11 @@ public class SellerController {
         model.addAttribute("flashSalesJson", flashSaleService.sellerJson(userId));
         model.addAttribute("sellerOrdersJson", orderService.sellerOrdersJson(userId));
         model.addAttribute("finance", orderService.sellerFinance(userId));
+        model.addAttribute("storeReviews", productReviewRepository.findForSellerNewest(userId));
+        model.addAttribute("storeRating", productReviewRepository.averageForSeller(userId));
+        model.addAttribute("storeReviewCount", productReviewRepository.countForSeller(userId));
+        model.addAttribute("followerCount", storeFollowRepository.countBySeller_Id(userId));
+        model.addAttribute("unreadMessagesCount", storeMessageRepository.countBySeller_IdAndUnreadForSellerTrue(userId));
 
         return "SellerPage/SellerDashboard";
     }

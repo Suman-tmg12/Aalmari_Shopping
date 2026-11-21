@@ -565,7 +565,7 @@
     <section class="ct-card ct-reveal" aria-labelledby="ctHelpTitle">
         <h2 id="ctHelpTitle">Looking for a quick answer?</h2>
         <p class="ct-card-sub">Many common questions about orders, vouchers, returns and your account are answered in our Help Center.</p>
-        <a class="ct-btn ct-btn--ghost" href="${pageContext.request.contextPath}/helpcenter">
+        <a class="ct-btn ct-btn--ghost" href="${pageContext.request.contextPath}/support">
             <span class="material-symbols-outlined" aria-hidden="true">help</span> Visit the Help Center
         </a>
     </section>

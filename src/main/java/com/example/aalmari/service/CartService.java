@@ -151,6 +151,53 @@ public class CartService {
         return view;
     }
 
+    @Transactional(readOnly = true)
+    public CartView buyNowView(Long userId, Long productId, int quantity) {
+        if (quantity < 1) quantity = 1;
+
+        SellerProduct product = productRepository.findById(productId)
+                .filter(p -> Boolean.TRUE.equals(p.getActive()))
+                .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
+
+        int stock = product.getStock() == null ? 0 : product.getStock();
+        if (stock < 1) throw new IllegalArgumentException("This product is out of stock.");
+
+        int limit = Math.min(MAX_QTY_PER_ITEM, stock);
+        Optional<FlashSaleService.Offer> offer = flashSaleService.offerFor(userId, productId);
+        if (offer.isPresent()) limit = Math.min(limit, offer.get().maxQty());
+
+        if (quantity > limit) {
+            throw new IllegalArgumentException(limit == 1
+                    ? "Only 1 item is available."
+                    : "You can buy up to " + limit + " items.");
+        }
+
+        long price = product.getPrice() == null ? 0 : product.getPrice();
+        int discount = product.getDiscount() == null ? 0 : product.getDiscount();
+        long unit = (long) (price * (100 - discount) / 100.0);
+        if (offer.isPresent() && quantity <= offer.get().maxQty()) unit = offer.get().flashPrice();
+
+        CartView.Line line = new CartView.Line();
+        line.setId(null);
+        line.setProductId(product.getId());
+        line.setName(product.getName());
+        line.setImageUrl(firstImage(product));
+        line.setUnitPrice(unit);
+        line.setOriginalPrice(price);
+        line.setQuantity(quantity);
+        line.setLineTotal(unit * quantity);
+
+        CartView view = new CartView();
+        view.setItems(List.of(line));
+        view.setSubtotal(price * quantity);
+        view.setDiscountAmount(price * quantity - unit * quantity);
+        view.setDiscountPercent(view.getSubtotal() > 0
+                ? Math.round(view.getDiscountAmount() * 100.0 / view.getSubtotal()) : 0);
+        view.setDeliveryFee(0);
+        view.setTotal(unit * quantity);
+        return view;
+    }
+
     private String firstImage(SellerProduct p) {
         try {
             String json = p.getImageUrlsJson();

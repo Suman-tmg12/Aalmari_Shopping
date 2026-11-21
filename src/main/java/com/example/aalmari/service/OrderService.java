@@ -122,11 +122,24 @@ public class OrderService {
         if (cart.getItems().isEmpty()) {
             throw new IllegalStateException("Your cart is empty.");
         }
+        Order order = placeCodCartView(userId, f, cart);
+        cartItemRepository.deleteAll(cartItemRepository.findByUser_IdOrderByIdDesc(userId));
+        return order;
+    }
 
+    @Transactional
+    public Order placeCodBuyNow(Long userId, Long productId, int quantity, CheckoutForm f) {
+        CartView cart = cartService.buyNowView(userId, productId, quantity);
+        if (cart.getItems().isEmpty()) {
+            throw new IllegalStateException("The selected product is unavailable.");
+        }
+        return placeCodCartView(userId, f, cart);
+    }
+
+    private Order placeCodCartView(Long userId, CheckoutForm f, CartView cart) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("Please log in again."));
 
-        // The chosen saved address must belong to this customer.
         if (f.getAddressId() == null) {
             throw new IllegalStateException("Please choose a delivery address.");
         }
@@ -143,7 +156,6 @@ public class OrderService {
         order.setDeliveryFee(cart.getDeliveryFee());
         order.setTotal(cart.getTotal());
 
-        // The order keeps its own copy, so editing or deleting the saved address never changes it.
         order.setReceiverName(addr.getReceiverName());
         order.setReceiverPhone(addr.getPhone());
         order.setProvince(addr.getProvince());
@@ -156,7 +168,7 @@ public class OrderService {
             SellerProduct p = productRepository.findById(line.getProductId())
                     .filter(x -> Boolean.TRUE.equals(x.getActive()))
                     .orElseThrow(() -> new IllegalStateException(
-                            line.getName() + " is no longer available. Remove it from your cart."));
+                            line.getName() + " is no longer available."));
 
             int stock = p.getStock() == null ? 0 : p.getStock();
             if (stock < line.getQuantity()) {
@@ -165,13 +177,12 @@ public class OrderService {
                         : "Only " + stock + " of " + line.getName() + " left in stock.");
             }
 
-            // Claims flash units and enforces the per-customer limit; throws if the deal sold out.
             long unitPrice = line.getUnitPrice();
             Optional<Integer> flashPrice =
                     flashSaleService.claim(userId, line.getProductId(), line.getQuantity());
             if (flashPrice.isPresent() && flashPrice.get() != unitPrice) {
                 throw new IllegalStateException(
-                        "The price of " + line.getName() + " has changed. Please review your cart.");
+                        "The price of " + line.getName() + " has changed. Please try again.");
             }
 
             p.setStock(stock - line.getQuantity());
@@ -180,8 +191,8 @@ public class OrderService {
 
             OrderItem item = new OrderItem();
             item.setProductId(line.getProductId());
-            item.setSeller(p.getSeller());                 // the seller who owns this product
-            item.setStatus("PENDING");                     // each seller moves their own lines
+            item.setSeller(p.getSeller());
+            item.setStatus("PENDING");
             item.setName(line.getName());
             item.setImageUrl(line.getImageUrl());
             item.setUnitPrice(unitPrice);
@@ -191,10 +202,9 @@ public class OrderService {
             order.addItem(item);
         }
 
-        orderRepository.save(order);                                    // assigns the id
-        order.setOrderNumber(String.format("AAL-%06d", order.getId())); // e.g. AAL-000042
-
-        cartItemRepository.deleteAll(cartItemRepository.findByUser_IdOrderByIdDesc(userId));
+        orderRepository.save(order);
+        order.setOrderNumber(String.format("AAL-%06d", order.getId()));
+        orderRepository.save(order);
         return order;
     }
 
