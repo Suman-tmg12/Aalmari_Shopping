@@ -266,6 +266,43 @@
 .back-link { display: block; text-align: center; font-size: 14px; color: var(--co-ink); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
 
+/* ---------- eSewa QR modal ---------- */
+.esewa-qr-wrap { text-align: center; }
+.esewa-qr-wrap img {
+    width: min(280px, 80vw);
+    max-height: 280px;
+    object-fit: contain;
+    display: block;
+    margin: 10px auto 14px;
+    border: 1px solid var(--co-line);
+    border-radius: 12px;
+    background: #fff;
+}
+.esewa-qr-title { margin: 0 0 4px; font-size: 18px; }
+.esewa-qr-text { color: var(--co-muted); margin: 0 0 14px; }
+.esewa-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: rgba(0, 0, 0, .55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.esewa-modal-card {
+    width: min(420px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+}
+.esewa-modal-actions { display: flex; gap: 10px; }
+.esewa-modal-actions button { flex: 1; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
     .co-layout { grid-template-columns: 1fr; }

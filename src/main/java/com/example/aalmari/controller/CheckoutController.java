@@ -6,6 +6,7 @@ import com.example.aalmari.model.Order;
 import com.example.aalmari.service.AddressService;
 import com.example.aalmari.service.CartService;
 import com.example.aalmari.service.OrderService;
+import com.example.aalmari.service.EsewaPaymentService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -26,13 +27,16 @@ public class CheckoutController {
     private final CartService cartService;
     private final OrderService orderService;
     private final AddressService addressService;
+    private final EsewaPaymentService esewaPaymentService;
 
     public CheckoutController(CartService cartService,
                               OrderService orderService,
-                              AddressService addressService) {
+                              AddressService addressService,
+                              EsewaPaymentService esewaPaymentService) {
         this.cartService = cartService;
         this.orderService = orderService;
         this.addressService = addressService;
+        this.esewaPaymentService = esewaPaymentService;
     }
 
     private Long currentUserId(HttpSession session) {
@@ -177,10 +181,18 @@ public class CheckoutController {
             return "redirect:/checkout";
         }
 
-        // Only cash on delivery is built so far. eSewa, Khalti and card come next.
-        if (!"COD".equals(form.getPaymentMethod())) {
+        // QR payments are manual verification payments.
+        if (!"COD".equals(form.getPaymentMethod())
+                && !"ESEWA".equals(form.getPaymentMethod())) {
             redirect.addFlashAttribute("checkoutError",
-                    "Online payment is not available yet. Please choose Cash on delivery.");
+                    "This payment method is not available yet. Please choose Cash on delivery or eSewa.");
+            return "redirect:/checkout";
+        }
+        if ("ESEWA".equals(form.getPaymentMethod())
+                && (form.getEsewaTransactionId() == null
+                || form.getEsewaTransactionId().trim().isEmpty())) {
+            redirect.addFlashAttribute("checkoutError",
+                    "Enter the eSewa transaction ID after completing the QR payment.");
             return "redirect:/checkout";
         }
 

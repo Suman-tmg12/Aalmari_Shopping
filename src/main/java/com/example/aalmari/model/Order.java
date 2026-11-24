@@ -33,6 +33,12 @@ public class Order {
     @Column(name = "payment_status", nullable = false, length = 20)
     private String paymentStatus;
 
+    @Column(name = "payment_reference", length = 100)
+    private String paymentReference;
+
+    @Column(name = "transaction_uuid", unique = true, length = 100)
+    private String transactionUuid;
+
     @Column(nullable = false) private long subtotal;
     @Column(name = "discount_amount", nullable = false) private long discountAmount;
     @Column(name = "delivery_fee", nullable = false) private long deliveryFee;
@@ -71,6 +77,10 @@ public class Order {
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public String getPaymentReference() { return paymentReference; }
+    public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
+    public String getTransactionUuid() { return transactionUuid; }
+    public void setTransactionUuid(String transactionUuid) { this.transactionUuid = transactionUuid; }
     public long getSubtotal() { return subtotal; }
     public void setSubtotal(long subtotal) { this.subtotal = subtotal; }
     public long getDiscountAmount() { return discountAmount; }

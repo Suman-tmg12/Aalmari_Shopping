@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class FlashDeal {
-    private Long itemId, productId;
+    private Long itemId, productId, sellerId;
     private String title, category, subCategory, mainImage, descriptionHtml;
     private List<String> galleryImages = new ArrayList<>();
     private Map<String, String> specs = new LinkedHashMap<>();
@@ -15,6 +15,7 @@ public class FlashDeal {
 
     public Long getItemId() { return itemId; }                 public void setItemId(Long v) { itemId = v; }
     public Long getProductId() { return productId; }          public void setProductId(Long v) { productId = v; }
+    public Long getSellerId() { return sellerId; }            public void setSellerId(Long v) { sellerId = v; }
     public String getTitle() { return title; }                public void setTitle(String v) { title = v; }
     public String getCategory() { return category; }          public void setCategory(String v) { category = v; }
     public String getSubCategory() { return subCategory; }    public void setSubCategory(String v) { subCategory = v; }

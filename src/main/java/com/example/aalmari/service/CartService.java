@@ -48,6 +48,8 @@ public class CartService {
                 .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
 
+        rejectOwnProduct(userId, product);
+
         int stock = product.getStock() == null ? 0 : product.getStock();
         if (stock < 1) {
             throw new IllegalArgumentException("This product is out of stock.");
@@ -93,6 +95,8 @@ public class CartService {
         CartItem item = cartItemRepository.findByIdAndUser_Id(itemId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Cart item not found."));
 
+        rejectOwnProduct(userId, item.getProduct());
+
         int stock = item.getProduct().getStock() == null ? 0 : item.getProduct().getStock();
         int limit = Math.max(1, Math.min(MAX_QTY_PER_ITEM, stock));
 
@@ -118,13 +122,18 @@ public class CartService {
                 .ifPresent(cartItemRepository::delete);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public int count(Long userId) {
+        for (CartItem item : cartItemRepository.findByUser_IdOrderByIdDesc(userId)) {
+            if (isOwnProduct(userId, item.getProduct())) {
+                cartItemRepository.delete(item);
+            }
+        }
         return cartItemRepository.countItems(userId);
     }
 
     /** Builds everything cart.jsp shows. Prices always come from the live product row / live flash sale. */
-    @Transactional(readOnly = true)
+    @Transactional
     public CartView view(Long userId) {
         CartView view = new CartView();
         List<CartView.Line> lines = new ArrayList<>();
@@ -133,6 +142,11 @@ public class CartService {
 
         for (CartItem item : cartItemRepository.findByUser_IdOrderByIdDesc(userId)) {
             SellerProduct p = item.getProduct();
+            if (isOwnProduct(userId, p)) {
+                cartItemRepository.delete(item);
+                continue;
+            }
+
             long price = p.getPrice() == null ? 0 : p.getPrice();
             int discount = p.getDiscount() == null ? 0 : p.getDiscount();
             long unit = (long) (price * (100 - discount) / 100.0);   // same formula as ProductController
@@ -178,6 +192,8 @@ public class CartService {
                 .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
 
+        rejectOwnProduct(userId, product);
+
         int stock = product.getStock() == null ? 0 : product.getStock();
         if (stock < 1) throw new IllegalArgumentException("This product is out of stock.");
 
@@ -217,6 +233,14 @@ public class CartService {
         return view;
     }
 
+    private void rejectOwnProduct(Long userId, SellerProduct product) {
+        if (product.getSeller() != null
+                && product.getSeller().getId() != null
+                && product.getSeller().getId().equals(userId)) {
+            throw new IllegalArgumentException("You cannot purchase a product that you sell.");
+        }
+    }
+
     private String firstImage(SellerProduct p) {
         try {
             String json = p.getImageUrlsJson();
@@ -235,5 +259,11 @@ public class CartService {
     private String toUrl(String path) {
         if (path == null || path.isEmpty()) return null;
         return path.startsWith("http") ? path : S3_BUCKET_URL + path;
+    }
+
+    private boolean isOwnProduct(Long userId, SellerProduct product) {
+        return product.getSeller() != null
+                && product.getSeller().getId() != null
+                && product.getSeller().getId().equals(userId);
     }
 }

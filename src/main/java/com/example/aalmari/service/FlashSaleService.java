@@ -295,6 +295,8 @@ public class FlashSaleService {
         FlashDeal d = new FlashDeal();
         d.setItemId(i.getId());
         d.setProductId(p.getId());
+        d.setSellerId(p.getSeller() == null ? null : p.getSeller().getId());
+
         d.setTitle(p.getName());
         d.setCategory(p.getCategory());
         d.setSubCategory(p.getSubCategory() == null ? "" : p.getSubCategory());

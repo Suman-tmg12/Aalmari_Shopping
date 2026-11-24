@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +24,9 @@ public class AccountController {
 
     @Autowired
     private HeroSlideRepository heroSlideRepository;
+
+    @Autowired
+    private com.example.aalmari.service.RememberMeService rememberMeService;
 
     // ---------- SIGNUP ----------
 
@@ -87,7 +91,9 @@ public class AccountController {
     public String loginUser(
             @RequestParam String email,
             @RequestParam String password,
+            @RequestParam(value = "rememberMe", required = false) String rememberMe,
             HttpSession session,
+            HttpServletResponse response,
             Model model) {
 
         email = email.trim().toLowerCase(java.util.Locale.ROOT);
@@ -99,12 +105,13 @@ public class AccountController {
             return "auth/login";
         }
 
-        session.setAttribute("userId", user.getId());
-        session.setAttribute("userFirstName", user.getFirstName());
-        session.setAttribute("userLastName", user.getLastName());
-        session.setAttribute("userEmail", user.getEmail());
-        session.setAttribute("userPhone", user.getPhone());
-        session.setAttribute("userProfilePicPath", user.getProfilePicPath() == null ? "" : user.getProfilePicPath());
+        rememberMeService.setSession(session, user);
+
+        if (rememberMe != null) {
+            rememberMeService.createToken(user, response);
+        } else {
+            rememberMeService.clearCookie(response);
+        }
 
         return "redirect:/";
     }
@@ -135,7 +142,14 @@ public class AccountController {
     // ---------- LOGOUT ----------
 
     @GetMapping("/logout")
-    public String logoutUser(HttpSession session) {
+    public String logoutUser(HttpSession session,
+                             HttpServletResponse response) {
+        Object userIdValue = session.getAttribute("userId");
+        if (userIdValue instanceof Number number) {
+            rememberMeService.revokeForUser(number.longValue(), response);
+        } else {
+            rememberMeService.clearCookie(response);
+        }
         session.invalidate();
         return "redirect:/login";
     }

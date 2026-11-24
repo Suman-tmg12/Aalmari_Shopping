@@ -34,6 +34,8 @@ public class SellerFinance {
     public String rangeLabel;         // "June – November 2026"
     public String currentPeriod;      // "Nov 1–30"
     public String nextPayoutDate;     // "Dec 5"
+    public String currentPeriodStatus = "PENDING";
+    public String currentPeriodReference = "";
     public List<Earn> earnings = new ArrayList<>();
     public List<Payout> payouts = new ArrayList<>();
 

@@ -56,7 +56,11 @@
         </div>
     </div>
     <div class="footer-bottom">
-        <span>Privacy | Terms | Return Policy</span>
+        <span>
+            <a href="${pageContext.request.contextPath}/legal?document=privacy">Privacy</a> |
+            <a href="${pageContext.request.contextPath}/legal?document=terms">Terms</a> |
+            <a href="${pageContext.request.contextPath}/legal?document=returns">Return Policy</a>
+        </span>
         <span>&copy; 2026 Aalmari Shopping</span>
     </div>
 </footer>

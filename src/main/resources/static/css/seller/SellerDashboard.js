@@ -184,8 +184,6 @@
             if (pop && !pop.contains(e.target) && !pop._a.contains(e.target)) closePop();
             const g = e.target.closest('[data-go]');
             if (g) { closePop(); show(g.dataset.go, true); }
-            const h = e.target.closest('.pcard-heart');
-            if (h) h.classList.toggle('on');
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') { closeModal(); closePop(); drawer(false); }
@@ -228,6 +226,21 @@
                 : (o.items[0] ? o.items[0].name : '');
         });
         let M = [];
+
+        function loadIncomingOrders() {
+            fetch('/api/seller/orders', { credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) throw new Error('Unable to load orders'); return r.json(); })
+                .then(function (items) {
+                    O = Array.isArray(items) ? items : [];
+                    O.forEach(function (o) {
+                        o.product = o.items && o.items.length > 1
+                            ? o.items[0].name + ' +' + (o.items.length - 1) + ' more'
+                            : (o.items && o.items[0] ? o.items[0].name : '');
+                    });
+                    refresh();
+                })
+                .catch(function (error) { console.error(error); });
+        }
 
         function loadConversations() {
             fetch('/api/seller/messages/conversations')
@@ -369,8 +382,7 @@
                 const stock = p.stock === 0 ? ['out', 'Out of stock'] : p.stock <= 5 ? ['low', 'Only ' + p.stock + ' left'] : ['', p.stock + ' in stock'];
                 return '<div class="pcard"><div class="pcard-img">' +
                     (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="">' : esc(p.name.charAt(0))) +
-                    (p.disc ? '<span class="pcard-badge">-' + p.disc + '%</span>' : '') +
-                    '<button type="button" class="pcard-heart" aria-label="Wishlist"><span class="material-symbols-outlined">favorite</span></button></div>' +
+                    (p.disc ? '<span class="pcard-badge">-' + p.disc + '%</span>' : '') + '</div>' +
                     '<div class="pcard-top"><span class="pcard-cat">' + esc(p.sub || p.cat) + '</span><span class="pcard-sold">' + sold + ' sold</span></div>' +
                     '<h4 class="pcard-name">' + esc(p.name) + '</h4>' +
                     '<div class="pcard-bottom"><div><span class="pcard-price">Rs ' + fmt(sale) + '</span>' +
@@ -414,6 +426,19 @@
             let badge = $('#sidebarNav .nav-item[data-view="messages"] .badge');
             if (!badge && n) { badge = el('span', 'badge'); $('#sidebarNav .nav-item[data-view="messages"]').appendChild(badge); }
             if (badge) { badge.textContent = n; badge.style.display = n ? '' : 'none'; }
+
+            // Show outstanding incoming orders next to the Orders menu item.
+            // Pending is used as "new / not yet confirmed" until the seller confirms or cancels it.
+            const pendingOrders = O.filter(o => o.status === 'pending').length;
+            let orderBadge = $('#sidebarNav .nav-item[data-view="orders"] .badge');
+            if (!orderBadge && pendingOrders) {
+                orderBadge = el('span', 'badge');
+                $('#sidebarNav .nav-item[data-view="orders"]').appendChild(orderBadge);
+            }
+            if (orderBadge) {
+                orderBadge.textContent = pendingOrders;
+                orderBadge.style.display = pendingOrders ? '' : 'none';
+            }
         }
         function refresh() { renderProducts(); renderFlash(); renderOrders(); renderStore(); renderMessages(); syncDash(); }
 
@@ -1237,7 +1262,9 @@
             show(location.hash.slice(1), false);
         }
         refresh();
+        loadIncomingOrders();
         loadConversations();
+        setInterval(loadIncomingOrders, 15000);
         setInterval(loadConversations, 15000);
         applyServerStatus();
 

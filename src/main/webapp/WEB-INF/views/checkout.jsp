@@ -18,7 +18,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout - Aalmari Store</title>
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/checkout.css?v=3">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/checkout.css?v=4">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -168,8 +168,14 @@
                             <span class="pay-name">eSewa
                                 <small>Pay with your eSewa wallet</small></span>
                         </span>
-                        <span class="pay-body">
-                            You'll be taken to eSewa to approve the payment, then brought back here.
+                        <span class="pay-body esewa-fields">
+                            Scan the eSewa QR, complete the payment, then enter the transaction ID below.
+                            <span class="field" style="margin-top:12px;margin-bottom:0">
+                                <label for="esewaTransactionId">eSewa transaction ID</label>
+                                <input id="esewaTransactionId" name="esewaTransactionId" type="text"
+                                       autocomplete="off" maxlength="100"
+                                       placeholder="Enter the transaction/reference ID">
+                            </span>
                         </span>
                     </label>
 
@@ -285,7 +291,9 @@
             <button type="submit" class="place-btn" id="placeBtn">
                 <span class="btn-label">Place order</span>
             </button>
-            <p class="terms">By placing your order you agree to our Terms of Use and Return Policy.</p>
+            <p class="terms">By placing your order you agree to our
+                <a href="${pageContext.request.contextPath}/legal?document=terms" target="_blank">Terms of Service</a>
+                and <a href="${pageContext.request.contextPath}/legal?document=returns" target="_blank">Return Policy</a>.</p>
 
             <a class="back-link" href="${pageContext.request.contextPath}/cart">&larr; Back to cart</a>
         </aside>
@@ -540,6 +548,78 @@
         e.target.value = e.target.value.replace(/\D/g, '');
     });
 
+    /* ---------- eSewa QR payment ---------- */
+    var esewaModal = null;
+
+    function closeEsewaModal() {
+        if (esewaModal) {
+            esewaModal.remove();
+            esewaModal = null;
+        }
+        document.body.classList.remove('no-scroll');
+    }
+
+    function openEsewaModal() {
+        if (esewaModal) return;
+
+        var existing = document.getElementById('esewaTransactionId');
+        esewaModal = document.createElement('div');
+        esewaModal.className = 'esewa-modal';
+        esewaModal.setAttribute('role', 'dialog');
+        esewaModal.setAttribute('aria-modal', 'true');
+        esewaModal.innerHTML =
+            '<div class="esewa-modal-card">' +
+                '<div class="esewa-qr-wrap">' +
+                    '<h2 class="esewa-qr-title">eSewa payment</h2>' +
+                    '<p class="esewa-qr-text">Scan this QR and pay.</p>' +
+                    '<img src="' + CTX + '/images/esewa-qr.png" alt="eSewa QR code">' +
+                '</div>' +
+                '<div class="field" style="margin-bottom:10px">' +
+                    '<label for="esewaModalTransactionId">eSewa transaction ID</label>' +
+                    '<input id="esewaModalTransactionId" type="text" autocomplete="off" maxlength="100" ' +
+                    'placeholder="Enter the transaction/reference ID" value="' + esc(existing ? existing.value : '') + '">' +
+                '</div>' +
+                '<small class="err-block" id="esewaModalError"></small>' +
+                '<div class="esewa-modal-actions" style="margin-top:14px">' +
+                    '<button type="button" class="btn-ghost" id="esewaModalCancel">Cancel</button>' +
+                    '<button type="button" class="btn-dark" id="esewaModalConfirm">Confirm payment</button>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(esewaModal);
+        document.body.classList.add('no-scroll');
+
+        var modalInput = document.getElementById('esewaModalTransactionId');
+        var modalError = document.getElementById('esewaModalError');
+        modalInput.focus();
+
+        document.getElementById('esewaModalCancel').addEventListener('click', function () {
+            esewaModalOpenedForSubmit = false;
+            closeEsewaModal();
+        });
+        esewaModal.addEventListener('click', function (event) {
+            if (event.target === esewaModal) {
+                esewaModalOpenedForSubmit = false;
+                closeEsewaModal();
+            }
+        });
+
+        document.getElementById('esewaModalConfirm').addEventListener('click', function () {
+            var transactionId = modalInput.value.trim();
+            if (!transactionId) {
+                modalError.style.display = 'block';
+                modalError.textContent = 'Enter the eSewa transaction ID after payment.';
+                modalInput.focus();
+                return;
+            }
+
+            existing.value = transactionId;
+            closeEsewaModal();
+            esewaModalOpenedForSubmit = true;
+            form.requestSubmit();
+        });
+    }
+
     /* ---------- validation ---------- */
     function cardOk() {
         var n = num.value.replace(/\s/g, '');
@@ -565,6 +645,8 @@
         return ok;
     }
 
+    var esewaModalOpenedForSubmit = false;
+
     form.addEventListener('submit', function (e) {
         var ok = true, first = null;
 
@@ -586,6 +668,15 @@
             first.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
+
+        var paymentMethod = form.querySelector('input[name="paymentMethod"]:checked').value;
+        if (paymentMethod === 'ESEWA' && !esewaModalOpenedForSubmit) {
+            e.preventDefault();
+            esewaModalOpenedForSubmit = true;
+            openEsewaModal();
+            return;
+        }
+
         // stop double orders
         placeBtn.disabled = true;
         placeBtn.classList.add('loading');

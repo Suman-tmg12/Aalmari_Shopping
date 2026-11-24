@@ -15,6 +15,7 @@ import com.example.aalmari.repository.OrderItemRepository;
 import com.example.aalmari.repository.OrderRepository;
 import com.example.aalmari.repository.SellerProductRepository;
 import com.example.aalmari.repository.UserRepository;
+import com.example.aalmari.repository.PayoutSettlementRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -80,6 +81,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
     private final AddressRepository addressRepository;
+    private final PayoutSettlementRepository payoutSettlementRepository;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public OrderService(OrderRepository orderRepository,
@@ -89,7 +91,8 @@ public class OrderService {
                         SellerProductRepository productRepository,
                         UserRepository userRepository,
                         FlashSaleService flashSaleService,
-                        AddressRepository addressRepository) {
+                        AddressRepository addressRepository,
+                        PayoutSettlementRepository payoutSettlementRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
@@ -98,6 +101,7 @@ public class OrderService {
         this.userRepository = userRepository;
         this.flashSaleService = flashSaleService;
         this.addressRepository = addressRepository;
+        this.payoutSettlementRepository = payoutSettlementRepository;
     }
 
     /** Name and phone to pre-fill the checkout address form (keys: fullName, phone). */
@@ -149,8 +153,11 @@ public class OrderService {
         Order order = new Order();
         order.setUser(user);
         order.setStatus("PLACED");
-        order.setPaymentMethod("COD");
-        order.setPaymentStatus("UNPAID");
+        order.setPaymentMethod(f.getPaymentMethod());
+        order.setPaymentStatus("COD".equals(f.getPaymentMethod()) ? "UNPAID" : "PENDING_VERIFICATION");
+        if ("ESEWA".equals(f.getPaymentMethod())) {
+            order.setPaymentReference(f.getEsewaTransactionId());
+        }
         order.setSubtotal(cart.getSubtotal());
         order.setDiscountAmount(cart.getDiscountAmount());
         order.setDeliveryFee(cart.getDeliveryFee());
@@ -169,6 +176,9 @@ public class OrderService {
                     .filter(x -> Boolean.TRUE.equals(x.getActive()))
                     .orElseThrow(() -> new IllegalStateException(
                             line.getName() + " is no longer available."));
+
+            rejectOwnProduct(userId, p);
+
 
             int stock = p.getStock() == null ? 0 : p.getStock();
             if (stock < line.getQuantity()) {
@@ -361,6 +371,13 @@ public class OrderService {
 
         for (int k = 0; k < SellerFinance.MONTHS; k++) f.orders[k] = orderIds.get(k).size();
 
+        String currentPeriodCode = String.format("%d-%02d", cur.getYear(), cur.getMonthValue());
+        var currentSettlement = payoutSettlementRepository.findBySellerIdAndPeriod(sellerId, currentPeriodCode);
+        f.currentPeriodStatus = currentSettlement.isPresent()
+                && "PAID".equalsIgnoreCase(currentSettlement.get().getStatus()) ? "PAID" : "PENDING";
+        f.currentPeriodReference = currentSettlement.isPresent() && currentSettlement.get().getReference() != null
+                ? currentSettlement.get().getReference() : "";
+
         // product-wise earnings, net of commission, best first
         for (SellerFinance.Earn e : byProduct.values()) {
             e.amount = e.amount - Math.round(e.amount * COMMISSION_RATE);
@@ -380,7 +397,13 @@ public class OrderService {
             p.ref = "PAY-" + String.format("%d%02d", ym.getYear(), ym.getMonthValue());
             p.date = payDay.format(java.time.format.DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH));
             p.net = f.gross[k] - Math.round(f.gross[k] * COMMISSION_RATE);
-            p.paid = !today.isBefore(payDay);
+
+            String periodCode = String.format("%d-%02d", ym.getYear(), ym.getMonthValue());
+            var settlement = payoutSettlementRepository.findBySellerIdAndPeriod(sellerId, periodCode);
+            p.paid = settlement.isPresent() && "PAID".equalsIgnoreCase(settlement.get().getStatus());
+            if (p.paid && settlement.get().getReference() != null && !settlement.get().getReference().isBlank()) {
+                p.ref = settlement.get().getReference();
+            }
             f.payouts.add(p);
         }
         return f;
@@ -488,5 +511,13 @@ public class OrderService {
 
     private static String blankToNull(String s) {
         return (s == null || s.trim().isEmpty()) ? null : s.trim();
+    }
+
+    private void rejectOwnProduct(Long userId, SellerProduct product) {
+        if (product.getSeller() != null
+                && product.getSeller().getId() != null
+                && product.getSeller().getId().equals(userId)) {
+            throw new IllegalStateException("You cannot purchase a product that you sell.");
+        }
     }
 }

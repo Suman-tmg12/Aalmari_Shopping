@@ -3,7 +3,7 @@
 <html>
 <head>
     <title>Create Account - Aalmari Store</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=6">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=7">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -91,7 +91,10 @@
 
                 <div class="checkbox-group">
                     <input type="checkbox" name="terms" id="terms" required>
-                    <label for="terms">Terms of Service and Privacy Policy</label>
+                    <label for="terms">
+                        I agree to the <a href="${pageContext.request.contextPath}/legal?document=terms" target="_blank">Terms of Service</a>
+                        and <a href="${pageContext.request.contextPath}/legal?document=privacy" target="_blank">Privacy Policy</a>
+                    </label>
                 </div>
 
                 <button type="submit" class="submit-btn">Sign up</button>

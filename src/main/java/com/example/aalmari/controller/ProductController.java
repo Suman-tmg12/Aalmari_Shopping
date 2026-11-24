@@ -154,9 +154,13 @@ public class ProductController {
         // 7. Session eligibility and existing review
         boolean canReview = false;
         ProductReview existingReview = null;
+        boolean isOwnProduct = false;
         Object userIdValue = session.getAttribute("userId");
         if (userIdValue instanceof Number number) {
             Long userId = number.longValue();
+            isOwnProduct = product.getSeller() != null
+                    && product.getSeller().getId() != null
+                    && product.getSeller().getId().equals(userId);
             canReview = orderItemRepository.existsDeliveredPurchase(userId, id);
             existingReview = reviewRepository.findByUser_IdAndProduct_Id(userId, id).orElse(null);
         }
@@ -175,6 +179,7 @@ public class ProductController {
         model.addAttribute("averageRating", averageRating);
         model.addAttribute("canReview", canReview);
         model.addAttribute("existingReview", existingReview);
+        model.addAttribute("isOwnProduct", isOwnProduct);
 
         return "productDetail";
     }

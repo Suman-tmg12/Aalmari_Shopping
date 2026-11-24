@@ -11,6 +11,7 @@ public class CheckoutForm {
     private String paymentMethod;
     private String orderNote;
     private String promoCode;
+    private String esewaTransactionId;
     private Long addressId;
 
     public Long getAddressId() { return addressId; }
@@ -34,4 +35,6 @@ public class CheckoutForm {
     public void setOrderNote(String orderNote) { this.orderNote = orderNote; }
     public String getPromoCode() { return promoCode; }
     public void setPromoCode(String promoCode) { this.promoCode = promoCode; }
+    public String getEsewaTransactionId() { return esewaTransactionId; }
+    public void setEsewaTransactionId(String esewaTransactionId) { this.esewaTransactionId = esewaTransactionId; }
 }

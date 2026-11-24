@@ -2,6 +2,7 @@ package com.example.aalmari.controller;
 
 import com.example.aalmari.dto.FlashDeal;
 import com.example.aalmari.service.FlashSaleService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +32,7 @@ public class FlashController {
 
     /** /flashsaleproduct?id=<flash item id> */
     @GetMapping("/flashsaleproduct")
-    public String showFlashSaleProduct(@RequestParam(value = "id", required = false) Long id, Model model) {
+    public String showFlashSaleProduct(@RequestParam(value = "id", required = false) Long id, Model model, HttpSession session) {
         if (id == null) return "redirect:/flash";
         Optional<FlashDeal> deal = flashSaleService.liveDeal(id);
         if (deal.isEmpty()) return "redirect:/flash";      // sale ended, sold out, or bad id
@@ -42,6 +43,16 @@ public class FlashController {
 
         model.addAttribute("product", deal.get());
         model.addAttribute("relatedFlashDeals", related);
+
+        // Check if the logged-in user owns the viewed flash sale product
+        Object userIdValue = session.getAttribute("userId");
+        boolean isOwner = false;
+        if (userIdValue instanceof Number number) {
+            isOwner = deal.get().getSellerId() != null
+                    && deal.get().getSellerId().equals(number.longValue());
+        }
+        model.addAttribute("isOwner", isOwner);
+
         return "flashsaleproduct";
     }
 }

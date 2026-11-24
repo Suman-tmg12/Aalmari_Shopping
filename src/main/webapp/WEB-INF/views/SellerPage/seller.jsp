@@ -304,7 +304,7 @@
                 <div class="agreement-row">
                     <input type="checkbox" id="agreeTerms" name="agreeTerms" value="yes" aria-describedby="agreeTerms-error">
                     <label for="agreeTerms" class="agreement-label">
-                        I agree to the <a href="#" class="terms-link">Seller Terms of Service</a> and confirm that all provided information is accurate.
+                        I agree to the <a href="${pageContext.request.contextPath}/legal?document=seller" target="_blank" class="terms-link">Seller Terms of Service</a> and confirm that all provided information is accurate.
                     </label>
                 </div>
                 <div class="field-error agree-error" id="agreeTerms-error" role="alert"></div>

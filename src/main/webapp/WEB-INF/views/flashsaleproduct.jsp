@@ -99,12 +99,15 @@
                     </div>
 
                     <div class="action-buttons">
-                        <button type="button" class="buy-now-btn" data-product-id="${product.productId}">Claim Flash Deal</button>
-                        <button type="button" class="add-to-cart-btn" data-product-id="${product.productId}">
+                        <button type="button" class="buy-now-btn" data-product-id="${product.productId}" ${isOwner ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Claim Flash Deal</button>
+                        <button type="button" class="add-to-cart-btn" data-product-id="${product.productId}" ${isOwner ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
                             <span class="material-symbols-outlined">shopping_bag</span>
                             Add to Cart
                         </button>
                     </div>
+                    <c:if test="${isOwner}">
+                        <div class="qty-note" style="color:#c2410c;font-weight:700">You cannot purchase a product that you sell.</div>
+                    </c:if>
                 </div>
             </div>
         </div>

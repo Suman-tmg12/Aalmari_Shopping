@@ -214,12 +214,15 @@
                     </div>
                     <div class="quantity-limit-message" id="quantityLimitMessage"></div>
                     <div class="action-buttons">
-                        <button type="button" class="buy-now-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Buy Now</button>
-                        <button type="button" class="add-to-cart-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
+                        <button type="button" class="buy-now-btn" ${isOwnProduct || product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Buy Now</button>
+                        <button type="button" class="add-to-cart-btn" ${isOwnProduct || product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
                             <span class="material-symbols-outlined">shopping_bag</span>
                             Add to Cart
                         </button>
                     </div>
+                    <c:if test="${isOwnProduct}">
+                        <div class="quantity-limit-message" style="height:auto;min-height:18px;margin-top:0">You cannot purchase a product that you sell.</div>
+                    </c:if>
 
                     <!-- Go to Store: opens this product's seller store -->
                     <a href="${pageContext.request.contextPath}/store/${product.sellerId}" class="go-to-store-btn">

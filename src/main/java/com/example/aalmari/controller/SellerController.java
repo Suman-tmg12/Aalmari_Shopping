@@ -63,7 +63,8 @@ public class SellerController {
     private static final String S3_BUCKET_URL = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
 
     @GetMapping("/seller")
-    public String sellerController(HttpSession session) {
+    public String sellerController(HttpSession session,
+                                  @RequestParam(value = "reapply", defaultValue = "false") boolean reapply) {
         Object userIdAttr = session.getAttribute("userId");
         if (userIdAttr == null) {
             return "redirect:/login";
@@ -71,8 +72,14 @@ public class SellerController {
         Long userId = Long.valueOf(userIdAttr.toString());
 
         Optional<SellerDocumentation> existing = sellerDocumentationRepository.findByUserId(userId);
-        if (existing.isPresent() && !"rejected".equalsIgnoreCase(existing.get().getStatus())) {
-            return "redirect:/SellerDashboard";
+        if (existing.isPresent()) {
+            String status = existing.get().getStatus();
+
+            // Rejected sellers must see the rejection first. Only the Re-apply action
+            // explicitly allows them to open the application form again.
+            if (!"rejected".equalsIgnoreCase(status) || !reapply) {
+                return "redirect:/SellerDashboard";
+            }
         }
         return "SellerPage/seller";
     }
@@ -508,6 +515,18 @@ public class SellerController {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/api/seller/orders")
+    public ResponseEntity<?> listSellerOrders(HttpSession session) {
+        Object userIdAttr = session.getAttribute("userId");
+        if (userIdAttr == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+        Long userId = Long.valueOf(userIdAttr.toString());
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/json")
+                .body(orderService.sellerOrdersJson(userId));
     }
 
     @PostMapping("/api/orders/status")

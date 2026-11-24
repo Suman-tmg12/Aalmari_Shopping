@@ -255,7 +255,7 @@
             <div class="view" id="view-dashboard">
 
                 <!-- Under review -->
-                <div class="review-card" id="reviewState" style="display:none;">
+                <div class="review-card" id="reviewState" style="display:<%= isUnderReview ? "block" : "none" %>;">
                     <div class="review-icon">⏱</div>
                     <h1>Application under review</h1>
                     <p>
@@ -279,7 +279,7 @@
                 </div>
 
                 <!-- Rejected -->
-                <div class="review-card" id="rejectedState" style="display:none;">
+                <div class="review-card" id="rejectedState" style="display:<%= isRejected ? "block" : "none" %>;">
                     <div class="review-icon">✕</div>
                     <h1>Application rejected</h1>
                     <p>
@@ -289,13 +289,13 @@
                             Your seller application was not approved this time.
                         <% } %>
                     </p>
-                    <a href="${pageContext.request.contextPath}/seller" class="btn-primary" style="text-decoration:none;">
+                    <a href="${pageContext.request.contextPath}/seller?reapply=true" class="btn-primary" style="text-decoration:none;">
                         Re-apply
                     </a>
                 </div>
 
                 <!-- Approved dashboard -->
-                <div id="approvedDashboard" style="display: none;">
+                <div id="approvedDashboard" style="display:<%= isApproved ? "block" : "none" %>;">
                     <%
                         int inactiveCount = 0;
                         String lowName = null; int lowStock = 0;
@@ -767,12 +767,15 @@
                         <div class="payout-current">
                             <div class="payout-current-top">
                                 <strong><%= fin.currentPeriod %> (current)</strong>
-                                <span class="pill pill-pending">Pending</span>
+                                <span class="pill <%= "PAID".equals(fin.currentPeriodStatus) ? "pill-active" : "pill-pending" %>"><%= "PAID".equals(fin.currentPeriodStatus) ? "Paid" : "Pending" %></span>
                             </div>
                             <div class="payout-current-bottom">
                                 <span>Gross: Rs <%= String.format("%,d", curGross) %></span>
                                 <span>Commission: Rs <%= String.format("%,d", curCommission) %></span>
                                 <strong>Net: Rs <%= String.format("%,d", pendingPayout) %></strong>
+                                <% if ("PAID".equals(fin.currentPeriodStatus) && !fin.currentPeriodReference.isEmpty()) { %>
+                                    <span>Reference: <%= fin.currentPeriodReference %></span>
+                                <% } %>
                             </div>
                         </div>
 
@@ -908,6 +911,6 @@
 <script>
 var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=7"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=8"></script>
 </body>
 </html>
