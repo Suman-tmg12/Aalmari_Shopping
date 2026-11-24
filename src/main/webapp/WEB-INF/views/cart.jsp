@@ -15,6 +15,9 @@
     <title>Your Cart - Aalmari Store</title>
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/cart.css?v=2">
+    <style>
+        .cart-error { margin:0 0 14px; border:1px solid #fecaca; border-radius:10px; background:#fef2f2; color:#b91c1c; padding:11px 14px; font-size:13px; font-weight:700; }
+    </style>
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -26,6 +29,9 @@
 
         <!-- Cart Items Panel -->
         <div class="cart-items-panel">
+            <c:if test="${not empty cartError}">
+                <p class="cart-error" role="alert">${cartError}</p>
+            </c:if>
             <c:choose>
                 <c:when test="${empty cartItems}">
                     <p class="empty-cart">Your cart is empty.</p>

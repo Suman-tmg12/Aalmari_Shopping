@@ -61,6 +61,19 @@ public class CartService {
         }
 
         CartItem item = cartItemRepository.findByUser_IdAndProduct_Id(userId, productId).orElse(null);
+        int currentQuantity = item == null ? 0 : item.getQuantity();
+        int requestedQuantity = currentQuantity + qty;
+        if (requestedQuantity > limit) {
+            int remaining = Math.max(0, limit - currentQuantity);
+            if (remaining == 0) {
+                throw new IllegalArgumentException(limit == 1
+                        ? "Only 1 item is available. It is already in your cart."
+                        : "You already have the maximum available quantity in your cart.");
+            }
+            throw new IllegalArgumentException(remaining == 1
+                    ? "Only 1 more item is available."
+                    : "Only " + remaining + " more items are available.");
+        }
         if (item == null) {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found."));
@@ -69,7 +82,7 @@ public class CartService {
             item.setProduct(product);
             item.setQuantity(0);
         }
-        item.setQuantity(Math.min(limit, item.getQuantity() + qty));
+        item.setQuantity(requestedQuantity);
         cartItemRepository.save(item);
 
         return cartItemRepository.countItems(userId);
@@ -77,21 +90,26 @@ public class CartService {
 
     @Transactional
     public void changeQuantity(Long userId, Long itemId, boolean increase) {
-        cartItemRepository.findByIdAndUser_Id(itemId, userId).ifPresent(item -> {
-            int stock = item.getProduct().getStock() == null ? 0 : item.getProduct().getStock();
-            int limit = Math.max(1, Math.min(MAX_QTY_PER_ITEM, stock));
+        CartItem item = cartItemRepository.findByIdAndUser_Id(itemId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found."));
 
-            // Flash sale: same cap as add()
-            Optional<FlashSaleService.Offer> offer =
-                    flashSaleService.offerFor(userId, item.getProduct().getId());
-            if (offer.isPresent()) {
-                limit = Math.max(1, Math.min(limit, offer.get().maxQty()));
-            }
+        int stock = item.getProduct().getStock() == null ? 0 : item.getProduct().getStock();
+        int limit = Math.max(1, Math.min(MAX_QTY_PER_ITEM, stock));
 
-            int q = item.getQuantity() + (increase ? 1 : -1);
-            item.setQuantity(Math.max(1, Math.min(limit, q)));
-            cartItemRepository.save(item);
-        });
+        Optional<FlashSaleService.Offer> offer =
+                flashSaleService.offerFor(userId, item.getProduct().getId());
+        if (offer.isPresent()) {
+            limit = Math.max(1, Math.min(limit, offer.get().maxQty()));
+        }
+
+        int q = item.getQuantity() + (increase ? 1 : -1);
+        if (increase && q > limit) {
+            throw new IllegalArgumentException(limit == 1
+                    ? "Only 1 item is available."
+                    : "You can order up to " + limit + " items.");
+        }
+        item.setQuantity(Math.max(1, q));
+        cartItemRepository.save(item);
     }
 
     @Transactional
@@ -135,6 +153,7 @@ public class CartService {
             line.setOriginalPrice(price);
             line.setQuantity(qty);
             line.setLineTotal(unit * qty);
+            line.setStock(p.getStock() == null ? 0 : p.getStock());
             lines.add(line);
 
             subtotal += price * qty;

@@ -11,6 +11,11 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
@@ -49,7 +54,70 @@ public class S3Service {
     }
 
     public String uploadProfilePic(MultipartFile file, Long userId) {
-        return uploadToBucket(file, profileBucket, "profile/" + userId + "/");
+        if (file == null || file.isEmpty()) return null;
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new IllegalArgumentException("Profile photo must be smaller than 2MB");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !(contentType.equals("image/jpeg")
+                || contentType.equals("image/png")
+                || contentType.equals("image/webp")
+                || contentType.equals("image/gif"))) {
+            throw new IllegalArgumentException("Profile photo must be JPG, PNG, GIF or WebP");
+        }
+
+        try {
+            BufferedImage source = ImageIO.read(file.getInputStream());
+            if (source == null) throw new IllegalArgumentException("Invalid profile image");
+
+            BufferedImage square = cropAndResize(source, 512);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!ImageIO.write(square, "jpg", output)) {
+                throw new IllegalArgumentException("Unable to process profile image");
+            }
+
+            byte[] bytes = output.toByteArray();
+            String key = "profile/" + userId + "/" + UUID.randomUUID() + ".jpg";
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(profileBucket)
+                            .key(key)
+                            .contentType("image/jpeg")
+                            .cacheControl("public, max-age=86400")
+                            .build(),
+                    RequestBody.fromBytes(bytes)
+            );
+            return key;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to process profile image", e);
+        }
+    }
+
+    private BufferedImage cropAndResize(BufferedImage source, int size) {
+        int width = source.getWidth();
+        int height = source.getHeight();
+        int cropSize = Math.min(width, height);
+        int x = (width - cropSize) / 2;
+        int y = (height - cropSize) / 2;
+
+        BufferedImage cropped = new BufferedImage(cropSize, cropSize, BufferedImage.TYPE_INT_RGB);
+        Graphics2D cropGraphics = cropped.createGraphics();
+        cropGraphics.setColor(java.awt.Color.WHITE);
+        cropGraphics.fillRect(0, 0, cropSize, cropSize);
+        cropGraphics.drawImage(source, 0, 0, cropSize, cropSize, x, y, x + cropSize, y + cropSize, null);
+        cropGraphics.dispose();
+
+        BufferedImage resized = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = resized.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(java.awt.Color.WHITE);
+        graphics.fillRect(0, 0, size, size);
+        graphics.drawImage(cropped, 0, 0, size, size, null);
+        graphics.dispose();
+        return resized;
     }
 
     /**
@@ -144,5 +212,11 @@ public class S3Service {
             return;
         }
         s3Client.deleteObject(builder -> builder.bucket(bucket).key(path));
+    }
+
+    public void deleteProfilePic(String path) {
+        if (path == null || path.isBlank() || path.startsWith("http://") || path.startsWith("https://")
+                || path.contains("../") || path.contains("\\\\")) return;
+        s3Client.deleteObject(builder -> builder.bucket(profileBucket).key(path));
     }
 }

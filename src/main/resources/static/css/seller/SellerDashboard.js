@@ -790,6 +790,10 @@
                 $('#prodimages-err', m).textContent = prodImagesErr;
                 prodZone.classList.toggle('bad', !!prodImagesErr);
 
+                const infoImageErr = isNew && !infoImage ? 'Detailed information image is required.' : '';
+                $('#infoimage-err', m).textContent = infoImageErr;
+                infoZone.classList.toggle('bad', !!infoImageErr);
+
                 const ok = [
                     err('f-name', !name ? 'Name is required.' : ''),
                     err('f-sub', needSub && !subSel.value ? 'Select a sub-category.' : ''),
@@ -797,6 +801,7 @@
                     err('f-disc', !(disc >= 0 && disc <= 90) ? '0 – 90 only.' : ''),
                     err('f-stock', stock === '' || Number(stock) < 0 || !Number.isInteger(Number(stock)) ? 'Whole number, 0 or more.' : ''),
                     !descMsg,
+                    !infoImageErr,
                     !prodImagesErr
                 ].every(Boolean);
                 if (!ok) return;

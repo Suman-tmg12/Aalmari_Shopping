@@ -23,6 +23,12 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             "where i.seller.id = :sellerId and i.status = 'DELIVERED'")
     List<OrderItem> findDeliveredForSeller(@Param("sellerId") Long sellerId);
 
+    /** Delivered order lines are the sales basis used by seller finance summaries. */
+    @Query("select i.lineTotal, coalesce(i.deliveredAt, o.createdAt), o.id " +
+            "from OrderItem i join i.order o " +
+            "where i.status = 'DELIVERED'")
+    List<Object[]> findDeliveredSalesData();
+
     /** Check if there's a delivered purchase for verification eligibility. */
     @Query("select count(i) > 0 from OrderItem i join i.order o " +
             "where o.user.id = :userId and i.productId = :productId and i.status = 'DELIVERED'")

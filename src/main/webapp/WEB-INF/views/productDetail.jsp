@@ -37,7 +37,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${product.name} — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=12">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=13">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 
     <!-- Same card styles as product.jsp (used by the "You May Also Like" section) -->
@@ -109,6 +109,15 @@
         .review-character-count { text-align:right; color:#9ca3af; font-size:11px; margin-top:4px; }
         .review-submit-btn { width:100%; margin-top:10px; border-radius:10px; background:#ff7b00; color:#fff; padding:11px; font-weight:800; border: none; cursor: pointer; }
         .review-error { min-height:18px; color:#e11d48; font-size:12px; margin-top:8px; }
+        .product-price { margin-bottom: 10px; }
+        .stock-status { display:inline-flex; align-items:center; width:max-content; margin:0 0 12px; border-radius:999px; padding:7px 11px; background:#ecfdf5; color:#047857; font-size:13px; font-weight:800; }
+        .stock-status.low { background:#fff7ed; color:#c2410c; }
+        .stock-status.out { background:#fef2f2; color:#b91c1c; }
+        .quantity-wrapper { margin:2px 0 0; }
+        .quantity-limit-message { height:18px; min-height:18px; margin:5px 0 10px; line-height:18px; color:#c2410c; font-size:12px; font-weight:700; }
+        .action-buttons { margin-bottom:10px; }
+        .go-to-store-btn { margin-bottom:10px; }
+
         @media(max-width:640px){ .review-section{margin:24px 16px;padding:20px 16px}.review-heading{align-items:flex-start}.review-heading h2{font-size:19px}.review-comment{margin-left:0}.review-modal-card{padding:20px}.review-eligible-note{max-width:180px;text-align:center} }
     </style>
 </head>
@@ -186,33 +195,41 @@
                             <span class="discount-badge">${discount}</span>
                         </c:if>
                     </div>
-                    <div class="product-actions">
-                        <div class="quantity-wrapper">
-                            <label for="qtyInput" class="quantity">Quantity</label>
-                            <div class="quantity-selector">
-                                <button type="button" class="qty-btn minus" id="qtyMinus">-</button>
-                                <input type="number" value="1" min="1" max="${product.stock == null ? 1 : (product.stock < 10 ? product.stock : 10)}" class="qty-input" id="qtyInput">
-                                <button type="button" class="qty-btn plus" id="qtyPlus">+</button>
-                            </div>
+                    <c:if test="${product.stock != null}">
+                        <div class="stock-status ${product.stock > 10 ? '' : (product.stock > 0 ? 'low' : 'out')}">
+                            <c:choose>
+                                <c:when test="${product.stock > 10}">In Stock</c:when>
+                                <c:when test="${product.stock > 0}">Only ${product.stock} left</c:when>
+                                <c:otherwise>Out of Stock</c:otherwise>
+                            </c:choose>
                         </div>
-                        <div class="action-buttons">
-                            <button type="button" class="buy-now-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Buy Now</button>
-                            <button type="button" class="add-to-cart-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
-                                <span class="material-symbols-outlined">shopping_bag</span>
-                                Add to Cart
-                            </button>
+                    </c:if>
+                    <div class="quantity-wrapper">
+                        <label for="qtyInput" class="quantity">Quantity</label>
+                        <div class="quantity-selector">
+                            <button type="button" class="qty-btn minus" id="qtyMinus">-</button>
+                            <input type="number" value="1" min="1" max="${product.stock == null ? 1 : (product.stock < 10 ? product.stock : 10)}" class="qty-input" id="qtyInput">
+                            <button type="button" class="qty-btn plus" id="qtyPlus">+</button>
                         </div>
-
-                        <!-- Go to Store: opens this product's seller store -->
-                        <a href="${pageContext.request.contextPath}/store/${product.sellerId}" class="go-to-store-btn">
-                            <span class="material-symbols-outlined">storefront</span>
-                            Go to Store
-                        </a>
-                        <button type="button" class="ask-seller-btn" id="openMessageModal">
-                            <span class="material-symbols-outlined">chat</span>
-                            Ask Seller
+                    </div>
+                    <div class="quantity-limit-message" id="quantityLimitMessage"></div>
+                    <div class="action-buttons">
+                        <button type="button" class="buy-now-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>Buy Now</button>
+                        <button type="button" class="add-to-cart-btn" ${product.stock == null || product.stock <= 0 ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
+                            <span class="material-symbols-outlined">shopping_bag</span>
+                            Add to Cart
                         </button>
                     </div>
+
+                    <!-- Go to Store: opens this product's seller store -->
+                    <a href="${pageContext.request.contextPath}/store/${product.sellerId}" class="go-to-store-btn">
+                        <span class="material-symbols-outlined">storefront</span>
+                        Go to Store
+                    </a>
+                    <button type="button" class="ask-seller-btn" id="openMessageModal">
+                        <span class="material-symbols-outlined">chat</span>
+                        Ask Seller
+                    </button>
                 </div>
             </div>
 
@@ -449,15 +466,53 @@
         const qtyInput = document.getElementById('qtyInput');
         const qtyMinus = document.getElementById('qtyMinus');
         const qtyPlus = document.getElementById('qtyPlus');
+        const quantityLimitMessage = document.getElementById('quantityLimitMessage');
+
+        function showQuantityLimit(message) {
+            if (quantityLimitMessage) quantityLimitMessage.textContent = message;
+        }
+
+        function clearQuantityLimit() {
+            if (quantityLimitMessage) quantityLimitMessage.textContent = '';
+        }
+
         if (qtyMinus && qtyPlus && qtyInput) {
             qtyMinus.addEventListener('click', () => {
                 let val = parseInt(qtyInput.value) || 1;
-                if (val > 1) qtyInput.value = val - 1;
+                if (val > 1) {
+                    qtyInput.value = val - 1;
+                    clearQuantityLimit();
+                }
             });
+
             qtyPlus.addEventListener('click', () => {
                 let val = parseInt(qtyInput.value) || 1;
-                let max = parseInt(qtyInput.max, 10) || 10;
-                if (val < max) qtyInput.value = val + 1;
+                let max = parseInt(qtyInput.max, 10) || 1;
+                if (val < max) {
+                    qtyInput.value = val + 1;
+                    clearQuantityLimit();
+                } else {
+                    showQuantityLimit(max === 1
+                        ? 'Only 1 item is available.'
+                        : 'You can order up to ' + max + ' items.');
+                }
+            });
+
+            qtyInput.addEventListener('input', () => {
+                let max = parseInt(qtyInput.max, 10) || 1;
+                let val = parseInt(qtyInput.value, 10);
+
+                if (!val || val < 1) {
+                    qtyInput.value = 1;
+                    clearQuantityLimit();
+                } else if (val > max) {
+                    qtyInput.value = max;
+                    showQuantityLimit(max === 1
+                        ? 'Only 1 item is available.'
+                        : 'You can order up to ' + max + ' items.');
+                } else {
+                    clearQuantityLimit();
+                }
             });
         }
 

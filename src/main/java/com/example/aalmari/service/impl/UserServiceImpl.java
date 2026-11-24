@@ -69,11 +69,26 @@ public class UserServiceImpl implements UserService {
         user.setPhone(phone);
 
         if (profilePic != null && !profilePic.isEmpty()) {
+            String oldKey = user.getProfilePicPath();
             String key = s3Service.uploadProfilePic(profilePic, userId);
             user.setProfilePicPath(key);
+            if (oldKey != null && !oldKey.isBlank()) {
+                s3Service.deleteProfilePic(oldKey);
+            }
         }
 
         return userRepository.save(user);
+    }
+
+    @Override
+    public void removeProfilePic(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        String oldKey = user.getProfilePicPath();
+        user.setProfilePicPath(null);
+        userRepository.save(user);
+        s3Service.deleteProfilePic(oldKey);
     }
 
     private String normalizeEmail(String email) {

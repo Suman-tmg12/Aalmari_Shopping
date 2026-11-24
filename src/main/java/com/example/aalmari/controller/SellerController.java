@@ -246,7 +246,7 @@ public class SellerController {
             @RequestParam("discount") String discountStr,
             @RequestParam("description") String description,
             @RequestParam("attributes") String attributesJson,
-            @RequestParam("infoImage") MultipartFile infoImage,
+            @RequestParam(value = "infoImage", required = false) MultipartFile infoImage,
             @RequestParam(value = "productImages", required = false) List<MultipartFile> productImages,
             HttpSession session
     ) {
@@ -260,7 +260,7 @@ public class SellerController {
             User seller = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-            if (infoImage.isEmpty()) {
+            if (infoImage == null || infoImage.isEmpty()) {
                 return ResponseEntity.badRequest().body("Info image is required");
             }
 

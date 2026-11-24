@@ -307,10 +307,12 @@ button, input {
 
 /* Profile picture shown in the header instead of the user's name */
 .header-avatar {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     object-fit: cover;
+    object-position: center;
+    image-rendering: auto;
     display: block;
     flex-shrink: 0;
     background: #fff;
@@ -739,8 +741,8 @@ button, input {
     .categories-trigger { display: none; }
 
     .header-avatar {
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
     }
 
     .account-dropdown-menu {

@@ -100,4 +100,15 @@ public class MyProfileController {
 
         return "redirect:/myprofile?saved=true";
     }
+
+    @PostMapping("/myprofile/remove-avatar")
+    public String removeProfilePic(HttpSession session) {
+        Object sessionUserId = session.getAttribute("userId");
+        Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
+        if (userId == null) return "redirect:/login";
+
+        userService.removeProfilePic(userId);
+        session.setAttribute("userProfilePicPath", "");
+        return "redirect:/myprofile?tab=settings&avatar=removed";
+    }
 }

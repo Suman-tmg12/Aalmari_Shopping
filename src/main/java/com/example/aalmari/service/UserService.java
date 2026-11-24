@@ -12,4 +12,5 @@ public interface UserService {
     Optional<User> findByEmail(String email);
     Optional<User> findById(Long id);
     User updateProfile(Long userId, String firstName, String lastName, String phone, MultipartFile profilePic);
+    void removeProfilePic(Long userId);
 }

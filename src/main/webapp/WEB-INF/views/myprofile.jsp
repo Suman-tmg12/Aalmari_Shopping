@@ -443,9 +443,9 @@
                                     <div class="avatar-actions">
                                         <label class="file-label">
                                             <span>Change Photo</span>
-                                            <input type="file" name="profilePic" accept="image/*" onchange="previewImage(event)">
+                                            <input type="file" name="profilePic" accept="image/jpeg,image/png,image/gif" onchange="previewImage(event)">
                                         </label>
-                                        <button type="button" class="link-muted" onclick="showToast('Avatar reset to default')">Remove</button>
+                                        <button type="submit" class="link-muted" form="remove-avatar-form">Remove</button>
                                     </div>
                                     <p class="avatar-hint">JPG, PNG or GIF. Max size 2MB.</p>
                                 </div>
@@ -492,6 +492,8 @@
                             </div>
                         </form>
                     </div>
+
+                    <form id="remove-avatar-form" action="${pageContext.request.contextPath}/myprofile/remove-avatar" method="post" style="display:none"></form>
 
                     <!-- 4B. Security -->
                     <div class="settings-card">
@@ -808,6 +810,19 @@
         function previewImage(event) {
             var file = event.target.files[0];
             if (!file) return;
+
+            var allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (allowedTypes.indexOf(file.type) === -1) {
+                showToast('Please choose a JPG, PNG or GIF image');
+                event.target.value = '';
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Profile photo must be smaller than 2MB');
+                event.target.value = '';
+                return;
+            }
+
             var reader = new FileReader();
             reader.onload = function (e) {
                 var src = e.target.result;

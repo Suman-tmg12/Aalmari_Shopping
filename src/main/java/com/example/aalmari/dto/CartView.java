@@ -15,6 +15,7 @@ public class CartView {
         private long originalPrice;
         private int quantity;
         private long lineTotal;
+        private int stock;
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -32,6 +33,8 @@ public class CartView {
         public void setQuantity(int quantity) { this.quantity = quantity; }
         public long getLineTotal() { return lineTotal; }
         public void setLineTotal(long lineTotal) { this.lineTotal = lineTotal; }
+        public int getStock() { return stock; }
+        public void setStock(int stock) { this.stock = stock; }
     }
 
     private List<Line> items = new ArrayList<>();

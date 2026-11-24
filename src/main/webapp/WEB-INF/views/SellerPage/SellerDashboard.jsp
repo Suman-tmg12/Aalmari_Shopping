@@ -195,9 +195,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller Hub - Dashboard</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=16">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=17">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names" />
 </head>
 <body>
     <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -909,6 +908,6 @@
 <script>
 var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=6"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=7"></script>
 </body>
 </html>

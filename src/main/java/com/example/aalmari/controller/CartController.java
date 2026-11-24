@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class CartController {
@@ -41,10 +42,15 @@ public class CartController {
     @PostMapping("/cart/update")
     public String update(@RequestParam Long itemId,
                          @RequestParam String action,
-                         HttpSession session) {
+                         HttpSession session,
+                         RedirectAttributes redirectAttributes) {
         Long userId = currentUserId(session);
         if (userId == null) return "redirect:/login";
-        cartService.changeQuantity(userId, itemId, "increase".equals(action));
+        try {
+            cartService.changeQuantity(userId, itemId, "increase".equals(action));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("cartError", e.getMessage());
+        }
         return "redirect:/cart";
     }
 
