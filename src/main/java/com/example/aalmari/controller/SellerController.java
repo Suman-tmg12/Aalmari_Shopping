@@ -19,12 +19,20 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import com.example.aalmari.service.OrderService;
+import com.example.aalmari.service.CryptoService;
+import com.example.aalmari.util.MaskUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 public class SellerController {
@@ -38,6 +46,7 @@ public class SellerController {
     private final ProductReviewRepository productReviewRepository;
     private final StoreFollowRepository storeFollowRepository;
     private final StoreMessageRepository storeMessageRepository;
+    private final CryptoService cryptoService;
 
     public SellerController(S3Service s3Service,
                             SellerDocumentationRepository sellerDocumentationRepository,
@@ -47,7 +56,8 @@ public class SellerController {
                             OrderService orderService,
                             ProductReviewRepository productReviewRepository,
                             StoreFollowRepository storeFollowRepository,
-                            StoreMessageRepository storeMessageRepository) {
+                            StoreMessageRepository storeMessageRepository,
+                            CryptoService cryptoService) {
         this.s3Service = s3Service;
         this.sellerDocumentationRepository = sellerDocumentationRepository;
         this.sellerProductRepository = sellerProductRepository;
@@ -57,10 +67,12 @@ public class SellerController {
         this.productReviewRepository = productReviewRepository;
         this.storeFollowRepository = storeFollowRepository;
         this.storeMessageRepository = storeMessageRepository;
+        this.cryptoService = cryptoService;
     }
 
     // S3 Bucket URL - Replace with your actual bucket URL
     private static final String S3_BUCKET_URL = "https://sellerimages123.s3.ap-southeast-2.amazonaws.com/";
+    private static final Logger logger = LoggerFactory.getLogger(SellerController.class);
 
     @GetMapping("/seller")
     public String sellerController(HttpSession session,
@@ -143,7 +155,12 @@ public class SellerController {
 
         doc.setAccountHolder(accountHolder.trim());
         doc.setBankName(bankName.trim());
-        doc.setAccountIban(accountIban.replaceAll("[\\s-]", "").toUpperCase());
+        String normalizedAccount = accountIban == null ? "" : accountIban.replaceAll("[\\s-]", "").toUpperCase();
+        if (!normalizedAccount.matches("\\d{8,34}")) {
+            return "redirect:/seller?error=invalid_account_number";
+        }
+        doc.setAccountIban(cryptoService.encrypt(normalizedAccount));
+        doc.setAccountIbanMasked(MaskUtil.maskAccountNumber(normalizedAccount));
         doc.setAgreeTerms(true);
         doc.setStatus("pending");
         doc.setRejectionReason(null);
@@ -193,6 +210,9 @@ public class SellerController {
         model.addAttribute("storeTagline", doc.getStoreTagline());
         model.addAttribute("status", doc.getStatus());
         model.addAttribute("rejectionReason", doc.getRejectionReason());
+        model.addAttribute("accountHolder", doc.getAccountHolder());
+        model.addAttribute("bankName", doc.getBankName());
+        model.addAttribute("accountIbanMasked", doc.getAccountIbanMasked());
 
         // --- Filter products by user and convert image paths to URLs ---
         List<SellerProduct> allProducts = sellerProductRepository.findAll();
@@ -548,6 +568,77 @@ public class SellerController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    // --- Seller Bank Info (masked) Update Endpoint ---
+    @PostMapping("/api/seller/bank/update")
+    public ResponseEntity<?> updateSellerBankInfo(
+            @RequestParam("accountHolder") String accountHolder,
+            @RequestParam("bankName") String bankName,
+            @RequestParam(value = "accountIban", defaultValue = "") String accountIban,
+            HttpSession session
+    ) {
+        try {
+            Object userIdAttr = session.getAttribute("userId");
+            if (userIdAttr == null) {
+                return ResponseEntity.status(401).body("Unauthorized");
+            }
+            Long userId = Long.valueOf(userIdAttr.toString());
+
+            SellerDocumentation doc = sellerDocumentationRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Seller documentation not found"));
+
+            // Update bank info fields
+            doc.setAccountHolder(accountHolder.trim());
+            doc.setBankName(bankName.trim());
+            if (!accountIban.isEmpty()) {
+                String normalizedAccount = accountIban.replaceAll("[\\s-]", "").toUpperCase();
+                if (!normalizedAccount.matches("\\d{8,34}")) {
+                    return ResponseEntity.badRequest().body("Invalid account number format");
+                }
+                doc.setAccountIban(cryptoService.encrypt(normalizedAccount));
+                doc.setAccountIbanMasked(MaskUtil.maskAccountNumber(normalizedAccount));
+            }
+            doc.setUpdatedAt(LocalDateTime.now()); // Update the timestamp
+
+            sellerDocumentationRepository.save(doc);
+
+            return ResponseEntity.ok("Bank information updated successfully.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    // --- Admin Endpoint to Reveal Seller's Bank Info (for support) ---
+    @GetMapping("/api/admin/seller/bank/reveal")
+    public ResponseEntity<?> revealSellerBankInfo(
+            @RequestParam("sellerId") Long sellerId,
+            HttpSession session
+    ) {
+        Object adminIdAttr = session.getAttribute("userId");
+        Object isAdminAttr = session.getAttribute("isAdmin");
+        boolean isAdmin = Boolean.TRUE.equals(isAdminAttr);
+        if (adminIdAttr == null || !isAdmin) {
+            return ResponseEntity.status(403).body("Forbidden");
+        }
+
+        SellerDocumentation doc = sellerDocumentationRepository.findByUserId(sellerId).orElse(null);
+        if (doc == null) {
+            return ResponseEntity.status(404).body("Seller documentation not found");
+        }
+
+        try {
+            String fullAccount = cryptoService.decrypt(doc.getAccountIban());
+            logger.info("Admin bank-detail reveal: adminId={}, sellerId={}, timestamp={}", adminIdAttr, sellerId, LocalDateTime.now());
+
+            Map<String, String> response = new LinkedHashMap<>();
+            response.put("accountIban", fullAccount);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(400).body("Account number is unavailable");
         }
     }
 }

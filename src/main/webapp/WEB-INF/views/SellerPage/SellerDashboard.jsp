@@ -188,6 +188,11 @@
         products[productIndex][14] = thumb;
         productIndex++;
     }
+
+    String accountHolder = nz((String) request.getAttribute("accountHolder"));
+    String bankName = nz((String) request.getAttribute("bankName"));
+    String accountIbanMasked = nz((String) request.getAttribute("accountIbanMasked"));
+
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -741,6 +746,26 @@
                     </div>
                 </div>
 
+                <div class="fin-card" style="margin-bottom:16px">
+                    <div class="fin-title">Payout bank details</div>
+                    <div class="muted-sm">Only the masked account number is shown here</div>
+                    <form id="bankDetailsForm">
+                        <div class="payout-current-bottom" style="padding:12px 0">
+                            <span>Account holder: <strong><%= h(accountHolder) %></strong></span>
+                            <span>Bank: <strong><%= h(bankName) %></strong></span>
+                            <span>Account / IBAN: <strong><%= h(accountIbanMasked) %></strong></span>
+                        </div>
+                        <div id="bankChangeFields" style="display:none">
+                            <input type="text" id="accountHolderInput" name="accountHolder" value="<%= h(accountHolder) %>" maxlength="60">
+                            <input type="text" id="bankNameInput" name="bankName" value="<%= h(bankName) %>" maxlength="60">
+                            <input type="text" id="accountIbanInput" name="accountIban" maxlength="34" autocomplete="off" placeholder="Leave blank to keep current">
+                        </div>
+                        <button type="button" class="btn-outline" id="changeBankBtn">Change</button>
+                        <button type="submit" class="btn-primary" id="saveBankBtn" style="display:none">Save</button>
+                        <div id="bankUpdateStatus" class="muted-sm"></div>
+                    </form>
+                </div>
+
                 <div class="finance-bottom">
                     <div class="fin-card">
                         <div class="fin-title">Product-wise earnings</div>
@@ -912,5 +937,46 @@
 var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
 <script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=8"></script>
+<script>
+(function () {
+    var changeBtn = document.getElementById('changeBankBtn');
+    var saveBtn = document.getElementById('saveBankBtn');
+    var fields = document.getElementById('bankChangeFields');
+    var form = document.getElementById('bankDetailsForm');
+    var status = document.getElementById('bankUpdateStatus');
+    if (!changeBtn || !saveBtn || !fields || !form) return;
+
+    changeBtn.addEventListener('click', function () {
+        fields.style.display = 'block';
+        saveBtn.style.display = 'inline-block';
+        changeBtn.style.display = 'none';
+        document.getElementById('accountIbanInput').focus();
+    });
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var account = document.getElementById('accountIbanInput').value.replace(/[\s-]/g, '').toUpperCase();
+        if (account && !/^\d{8,34}$/.test(account)) {
+            status.textContent = 'Enter 8–34 digits only.';
+            return;
+        }
+
+        var params = new URLSearchParams();
+        params.set('accountHolder', document.getElementById('accountHolderInput').value.trim());
+        params.set('bankName', document.getElementById('bankNameInput').value.trim());
+        params.set('accountIban', account);
+
+        fetch('${pageContext.request.contextPath}/api/seller/bank/update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: params.toString()
+        }).then(function (response) {
+            if (!response.ok) throw new Error('Could not update bank details');
+            location.reload();
+        }).catch(function (error) { status.textContent = error.message; });
+    });
+})();
+</script>
 </body>
 </html>

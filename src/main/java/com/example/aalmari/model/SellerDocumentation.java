@@ -61,8 +61,11 @@ public class SellerDocumentation {
     @Column(name = "bank_name", nullable = false, length = 60)
     private String bankName;
 
-    @Column(name = "account_iban", nullable = false, length = 34)
+    @Column(name = "account_iban", nullable = false, length = 512)
     private String accountIban;
+
+    @Column(name = "account_iban_masked", length = 50)
+    private String accountIbanMasked;
 
     // --- Status & Audit Info ---
     @Column(name = "agree_terms", nullable = false)
@@ -225,6 +228,14 @@ public class SellerDocumentation {
 
     public void setAccountIban(String accountIban) {
         this.accountIban = accountIban;
+    }
+
+    public String getAccountIbanMasked() {
+        return accountIbanMasked;
+    }
+
+    public void setAccountIbanMasked(String accountIbanMasked) {
+        this.accountIbanMasked = accountIbanMasked;
     }
 
     public boolean isAgreeTerms() {
