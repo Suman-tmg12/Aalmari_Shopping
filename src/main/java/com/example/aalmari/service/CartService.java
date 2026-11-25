@@ -44,8 +44,7 @@ public class CartService {
     public int add(Long userId, Long productId, int qty) {
         if (qty < 1) qty = 1;
 
-        SellerProduct product = productRepository.findById(productId)
-                .filter(p -> Boolean.TRUE.equals(p.getActive()))
+        SellerProduct product = productRepository.findPublicActiveById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
 
         rejectOwnProduct(userId, product);
@@ -125,7 +124,8 @@ public class CartService {
     @Transactional
     public int count(Long userId) {
         for (CartItem item : cartItemRepository.findByUser_IdOrderByIdDesc(userId)) {
-            if (isOwnProduct(userId, item.getProduct())) {
+            if (isOwnProduct(userId, item.getProduct())
+                    || productRepository.findPublicActiveById(item.getProduct().getId()).isEmpty()) {
                 cartItemRepository.delete(item);
             }
         }
@@ -142,7 +142,8 @@ public class CartService {
 
         for (CartItem item : cartItemRepository.findByUser_IdOrderByIdDesc(userId)) {
             SellerProduct p = item.getProduct();
-            if (isOwnProduct(userId, p)) {
+            if (isOwnProduct(userId, p)
+                    || productRepository.findPublicActiveById(p.getId()).isEmpty()) {
                 cartItemRepository.delete(item);
                 continue;
             }
@@ -188,8 +189,7 @@ public class CartService {
     public CartView buyNowView(Long userId, Long productId, int quantity) {
         if (quantity < 1) quantity = 1;
 
-        SellerProduct product = productRepository.findById(productId)
-                .filter(p -> Boolean.TRUE.equals(p.getActive()))
+        SellerProduct product = productRepository.findPublicActiveById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
 
         rejectOwnProduct(userId, product);

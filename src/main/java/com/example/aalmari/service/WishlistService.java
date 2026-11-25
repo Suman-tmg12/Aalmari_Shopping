@@ -45,8 +45,7 @@ public class WishlistService {
      */
     public int add(Long userId, Long productId) {
         if (!wishlistRepo.existsByUser_IdAndProduct_Id(userId, productId)) {
-            SellerProduct product = productRepo.findById(productId)
-                    .filter(p -> Boolean.TRUE.equals(p.getActive()))
+            SellerProduct product = productRepo.findPublicActiveById(productId)
                     .orElseThrow(() -> new IllegalArgumentException("This product is not available."));
 
             if (wishlistRepo.countByUser_Id(userId) >= MAX_ITEMS) {
@@ -95,7 +94,8 @@ public class WishlistService {
             int current = Math.max(0, (int) (regular * (100 - discount) / 100.0));   // same formula as ProductController
             int old = (discount > 0 && discount < 100) ? regular : 0;
 
-            boolean active = Boolean.TRUE.equals(p.getActive());
+            boolean active = Boolean.TRUE.equals(p.getActive())
+                    && productRepo.findPublicActiveById(p.getId()).isPresent();
             int stock = p.getStock() == null ? 0 : p.getStock();
             boolean available = active && stock > 0;
 

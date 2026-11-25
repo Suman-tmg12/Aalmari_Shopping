@@ -39,7 +39,7 @@ public class SearchSuggestController {
         String safe = q.replace("!", "!!").replace("%", "!%").replace("_", "!_");
 
         // Fetch extra rows, then de-duplicate names in Java
-        List<String> rows = repo.suggestNames(safe, PageRequest.of(0, LIMIT * 3));
+        List<String> rows = repo.suggestPublicNames(safe, PageRequest.of(0, LIMIT * 3));
         List<String> result = new LinkedHashSet<>(rows).stream()
                 .limit(LIMIT)
                 .collect(Collectors.toList());

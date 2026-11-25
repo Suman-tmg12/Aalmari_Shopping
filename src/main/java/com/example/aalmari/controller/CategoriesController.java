@@ -31,10 +31,8 @@ public class CategoriesController {
         boolean hasSub = sub != null && !sub.isBlank();
 
         List<SellerProduct> products = hasSub
-                ? sellerProductRepository
-                .findByActiveTrueAndCategoryIgnoreCaseAndSubCategoryIgnoreCaseOrderByIdDesc(category, sub.trim())
-                : sellerProductRepository
-                .findByActiveTrueAndCategoryIgnoreCaseOrderByIdDesc(category);
+                ? sellerProductRepository.findPublicActiveByCategoryAndSubCategory(category, sub.trim())
+                : sellerProductRepository.findPublicActiveByCategory(category);
 
         model.addAttribute("sellerProducts", products);
         return "categories";

@@ -50,17 +50,13 @@ public class ProductController {
 
     @GetMapping("/product/{id}")
     public String showProductDetail(@PathVariable Long id, Model model, HttpSession session) {
-        Optional<SellerProduct> productOpt = sellerProductRepository.findById(id);
+        Optional<SellerProduct> productOpt = sellerProductRepository.findPublicActiveById(id);
 
         if (!productOpt.isPresent()) {
             return "redirect:/";
         }
 
         SellerProduct product = productOpt.get();
-
-        if (!product.getActive()) {
-            return "redirect:/";
-        }
 
         // 1. Parse Attributes (Specs)
         Map<String, String> specs = new LinkedHashMap<>();
@@ -195,9 +191,8 @@ public class ProductController {
 
         String sub = current.getSubCategory();
         if (sub != null && !sub.trim().isEmpty()) {
-            for (SellerProduct p : sellerProductRepository
-                    .findTop40ByActiveTrueAndSubCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
-                            sub, current.getId())) {
+            for (SellerProduct p : sellerProductRepository.findPublicSimilarBySubCategory(
+                    sub, current.getId(), org.springframework.data.domain.PageRequest.of(0, SIMILAR_LIMIT))) {
                 if (result.size() < SIMILAR_LIMIT && seen.add(p.getId())) {
                     result.add(p);
                 }
@@ -206,9 +201,8 @@ public class ProductController {
 
         String cat = current.getCategory();
         if (result.size() < SIMILAR_LIMIT && cat != null && !cat.trim().isEmpty()) {
-            for (SellerProduct p : sellerProductRepository
-                    .findTop40ByActiveTrueAndCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
-                            cat, current.getId())) {
+            for (SellerProduct p : sellerProductRepository.findPublicSimilarByCategory(
+                    cat, current.getId(), org.springframework.data.domain.PageRequest.of(0, SIMILAR_LIMIT))) {
                 if (result.size() < SIMILAR_LIMIT && seen.add(p.getId())) {
                     result.add(p);
                 }

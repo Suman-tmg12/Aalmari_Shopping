@@ -116,8 +116,7 @@ public class EsewaPaymentService {
         order.setNote(blank(f.getOrderNote()));
 
         for (CartView.Line line : cart.getItems()) {
-            SellerProduct product = productRepository.findById(line.getProductId())
-                    .filter(p -> Boolean.TRUE.equals(p.getActive()))
+            SellerProduct product = productRepository.findPublicActiveById(line.getProductId())
                     .orElseThrow(() -> new IllegalStateException(line.getName() + " is no longer available."));
             if (product.getSeller() != null && product.getSeller().getId() != null
                     && product.getSeller().getId().equals(userId)) {
@@ -237,7 +236,7 @@ public class EsewaPaymentService {
         if ("PAID".equals(order.getPaymentStatus())) return order;
 
         for (OrderItem item : order.getItems()) {
-            SellerProduct product = productRepository.findById(item.getProductId())
+            SellerProduct product = productRepository.findPublicActiveById(item.getProductId())
                     .orElseThrow(() -> new IllegalStateException(item.getName() + " is no longer available."));
             int stock = product.getStock() == null ? 0 : product.getStock();
             if (stock < item.getQuantity()) {
@@ -404,4 +403,3 @@ public class EsewaPaymentService {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 }
-

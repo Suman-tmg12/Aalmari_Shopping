@@ -205,6 +205,7 @@
                 id: r.dataset.id || null,
                 name: $('.prod-name', r).textContent.trim(),
                 sku: $('.prod-sku', r).textContent.trim(),
+                approvalStatus: $('.approval-label', r) ? $('.approval-label', r).dataset.status : 'PENDING',
                 cat: $('.cat-tag', r).lastChild.textContent.trim(),
                 sub: subEl ? subEl.textContent.trim() : '',
                 price: num(t[2].childNodes[0].textContent),
@@ -333,6 +334,7 @@
                 return '<tr data-sku="' + esc(p.sku) + '" data-id="' + esc(p.id) + '"><td><div class="prod-cell"><div class="prod-thumb">' +
                     (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="">' : esc(p.name.charAt(0))) +
                     '</div><div><div class="prod-name">' + esc(p.name) + '</div><div class="prod-sku">' + esc(p.sku) + '</div>' +
+                    '<div class="approval-label" data-status="' + esc(p.approvalStatus) + '">' + (p.approvalStatus === 'APPROVED' ? 'Approved' : p.approvalStatus === 'REJECTED' ? 'Rejected' : 'Pending review') + '</div>' +
                     (attrTxt ? '<div class="prod-attrs">' + esc(attrTxt) + '</div>' : '') + '</div></div></td>' +
                     '<td><span class="cat-tag"><span class="material-symbols-outlined">sell</span>' + esc(p.cat) + '</span>' +
                     (p.sub ? '<div class="sub-tag">' + esc(p.sub) + '</div>' : '') + '</td>' +

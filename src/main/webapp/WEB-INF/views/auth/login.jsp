@@ -31,23 +31,25 @@
             </div>
 
             <c:if test="${not empty error}">
-                <p class="error"><c:out value="${error}"/></p>
+                <p class="error" role="alert"><c:out value="${error}"/></p>
             </c:if>
 
             <c:if test="${not empty success}">
-                <p class="success"><c:out value="${success}"/></p>
+                <p class="success" role="status"><c:out value="${success}"/></p>
             </c:if>
 
             <form action="${pageContext.request.contextPath}/login" method="post">
 
                 <div class="form-group">
                     <input type="email" name="email" placeholder="Email address"
-                           value="${param.email}" required>
+                           value="<c:out value='${not empty loginEmail ? loginEmail : param.email}'/>"
+                           <c:if test="${errorField == 'email'}">aria-invalid="true"</c:if> required>
                 </div>
 
                 <div class="form-group">
                   <div class="password-wrapper">
-                    <input type="password" id="password" name="password" placeholder="Password" required>
+                    <input type="password" id="password" name="password" placeholder="Password"
+                           <c:if test="${errorField == 'password'}">aria-invalid="true"</c:if> required>
                      <button type="button" class="toggle-password" data-target="password"
                                                     aria-label="Show password" aria-pressed="false">
                                                 <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

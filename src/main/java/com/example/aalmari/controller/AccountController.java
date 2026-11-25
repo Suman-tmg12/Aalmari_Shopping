@@ -89,19 +89,38 @@ public class AccountController {
 
     @PostMapping("/login")
     public String loginUser(
-            @RequestParam String email,
-            @RequestParam String password,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String password,
             @RequestParam(value = "rememberMe", required = false) String rememberMe,
             HttpSession session,
             HttpServletResponse response,
             Model model) {
 
-        email = email.trim().toLowerCase(java.util.Locale.ROOT);
+        email = email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
+
+        model.addAttribute("loginEmail", email);
+
+        if (email.isBlank()) {
+            model.addAttribute("error", "Please enter your email address.");
+            return "auth/login";
+        }
+
+        if (password == null || password.isBlank()) {
+            model.addAttribute("error", "Please enter your password.");
+            return "auth/login";
+        }
 
         User user = userService.findByEmail(email).orElse(null);
 
-        if (user == null || !userService.checkLogin(email, password)) {
-            model.addAttribute("error", "Invalid email or password. Please try again.");
+        if (user == null) {
+            model.addAttribute("error", "No account exists with this email address. Please sign up or check the email.");
+            model.addAttribute("errorField", "email");
+            return "auth/login";
+        }
+
+        if (!userService.checkLogin(email, password)) {
+            model.addAttribute("error", "The password you entered is incorrect. Please try again.");
+            model.addAttribute("errorField", "password");
             return "auth/login";
         }
 

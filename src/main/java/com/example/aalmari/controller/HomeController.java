@@ -37,11 +37,8 @@ public class HomeController {
         }
         model.addAttribute("heroSlides", slides);
 
-        // 2. Fetch Active Products (NEW Logic)
-        List<SellerProduct> allProducts = sellerProductRepository.findAll();
-        List<SellerProduct> activeProducts = allProducts.stream()
-                .filter(SellerProduct::getActive)
-                .collect(Collectors.toList());
+        // 2. Fetch products from approved sellers only
+        List<SellerProduct> activeProducts = sellerProductRepository.findAllPublicActive();
 
         model.addAttribute("sellerProducts", activeProducts);
 

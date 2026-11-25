@@ -172,8 +172,7 @@ public class OrderService {
         order.setNote(blankToNull(f.getOrderNote()));
 
         for (CartView.Line line : cart.getItems()) {
-            SellerProduct p = productRepository.findById(line.getProductId())
-                    .filter(x -> Boolean.TRUE.equals(x.getActive()))
+            SellerProduct p = productRepository.findPublicActiveById(line.getProductId())
                     .orElseThrow(() -> new IllegalStateException(
                             line.getName() + " is no longer available."));
 

@@ -156,7 +156,7 @@
 
     // columns: 0 name, 1 sku, 2 category, 3 price, 4 discount, 5 stock, 6 sold, 7 status,
     //          8 subCategory, 9 infoImage, 10 imagesJson, 11 id, 12 description, 13 attrsJson, 14 thumbnail
-    String[][] products = new String[realProducts.size()][15];
+    String[][] products = new String[realProducts.size()][16];
     int productIndex = 0;
     for (com.example.aalmari.model.SellerProduct p : realProducts) {
         products[productIndex][0]  = nz(p.getName());
@@ -186,6 +186,7 @@
         }
         if (thumb.isEmpty()) thumb = products[productIndex][9];
         products[productIndex][14] = thumb;
+        products[productIndex][15] = p.getApprovalStatus() == null ? "PENDING" : p.getApprovalStatus().name();
         productIndex++;
     }
 
@@ -550,6 +551,7 @@
                                     <div>
                                         <div class="prod-name"><%= h(p[0]) %></div>
                                         <div class="prod-sku"><%= h(p[1]) %></div>
+                                        <div class="approval-label" data-status="<%= h(p[15]) %>"><%= "APPROVED".equals(p[15]) ? "Approved" : ("REJECTED".equals(p[15]) ? "Rejected" : "Pending review") %></div>
                                     </div>
                                 </div>
                             </td>

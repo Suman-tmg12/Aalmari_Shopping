@@ -13,17 +13,32 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
 
     Optional<SellerProduct> findBySku(String sku);
 
-    // Category page: all sub-categories
-    List<SellerProduct> findByActiveTrueAndCategoryIgnoreCaseOrderByIdDesc(String category);
+    // Keep every storefront query restricted to products explicitly approved by an admin.
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND LOWER(p.category) = LOWER(:category)
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> findByActiveTrueAndCategoryIgnoreCaseOrderByIdDesc(@Param("category") String category);
 
-    // Category page: one sub-category
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND LOWER(p.category) = LOWER(:category)
+             AND LOWER(p.subCategory) = LOWER(:subCategory)
+           ORDER BY p.id DESC
+           """)
     List<SellerProduct> findByActiveTrueAndCategoryIgnoreCaseAndSubCategoryIgnoreCaseOrderByIdDesc(
-            String category, String subCategory);
+            @Param("category") String category, @Param("subCategory") String subCategory);
 
     // Search page: matches name, category or sub-category
     @Query("""
            SELECT p FROM SellerProduct p
            WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
              AND (:q = ''
                   OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%'))
                   OR LOWER(p.category) LIKE LOWER(CONCAT('%', :q, '%'))
@@ -38,6 +53,7 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
     @Query("""
            SELECT p.name FROM SellerProduct p
            WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
              AND LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '!'
            ORDER BY CASE WHEN LOWER(p.name) LIKE LOWER(CONCAT(:q, '%')) ESCAPE '!'
                          THEN 0 ELSE 1 END,
@@ -45,20 +61,151 @@ public interface SellerProductRepository extends JpaRepository<SellerProduct, Lo
            """)
     List<String> suggestNames(@Param("q") String q, Pageable pageable);
 
-    // Store page: all active products of one seller (newest first)
+    // Public store page: only active, approved products of one seller (newest first).
     @Query("""
            SELECT p FROM SellerProduct p
-           WHERE p.active = true AND p.seller.id = :sellerId
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id = :sellerId
            ORDER BY p.id DESC
            """)
     List<SellerProduct> findBySeller_IdAndActiveTrue(@Param("sellerId") Long sellerId);
 
     // ---------- "You May Also Like" ----------
-    // Same sub-category, excluding the current product, best sellers first
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND LOWER(p.subCategory) = LOWER(:subCategory) AND p.id <> :id
+           ORDER BY p.sold DESC, p.id DESC
+           """)
     List<SellerProduct> findTop40ByActiveTrueAndSubCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
-            String subCategory, Long id);
+            @Param("subCategory") String subCategory, @Param("id") Long id);
 
-    // Same category, excluding the current product, best sellers first
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND LOWER(p.category) = LOWER(:category) AND p.id <> :id
+           ORDER BY p.sold DESC, p.id DESC
+           """)
     List<SellerProduct> findTop40ByActiveTrueAndCategoryIgnoreCaseAndIdNotOrderBySoldDescIdDesc(
-            String category, Long id);
+            @Param("category") String category, @Param("id") Long id);
+
+    // Public storefront: product must be active and its seller application must be approved.
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> findAllPublicActive();
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.id = :id AND p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+           """)
+    Optional<SellerProduct> findPublicActiveById(@Param("id") Long id);
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND (:q = ''
+                  OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%'))
+                  OR LOWER(p.category) LIKE LOWER(CONCAT('%', :q, '%'))
+                  OR LOWER(p.subCategory) LIKE LOWER(CONCAT('%', :q, '%')))
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> searchPublicActive(@Param("q") String q);
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND LOWER(p.category) = LOWER(:category)
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> findPublicActiveByCategory(@Param("category") String category);
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND LOWER(p.category) = LOWER(:category)
+             AND LOWER(p.subCategory) = LOWER(:subCategory)
+           ORDER BY p.id DESC
+           """)
+    List<SellerProduct> findPublicActiveByCategoryAndSubCategory(
+            @Param("category") String category, @Param("subCategory") String subCategory);
+
+    @Query("""
+           SELECT p.name FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '!'
+           ORDER BY CASE WHEN LOWER(p.name) LIKE LOWER(CONCAT(:q, '%')) ESCAPE '!'
+                         THEN 0 ELSE 1 END,
+                    p.name
+           """)
+    List<String> suggestPublicNames(@Param("q") String q, Pageable pageable);
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.id <> :id
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND LOWER(p.subCategory) = LOWER(:subCategory)
+           ORDER BY p.sold DESC, p.id DESC
+           """)
+    List<SellerProduct> findPublicSimilarBySubCategory(
+            @Param("subCategory") String subCategory,
+            @Param("id") Long id,
+            Pageable pageable);
+
+    @Query("""
+           SELECT p FROM SellerProduct p
+           WHERE p.active = true
+             AND p.approvalStatus = com.example.aalmari.model.ProductApprovalStatus.APPROVED
+             AND p.id <> :id
+             AND p.seller.id IN (
+                 SELECT sd.userId FROM SellerDocumentation sd
+                 WHERE LOWER(sd.status) = 'approved'
+             )
+             AND LOWER(p.category) = LOWER(:category)
+           ORDER BY p.sold DESC, p.id DESC
+           """)
+    List<SellerProduct> findPublicSimilarByCategory(
+            @Param("category") String category,
+            @Param("id") Long id,
+            Pageable pageable);
 }

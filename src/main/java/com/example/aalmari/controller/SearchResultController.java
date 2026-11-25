@@ -21,7 +21,7 @@ public class SearchResultController {
         String query = q.trim();
         if (query.length() > 100) query = query.substring(0, 100);
 
-        model.addAttribute("searchProducts", sellerProductRepository.searchActive(query));
+        model.addAttribute("searchProducts", sellerProductRepository.searchPublicActive(query));
         return "searchResult";
     }
 }

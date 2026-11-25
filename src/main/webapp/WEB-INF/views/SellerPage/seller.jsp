@@ -184,10 +184,10 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="businessAddress">Business Reg No <span class="required">*</span></label>
-                    <input type="text" id="businessAddress" name="businessAddress" maxlength="200" autocomplete="street-address"
-                           placeholder="e.g. REG-8841-KTM" aria-describedby="businessAddress-error">
-                    <div class="field-error" id="businessAddress-error" role="alert"></div>
+                    <label for="businessRegNo">Business Reg No <span class="required">*</span></label>
+                    <input type="text" id="businessRegNo" name="businessRegNo" maxlength="200" autocomplete="off"
+                           placeholder="e.g. REG-8841-KTM" aria-describedby="businessRegNo-error">
+                    <div class="field-error" id="businessRegNo-error" role="alert"></div>
                 </div>
 
                 <div class="form-group">
@@ -388,12 +388,15 @@
                }
                return '';
            },
-           businessAddress: function (v) {
-               if (!v) return 'Business address is required.';
-               if (v.length < 10) return 'Enter the full address (street, city, country).';
-               if (v.length > 200) return 'Address can be at most 200 characters.';
-               return '';
-           },
+           businessRegNo: function (v) {
+                if (!v) return 'Business registration number is required.';
+                if (v.length < 3) return 'Business registration number must be at least 3 characters.';
+                if (v.length > 200) return 'Business registration number can be at most 200 characters.';
+                if (!/^[A-Za-z0-9][A-Za-z0-9 .\-\/]{2,199}$/.test(v)) {
+                    return 'Use letters, numbers, spaces, hyphens, dots or slashes only.';
+                }
+                return '';
+            },
            taxId: function (v) {
                if (!v) return '';
                if (!/^[A-Za-z0-9][A-Za-z0-9\-\/ ]{3,19}$/.test(v)) return 'Tax ID must be 4–20 characters: letters, numbers, - or /.';
@@ -446,7 +449,7 @@
 
        var stepFields = {
            1: ['storeBanner', 'storeLogo', 'storeName', 'storeTagline', 'primaryCategory'],
-           2: ['businessEmail', 'phoneNumber', 'businessAddress', 'taxId', 'docGovId', 'docBizCert', 'docAddressProof'],
+           2: ['businessEmail', 'phoneNumber', 'businessRegNo', 'taxId', 'docGovId', 'docBizCert', 'docAddressProof'],
            3: ['accountHolder', 'bankName', 'accountIban', 'agreeTerms']
        };
 
@@ -530,6 +533,16 @@
            });
            input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', function () {
                if (id === 'phoneNumber') input.value = input.value.replace(/[^0-9+\s\-()]/g, '');
+               if (id === 'accountHolder') {
+                   var holderStart = input.selectionStart;
+                   input.value = input.value.toUpperCase();
+                   if (typeof holderStart === 'number') input.setSelectionRange(holderStart, holderStart);
+               }
+               if (id === 'accountIban') {
+                   var rawAccount = input.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                   input.value = (rawAccount.match(/.{1,4}/g) || []).join(' ');
+                   input.setSelectionRange(input.value.length, input.value.length);
+               }
                if (touched || input.classList.contains('invalid') || input.tagName === 'SELECT') validateText(id);
            });
        });

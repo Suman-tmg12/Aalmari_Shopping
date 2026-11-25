@@ -229,7 +229,8 @@ public class FlashSaleService {
         if (live.isEmpty()) return Optional.empty();
         FlashSaleItem i = live.get(0);
         SellerProduct p = i.getProduct();
-        if (!Boolean.TRUE.equals(p.getActive())) return Optional.empty();
+        if (!Boolean.TRUE.equals(p.getActive())
+                || productRepo.findPublicActiveById(p.getId()).isEmpty()) return Optional.empty();
 
         int left = i.getQty() - i.getSold();
         int mine = userId == null ? 0 : (int) Math.min(Integer.MAX_VALUE, purchaseRepo.bought(userId, i.getId()));
@@ -269,6 +270,7 @@ public class FlashSaleService {
         List<FlashDeal> out = new ArrayList<>();
         for (FlashSaleItem i : itemRepo.findAllLive(System.currentTimeMillis())) {
             SellerProduct p = i.getProduct();
+            if (productRepo.findPublicActiveById(p.getId()).isEmpty()) continue;
             if (category != null && !category.isBlank() && !category.equalsIgnoreCase(p.getCategory())) continue;
             if (sub != null && !sub.isBlank() && !sub.equalsIgnoreCase(p.getSubCategory())) continue;
             out.add(toDeal(i));
@@ -286,7 +288,8 @@ public class FlashSaleService {
             SellerProduct p = i.getProduct();
             int stock = p.getStock() == null ? 0 : p.getStock();
             return !s.isEndedEarly() && s.getStartTime() <= now && now < s.getEndTime()
-                    && Boolean.TRUE.equals(p.getActive()) && stock > 0 && i.getSold() < i.getQty();
+                    && Boolean.TRUE.equals(p.getActive()) && productRepo.findPublicActiveById(p.getId()).isPresent()
+                    && stock > 0 && i.getSold() < i.getQty();
         }).map(this::toDeal);
     }
 

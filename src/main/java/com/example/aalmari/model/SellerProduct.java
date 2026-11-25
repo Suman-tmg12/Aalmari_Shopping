@@ -49,6 +49,10 @@ public class SellerProduct {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'APPROVED'")
+    private ProductApprovalStatus approvalStatus = ProductApprovalStatus.PENDING;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -62,6 +66,7 @@ public class SellerProduct {
     public SellerProduct() {
         this.sold = 0;
         this.active = true; // Default to active
+        this.approvalStatus = ProductApprovalStatus.PENDING;
         this.discount = 0;
         this.imageUrlsJson = "[]";
         this.attributesJson = "{}";
@@ -109,6 +114,9 @@ public class SellerProduct {
 
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+
+    public ProductApprovalStatus getApprovalStatus() { return approvalStatus; }
+    public void setApprovalStatus(ProductApprovalStatus approvalStatus) { this.approvalStatus = approvalStatus; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }

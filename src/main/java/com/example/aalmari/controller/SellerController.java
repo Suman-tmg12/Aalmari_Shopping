@@ -1,6 +1,7 @@
 package com.example.aalmari.controller;
 
 import com.example.aalmari.model.SellerDocumentation;
+import com.example.aalmari.model.ProductApprovalStatus;
 import com.example.aalmari.model.SellerProduct;
 import com.example.aalmari.model.User;
 import com.example.aalmari.repository.UserRepository;
@@ -106,7 +107,7 @@ public class SellerController {
             @RequestParam("primaryCategory") String primaryCategory,
             @RequestParam("businessEmail") String businessEmail,
             @RequestParam("phoneNumber") String phoneNumber,
-            @RequestParam("businessAddress") String businessRegistrationNumber,
+            @RequestParam("businessRegNo") String businessRegistrationNumber,
             @RequestParam(value = "taxId", required = false) String taxId,
             @RequestParam("docGovId") MultipartFile docGovId,
             @RequestParam("docBizCert") MultipartFile docBizCert,
@@ -153,10 +154,10 @@ public class SellerController {
         doc.setDocBizCertPath(s3Service.upload(docBizCert, userId, "docs/biz-cert"));
         doc.setDocAddressProofPath(s3Service.upload(docAddressProof, userId, "docs/address-proof"));
 
-        doc.setAccountHolder(accountHolder.trim());
+        doc.setAccountHolder(accountHolder.trim().toUpperCase(java.util.Locale.ROOT));
         doc.setBankName(bankName.trim());
-        String normalizedAccount = accountIban == null ? "" : accountIban.replaceAll("[\\s-]", "").toUpperCase();
-        if (!normalizedAccount.matches("\\d{8,34}")) {
+        String normalizedAccount = normalizeAccountOrIban(accountIban);
+        if (normalizedAccount == null) {
             return "redirect:/seller?error=invalid_account_number";
         }
         doc.setAccountIban(cryptoService.encrypt(normalizedAccount));
@@ -381,6 +382,7 @@ public class SellerController {
             product.setDiscount(Integer.parseInt(discountStr));
             product.setDescription(description);
             product.setAttributesJson(attributesJson);
+            product.setApprovalStatus(ProductApprovalStatus.PENDING);
 
             // persist the "Listed as active" checkbox to the database
             if (activeStr != null) {
@@ -590,12 +592,12 @@ public class SellerController {
                     .orElseThrow(() -> new RuntimeException("Seller documentation not found"));
 
             // Update bank info fields
-            doc.setAccountHolder(accountHolder.trim());
+            doc.setAccountHolder(accountHolder.trim().toUpperCase(java.util.Locale.ROOT));
             doc.setBankName(bankName.trim());
             if (!accountIban.isEmpty()) {
-                String normalizedAccount = accountIban.replaceAll("[\\s-]", "").toUpperCase();
-                if (!normalizedAccount.matches("\\d{8,34}")) {
-                    return ResponseEntity.badRequest().body("Invalid account number format");
+                String normalizedAccount = normalizeAccountOrIban(accountIban);
+                if (normalizedAccount == null) {
+                    return ResponseEntity.badRequest().body("Invalid account number or IBAN format");
                 }
                 doc.setAccountIban(cryptoService.encrypt(normalizedAccount));
                 doc.setAccountIbanMasked(MaskUtil.maskAccountNumber(normalizedAccount));
@@ -640,5 +642,29 @@ public class SellerController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(400).body("Account number is unavailable");
         }
+    }
+
+    private String normalizeAccountOrIban(String value) {
+        if (value == null) return null;
+        String normalized = value.replaceAll("[\\s-]", "").toUpperCase(java.util.Locale.ROOT);
+
+        if (!normalized.matches("^[A-Z]{2}")) {
+
+            return normalized.matches("\\d{8,20}") ? normalized : null;
+        }
+
+        if (!normalized.matches("[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}")) return null;
+
+        String rearranged = normalized.substring(4) + normalized.substring(0, 4);
+        StringBuilder numeric = new StringBuilder();
+        for (char c : rearranged.toCharArray()) {
+            numeric.append(Character.isDigit(c) ? c : (c - 'A' + 10));
+        }
+
+        int remainder = 0;
+        for (char c : numeric.toString().toCharArray()) {
+            remainder = (remainder * 10 + (c - '0')) % 97;
+        }
+        return remainder == 1 ? normalized : null;
     }
 }

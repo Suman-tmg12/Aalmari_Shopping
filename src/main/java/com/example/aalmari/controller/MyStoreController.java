@@ -66,6 +66,10 @@ public class MyStoreController {
         if (storeOpt.isEmpty()) return "redirect:/";
 
         SellerDocumentation store = storeOpt.get();
+        if (!"approved".equalsIgnoreCase(store.getStatus())) {
+            return "redirect:/";
+        }
+
         long followerCount = followRepository.countBySeller_Id(sellerId);
         boolean isFollowing = false;
         Object viewer = session.getAttribute("userId");
