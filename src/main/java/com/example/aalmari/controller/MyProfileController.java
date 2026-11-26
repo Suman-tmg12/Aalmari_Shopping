@@ -14,9 +14,12 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class MyProfileController {
@@ -37,6 +40,9 @@ public class MyProfileController {
     public String showMyProfile(HttpSession session, Model model) {
         Object sessionUserId = session.getAttribute("userId");
         Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
+        if (userId == null) {
+            return "redirect:/login";
+        }
 
         // Safe defaults so the page shows 0 and empty lists instead of blanks
         model.addAttribute("orders", List.of());
@@ -110,5 +116,36 @@ public class MyProfileController {
         userService.removeProfilePic(userId);
         session.setAttribute("userProfilePicPath", "");
         return "redirect:/myprofile?tab=settings&avatar=removed";
+    }
+
+    @PostMapping("/myprofile/password")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> changePassword(
+            @RequestParam(required = false) String currentPassword,
+            @RequestParam(required = false) String newPassword,
+            HttpSession session) {
+        Object sessionUserId = session.getAttribute("userId");
+        Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Please sign in again."));
+        }
+        if (currentPassword == null || currentPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Enter your current password."));
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 8 characters."));
+        }
+        if (currentPassword.equals(newPassword)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Choose a password you have not used for this account."));
+        }
+
+        try {
+            if (!userService.changePassword(userId, currentPassword, newPassword)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Current password is incorrect."));
+            }
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }

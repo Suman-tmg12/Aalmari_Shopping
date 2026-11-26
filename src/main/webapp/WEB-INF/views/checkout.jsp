@@ -45,7 +45,7 @@
         <div class="co-main">
 
             <!-- 1. Delivery address (address book) -->
-            <section class="co-card">
+            <section class="co-card" id="delivery-address">
                 <div class="addr-head">
                     <h2 class="co-card-title">Delivery address</h2>
                     <button type="button" class="link-btn" id="addAddrBtn">+ Add new address</button>

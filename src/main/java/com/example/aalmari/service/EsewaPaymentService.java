@@ -46,6 +46,7 @@ public class EsewaPaymentService {
     private final SellerProductRepository productRepository;
     private final UserRepository userRepository;
     private final FlashSaleService flashSaleService;
+    private final CustomerNotificationService notificationService;
     private final ObjectMapper mapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -63,7 +64,8 @@ public class EsewaPaymentService {
                                AddressRepository addressRepository,
                                SellerProductRepository productRepository,
                                UserRepository userRepository,
-                               FlashSaleService flashSaleService) {
+                               FlashSaleService flashSaleService,
+                               CustomerNotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.cartService = cartService;
@@ -72,6 +74,7 @@ public class EsewaPaymentService {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.flashSaleService = flashSaleService;
+        this.notificationService = notificationService;
     }
 
     public record EsewaForm(Map<String, String> fields, String formUrl) {}
@@ -254,6 +257,9 @@ public class EsewaPaymentService {
         order.setPaymentStatus("PAID");
         order.setPaymentReference(transactionCode);
         orderRepository.save(order);
+        notificationService.createForOrder(order, "Payment received",
+                "Your eSewa payment for order " + order.getOrderNumber() + " was successful.");
+        notificationService.createSellerOrderNotifications(order);
 
         cartItemRepository.deleteAll(cartItemRepository.findByUser_IdOrderByIdDesc(order.getUser().getId()));
 
@@ -292,11 +298,16 @@ public class EsewaPaymentService {
             throw new SecurityException("You cannot cancel another buyer's order.");
         }
 
+        boolean newlyFailed = !"FAILED".equals(order.getPaymentStatus());
         if (!"PAID".equals(order.getPaymentStatus())) {
             order.setStatus("PAYMENT_FAILED");
             order.setPaymentStatus("FAILED");
             for (OrderItem item : order.getItems()) item.setStatus("CANCELLED");
             orderRepository.save(order);
+            if (newlyFailed) {
+                notificationService.createForOrder(order, "Payment not completed",
+                        "Payment for order " + order.getOrderNumber() + " could not be completed. You can place the order again.");
+            }
 
             Payment payment = new Payment();
             payment.setOrder(order);
@@ -330,6 +341,8 @@ public class EsewaPaymentService {
                 order.setPaymentStatus("FAILED");
                 for (OrderItem item : order.getItems()) item.setStatus("CANCELLED");
                 orderRepository.save(order);
+                notificationService.createForOrder(order, "Payment not completed",
+                        "Payment for order " + order.getOrderNumber() + " could not be completed. You can place the order again.");
             }
         }
     }

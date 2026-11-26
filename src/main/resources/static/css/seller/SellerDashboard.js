@@ -272,13 +272,143 @@
         function alertList() {
             const a = [], low = P.find(p => p.active && p.stock > 0 && p.stock <= 5);
             const out = P.find(p => p.active && p.stock === 0), ret = O.find(o => o.status === 'return');
+            const pendingOrders = O.filter(o => o.status === 'pending');
             const unread = M.filter(m => m.unread).length;
             if (low) a.push({ cls: 'warning', icon: 'warning', title: 'Low stock alert', body: low.name + ' — only ' + low.stock + ' unit' + (low.stock > 1 ? 's' : '') + ' left.', go: 'products' });
             if (out) a.push({ cls: 'warning', icon: 'production_quantity_limits', title: 'Out of stock', body: out.name + ' is sold out but still active.', go: 'products' });
+            if (pendingOrders.length) a.push({
+                cls: 'orange', icon: 'shopping_bag',
+                title: pendingOrders.length + ' new order' + (pendingOrders.length > 1 ? 's' : ''),
+                body: pendingOrders[0].ref + ' is waiting for your confirmation.',
+                go: 'orders'
+            });
             if (ret) a.push({ cls: 'orange', icon: 'published_with_changes', title: 'Return request', body: ret.cust + ' — ' + ret.product + '.', go: 'orders' });
             if (unread) a.push({ cls: 'info', icon: 'inbox', title: unread + ' unread message' + (unread > 1 ? 's' : ''), body: 'Customer inquiries awaiting reply.', go: 'messages' });
             return a;
         }
+
+        /* ============ Persistent seller order notifications ============ */
+        function initSellerNotifications() {
+            const trigger = $('#sellerNotificationTrigger'), panel = $('#sellerNotificationPanel');
+            if (!trigger || !panel) return;
+            const apiUrl = trigger.dataset.apiUrl;
+            const badge = $('#sellerNotificationBadge');
+            const list = $('#sellerNotificationList');
+            const markAll = $('#sellerNotificationMarkAll');
+            let loading = false;
+
+            function setCount(count) {
+                const unread = Number(count) || 0;
+                badge.hidden = unread === 0;
+                badge.textContent = unread > 99 ? '99+' : String(unread);
+                trigger.setAttribute('aria-label', unread
+                    ? 'Notifications, ' + unread + ' unread'
+                    : 'Notifications');
+                markAll.disabled = unread === 0;
+            }
+
+            function state(message, retry) {
+                list.replaceChildren();
+                const p = el('p', 'seller-notification-state', esc(message));
+                if (retry) {
+                    const button = el('button', 'seller-notification-retry', 'Try again');
+                    button.type = 'button';
+                    button.onclick = load;
+                    p.appendChild(button);
+                }
+                list.appendChild(p);
+            }
+
+            function render(feed) {
+                setCount(feed.unreadCount);
+                list.replaceChildren();
+                if (!feed.items || !feed.items.length) {
+                    state('No new order notifications. New orders will appear here.');
+                    return;
+                }
+                feed.items.forEach(function (item) {
+                    const link = document.createElement('a');
+                    link.className = 'seller-notification-item' + (item.read ? '' : ' is-unread');
+                    link.href = trigger.dataset.ordersViewUrl;
+                    link.dataset.notificationId = item.id;
+                    const title = document.createElement('strong');
+                    title.textContent = item.title;
+                    const body = document.createElement('span');
+                    body.textContent = item.message;
+                    const time = document.createElement('time');
+                    time.textContent = item.createdAt;
+                    link.append(title, body, time);
+                    link.addEventListener('click', async function (event) {
+                        event.preventDefault();
+                        try {
+                            const response = await fetch(apiUrl + '/' + encodeURIComponent(item.id) + '/read', {
+                                method: 'POST', credentials: 'same-origin'
+                            });
+                            if (!response.ok) throw new Error('Could not update this notification.');
+                            panel.hidden = true;
+                            trigger.setAttribute('aria-expanded', 'false');
+                            await load();
+                            show('orders', true);
+                        } catch (error) {
+                            state(error.message || 'Could not update this notification.', true);
+                        }
+                    });
+                    list.appendChild(link);
+                });
+            }
+
+            async function load() {
+                if (loading) return;
+                loading = true;
+                try {
+                    const response = await fetch(apiUrl, {
+                        credentials: 'same-origin',
+                        headers: { Accept: 'application/json' }
+                    });
+                    if (!response.ok) throw new Error('Could not load notifications.');
+                    render(await response.json());
+                } catch (error) {
+                    state(error.message || 'Could not load notifications.', true);
+                } finally {
+                    loading = false;
+                }
+            }
+
+            trigger.addEventListener('click', function () {
+                const open = panel.hidden;
+                panel.hidden = !open;
+                trigger.setAttribute('aria-expanded', String(open));
+                if (open) load();
+            });
+            markAll.addEventListener('click', async function () {
+                markAll.disabled = true;
+                try {
+                    const response = await fetch(apiUrl + '/read-all', {
+                        method: 'POST', credentials: 'same-origin'
+                    });
+                    if (!response.ok) throw new Error('Could not mark notifications as read.');
+                    await load();
+                } catch (error) {
+                    state(error.message || 'Could not update notifications.', true);
+                }
+            });
+            document.addEventListener('click', function (event) {
+                if (!panel.hidden && !event.target.closest('.header-actions')) {
+                    panel.hidden = true;
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !panel.hidden) {
+                    panel.hidden = true;
+                    trigger.setAttribute('aria-expanded', 'false');
+                    trigger.focus();
+                }
+            });
+            load();
+            window.setInterval(load, 60000);
+        }
+        initSellerNotifications();
 
         /* ============ Pagination helpers ============ */
         function pageNumbers(cur, total) {
@@ -415,9 +545,6 @@
             $('#approvedDashboard .alerts-grid').innerHTML = al.map(a =>
                 '<div class="alert-card ' + a.cls + ' clickable" data-go="' + a.go + '"><span class="material-symbols-outlined alert-icon">' + a.icon +
                 '</span><div class="alert-content"><div class="alert-title">' + esc(a.title) + '</div><div class="alert-body">' + esc(a.body) + '</div></div></div>').join('');
-            const bell = $('.icon-btn[aria-label="Notifications"]');
-            if (bell) { if (al.length) bell.dataset.count = al.length; else delete bell.dataset.count; }
-
             $('.orders-table tbody').innerHTML = O.slice(0, 4).map(o =>
                     '<tr><td class="order-id">' + esc(o.ref) + '</td><td class="customer-name">' + esc(o.cust) + '</td><td class="product-name">' + esc(o.product) +
                     '</td><td class="order-status"><span class="status-badge ' + esc(o.status) + '">' + (LABEL[o.status] || esc(o.status)) + '</span></td><td class="order-price">Rs ' + fmt(o.total) + '</td></tr>').join('') ||

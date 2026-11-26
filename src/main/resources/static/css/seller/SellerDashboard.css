@@ -1400,6 +1400,41 @@ body {
     border-radius: 9px; background: #e2691b; color: #fff;
     font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
 }
+.seller-notification-badge:not([hidden]) {
+    position: absolute; top: -6px; right: -6px;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: #e2691b; color: #fff;
+    font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.seller-notification-panel[hidden] { display: none; }
+.seller-notification-panel {
+    position: absolute; z-index: 20; top: 52px; right: 0;
+    width: min(390px, calc(100vw - 32px)); max-height: min(65vh, 430px);
+    overflow: hidden; background: #fff; border: 1px solid #e6e3dc;
+    border-radius: 12px; box-shadow: 0 14px 36px rgba(0,0,0,.18);
+}
+.header-actions { position: relative; }
+.seller-notification-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 15px 17px; border-bottom: 1px solid #ece9e3;
+}
+.seller-notification-head h2 { font-size: 15px; margin: 0; }
+.seller-notification-head button {
+    border: 0; background: none; color: #a64b00; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600;
+}
+#sellerNotificationList { max-height: min(58vh, 370px); overflow-y: auto; }
+.seller-notification-item {
+    display: block; padding: 13px 17px; border-bottom: 1px solid #f0eee9;
+    color: #242424; text-decoration: none; cursor: pointer;
+}
+.seller-notification-item:hover, .seller-notification-item:focus-visible { background: #fff7f0; }
+.seller-notification-item.is-unread { background: #fffaf5; }
+.seller-notification-item strong { display: block; font-size: 13px; }
+.seller-notification-item span { display: block; margin-top: 4px; color: #555; font-size: 12px; line-height: 1.45; }
+.seller-notification-item time { display: block; margin-top: 6px; color: #858585; font-size: 11px; }
+.seller-notification-state { padding: 20px 17px; color: #666; font-size: 13px; text-align: center; }
+.seller-notification-retry { margin-left: 5px; border: 0; background: transparent; color: #a64b00; text-decoration: underline; cursor: pointer; }
 
 .no-scroll { overflow: hidden; }
 .clickable { cursor: pointer; }

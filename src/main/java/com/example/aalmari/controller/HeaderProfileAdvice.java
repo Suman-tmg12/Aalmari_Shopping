@@ -1,6 +1,8 @@
 package com.example.aalmari.controller;
 
+import com.example.aalmari.model.MarketplaceSetting;
 import com.example.aalmari.model.User;
+import com.example.aalmari.repository.MarketplaceSettingRepository;
 import com.example.aalmari.service.UserService;
 import com.example.aalmari.service.impl.S3Service;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +26,19 @@ public class HeaderProfileAdvice {
 
     @Autowired
     private S3Service s3Service;
+
+    @Autowired
+    private MarketplaceSettingRepository marketplaceSettingRepository;
+
+    @ModelAttribute("marketplacePlatformName")
+    public String marketplacePlatformName(HttpServletRequest request) {
+        if (request.getRequestURI().contains("/api/")) return null;
+
+        return marketplaceSettingRepository.findById(MarketplaceSetting.PLATFORM_NAME_KEY)
+                .map(MarketplaceSetting::getValue)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse(MarketplaceSetting.DEFAULT_PLATFORM_NAME);
+    }
 
     @ModelAttribute("headerPicUrl")
     public String headerPicUrl(HttpSession session, HttpServletRequest request) {

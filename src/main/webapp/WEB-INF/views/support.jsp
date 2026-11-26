@@ -217,19 +217,6 @@
 
     .hc-tool-label { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
 
-    .hc-soon-tag {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: #eef0f3;
-        color: var(--hc-muted);
-        font-size: 10.5px;
-        font-weight: 600;
-        padding: 2px 7px;
-        border-radius: 999px;
-        letter-spacing: .02em;
-    }
-
     /* ===== Topics + FAQ ===== */
     .hc-topics {
         display: flex;
@@ -473,42 +460,35 @@
         <p class="hc-card-sub">Manage your account without waiting for support.</p>
 
         <div class="hc-tools">
-            <a class="hc-tool" href="#" data-soon="My Orders">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/myprofile?tab=orders">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">receipt_long</span></span>
                 <span class="hc-tool-label">My Orders</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="Password reset">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/myprofile?tab=settings#security">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">lock_reset</span></span>
-                <span class="hc-tool-label">Reset Password</span>
+                <span class="hc-tool-label">Change Password</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="My Vouchers">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/support?topic=payments#faq">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">local_activity</span></span>
-                <span class="hc-tool-label">My Vouchers</span>
+                <span class="hc-tool-label">Voucher Help</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="My Cancellations">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/myprofile?tab=orders&amp;filter=cancelled">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">free_cancellation</span></span>
                 <span class="hc-tool-label">My Cancellations</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="My Returns">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/legal?document=returns">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">assignment_return</span></span>
-                <span class="hc-tool-label">My Returns</span>
+                <span class="hc-tool-label">Returns &amp; Refunds</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="Payment options">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/support?topic=payments#faq">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">payments</span></span>
-                <span class="hc-tool-label">My Payment Options</span>
+                <span class="hc-tool-label">Payment Help</span>
             </a>
-            <a class="hc-tool" href="#" data-soon="Delivery address changes">
-                <span class="hc-soon-tag">Soon</span>
+            <a class="hc-tool" href="${pageContext.request.contextPath}/checkout#delivery-address">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">location_on</span></span>
-                <span class="hc-tool-label">Change Delivery Address</span>
+                <span class="hc-tool-label">Delivery Address at Checkout</span>
             </a>
-            <a class="hc-tool" href="${pageContext.request.contextPath}/myprofile">
+            <a class="hc-tool" href="${pageContext.request.contextPath}/myprofile?tab=settings">
                 <span class="hc-tool-icon"><span class="material-symbols-outlined" aria-hidden="true">account_circle</span></span>
                 <span class="hc-tool-label">My Profile</span>
             </a>
@@ -623,13 +603,12 @@
                     <span class="hc-contact-icon"><span class="material-symbols-outlined" aria-hidden="true">support_agent</span></span>
                     <div>
                         <div class="hc-contact-title">Contact Customer Care</div>
-                        <div class="hc-contact-sub">Live Chat: 9AM - 6PM [Mon-Sun]</div>
+                        <div class="hc-contact-sub">Email support and we’ll get back to you.</div>
                     </div>
                 </div>
-                <span class="hc-status" data-hours="chat"></span>
-                <button type="button" class="hc-btn" data-soon="Live chat">
-                    <span class="material-symbols-outlined" aria-hidden="true">chat</span> Start live chat
-                </button>
+                <a class="hc-btn" href="mailto:support@aalmari.com">
+                    <span class="material-symbols-outlined" aria-hidden="true">mail</span> Email customer care
+                </a>
             </div>
 
             <div class="hc-contact">
@@ -739,23 +718,14 @@
 
     apply();
 
-    /* ---------- "Coming soon" toast for features that are not built yet ---------- */
-    var toast = document.getElementById('hcToast');
-    var toastTimer = null;
-
-    function showToast(msg) {
-        toast.textContent = msg;
-        toast.classList.add('is-on');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+    var params = new URLSearchParams(window.location.search);
+    var requestedTopic = params.get('topic');
+    if (requestedTopic && topicBtns.some(function (button) {
+        return button.getAttribute('data-topic') === requestedTopic;
+    })) {
+        setTopic(requestedTopic);
+        apply();
     }
-
-    document.addEventListener('click', function (e) {
-        var el = e.target.closest('[data-soon]');
-        if (!el) return;
-        e.preventDefault();
-        showToast(el.getAttribute('data-soon') + ' is coming soon.');
-    });
 
     /* ---------- Open / closed badges (Nepal time, UTC+5:45) ---------- */
     function nepalNow() {

@@ -13,4 +13,5 @@ public interface UserService {
     Optional<User> findById(Long id);
     User updateProfile(Long userId, String firstName, String lastName, String phone, MultipartFile profilePic);
     void removeProfilePic(Long userId);
+    boolean changePassword(Long userId, String currentPassword, String newPassword);
 }

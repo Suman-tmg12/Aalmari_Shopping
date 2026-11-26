@@ -82,6 +82,7 @@ public class OrderService {
     private final FlashSaleService flashSaleService;
     private final AddressRepository addressRepository;
     private final PayoutSettlementRepository payoutSettlementRepository;
+    private final CustomerNotificationService notificationService;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public OrderService(OrderRepository orderRepository,
@@ -92,7 +93,8 @@ public class OrderService {
                         UserRepository userRepository,
                         FlashSaleService flashSaleService,
                         AddressRepository addressRepository,
-                        PayoutSettlementRepository payoutSettlementRepository) {
+                        PayoutSettlementRepository payoutSettlementRepository,
+                        CustomerNotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
@@ -102,6 +104,7 @@ public class OrderService {
         this.flashSaleService = flashSaleService;
         this.addressRepository = addressRepository;
         this.payoutSettlementRepository = payoutSettlementRepository;
+        this.notificationService = notificationService;
     }
 
     /** Name and phone to pre-fill the checkout address form (keys: fullName, phone). */
@@ -214,6 +217,11 @@ public class OrderService {
         orderRepository.save(order);
         order.setOrderNumber(String.format("AAL-%06d", order.getId()));
         orderRepository.save(order);
+        notificationService.createForOrder(order, "Order placed",
+                "Your order " + order.getOrderNumber() + " has been placed. We’ll keep you updated as it moves through fulfillment.");
+        if ("COD".equals(order.getPaymentMethod())) {
+            notificationService.createSellerOrderNotifications(order);
+        }
         return order;
     }
 
@@ -335,7 +343,21 @@ public class OrderService {
                 });
             }
         }
-        rollUpOrderStatus(items.get(0).getOrder());
+
+        Order order = items.get(0).getOrder();
+        String previousPaymentStatus = order.getPaymentStatus();
+        rollUpOrderStatus(order);
+        String orderNumber = order.getOrderNumber() != null
+                ? order.getOrderNumber() : "AAL-" + order.getId();
+        String statusLabel = target.charAt(0) + target.substring(1).toLowerCase(Locale.ENGLISH);
+        notificationService.createForOrder(order, "Order " + statusLabel,
+                "The seller updated items in order " + orderNumber + " to " + statusLabel.toLowerCase(Locale.ENGLISH) + ".");
+        if (!previousPaymentStatus.equals(order.getPaymentStatus())
+                && "PAID".equals(order.getPaymentStatus())
+                && "COD".equals(order.getPaymentMethod())) {
+            notificationService.createForOrder(order, "Cash payment received",
+                    "Cash on delivery payment for order " + orderNumber + " was collected when it was delivered.");
+        }
     }
 
     /** Revenue, orders, product earnings and payouts for the last 6 months (delivered lines only). */

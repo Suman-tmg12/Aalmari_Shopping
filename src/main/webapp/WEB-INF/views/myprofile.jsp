@@ -496,7 +496,7 @@
                     <form id="remove-avatar-form" action="${pageContext.request.contextPath}/myprofile/remove-avatar" method="post" style="display:none"></form>
 
                     <!-- 4B. Security -->
-                    <div class="settings-card">
+                    <div class="settings-card" id="security">
                         <div class="settings-head">
                             <div class="section-icon tone-amber"><i data-lucide="shield-alert"></i></div>
                             <div>
@@ -675,6 +675,13 @@
             if (requestedTab === 'orders' || requestedTab === 'wishlist' || requestedTab === 'settings') {
                 switchTab(requestedTab);
             }
+            if (requestedTab === 'orders' && params.get('filter') === 'cancelled') {
+                var cancelledFilter = document.querySelector('[data-count-for="cancelled"]').closest('.filter-btn');
+                if (cancelledFilter) filterOrders('cancelled', cancelledFilter);
+            }
+            if (window.location.hash === '#security' && requestedTab === 'settings') {
+                document.getElementById('security').scrollIntoView();
+            }
         });
 
         // NOTE: In JSP, a dollar sign followed by braces is parsed as EL even inside <script>.
@@ -790,21 +797,49 @@
             }
         }
 
-        function handlePasswordChange(event) {
+        async function handlePasswordChange(event) {
             event.preventDefault();
+            var currentPass = document.getElementById('pass-current').value;
             var newPass = document.getElementById('pass-new').value;
             var confirmPass = document.getElementById('pass-confirm').value;
 
+            if (!currentPass) {
+                showToast('Enter your current password.');
+                return;
+            }
+            if (newPass.length < 8) {
+                showToast('New password must be at least 8 characters.');
+                return;
+            }
             if (newPass !== confirmPass) {
-                showToast('New passwords do not match!');
+                showToast('New passwords do not match.');
                 return;
             }
 
-            showToast('Password updated successfully!');
-            document.getElementById('pass-current').value = '';
-            document.getElementById('pass-new').value = '';
-            document.getElementById('pass-confirm').value = '';
-            checkPasswordStrength('');
+            var submitButton = event.submitter || event.target.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+            try {
+                var response = await fetch('${pageContext.request.contextPath}/myprofile/password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: new URLSearchParams({
+                        currentPassword: currentPass,
+                        newPassword: newPass
+                    })
+                });
+                var result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Could not update password.');
+
+                showToast(result.message || 'Password updated successfully.');
+                document.getElementById('pass-current').value = '';
+                document.getElementById('pass-new').value = '';
+                document.getElementById('pass-confirm').value = '';
+                checkPasswordStrength('');
+            } catch (error) {
+                showToast(error.message || 'Could not update password. Please try again.');
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
         }
 
         function previewImage(event) {

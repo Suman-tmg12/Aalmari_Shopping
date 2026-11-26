@@ -3,7 +3,18 @@
 <%-- Include fragment: no <html>/<head>/<body> here. The including page provides <title> and viewport meta. --%>
 <!-- Google Material Symbols for Icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=14">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=15">
+
+    <div id="marketplace-platform-brand" data-platform-name="<c:out value='${marketplacePlatformName}'/>" hidden></div>
+    <script>
+        (function () {
+            const brand = document.getElementById('marketplace-platform-brand');
+            const platformName = brand && brand.dataset.platformName.trim();
+            if (!platformName) return;
+
+            document.title = platformName;
+        })();
+    </script>
 
     <!-- Top Navigation Bar -->
     <div class="top-nav">
@@ -89,6 +100,27 @@
                     </c:otherwise>
                 </c:choose>
             </div>
+
+            <c:if test="${not empty sessionScope.userId}">
+                <div class="notification-container">
+                    <button type="button" class="icon-link notification-trigger" id="notificationTrigger"
+                            aria-label="Notifications" aria-expanded="false" aria-controls="notificationPanel"
+                            data-api-url="${pageContext.request.contextPath}/api/customer-notifications"
+                            data-orders-url="${pageContext.request.contextPath}/myprofile?tab=orders">
+                        <span class="material-symbols-outlined icon-item" aria-hidden="true">notifications</span>
+                        <span class="cart-badge notification-badge" id="notificationBadge" hidden>0</span>
+                    </button>
+                    <section class="notification-panel" id="notificationPanel" aria-label="Notifications" hidden>
+                        <div class="notification-panel-head">
+                            <h2>Notifications</h2>
+                            <button type="button" class="notification-mark-all" id="notificationMarkAll">Mark all read</button>
+                        </div>
+                        <div class="notification-list" id="notificationList" aria-live="polite">
+                            <p class="notification-state">Loading notifications…</p>
+                        </div>
+                    </section>
+                </div>
+            </c:if>
 
             <!-- Wishlist Icon with Badge -->
             <a href="${pageContext.request.contextPath}/myprofile?tab=wishlist" class="icon-link" id="wishlistLink"
@@ -307,3 +339,4 @@
     <script src="${pageContext.request.contextPath}/css/Cart/Cart.js"></script>
     <script src="${pageContext.request.contextPath}/css/js/Wishlist.js?v=1"></script>
     <script src="${pageContext.request.contextPath}/css/js/searchSuggest.js?v=1"></script>
+    <script src="${pageContext.request.contextPath}/js/customerNotifications.js?v=1"></script>

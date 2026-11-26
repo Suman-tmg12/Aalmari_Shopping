@@ -91,6 +91,19 @@ public class UserServiceImpl implements UserService {
         s3Service.deleteProfilePic(oldKey);
     }
 
+    @Override
+    public boolean changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found. Please sign in again."));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            return false;
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return true;
+    }
+
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
     }

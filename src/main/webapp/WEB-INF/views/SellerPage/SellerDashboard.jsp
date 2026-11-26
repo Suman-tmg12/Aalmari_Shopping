@@ -201,7 +201,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller Hub - Dashboard</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=17">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=18">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>
@@ -351,9 +351,22 @@
                             <span class="approved-badge">
                                 <span class="material-symbols-outlined">check_circle</span> Approved seller
                             </span>
-                            <button type="button" class="icon-btn" aria-label="Notifications">
+                            <button type="button" class="icon-btn" id="sellerNotificationTrigger"
+                                    aria-label="Notifications" aria-expanded="false" aria-controls="sellerNotificationPanel"
+                                    data-api-url="${pageContext.request.contextPath}/api/seller-notifications"
+                                    data-orders-view-url="${pageContext.request.contextPath}/SellerDashboard#orders">
                                 <span class="material-symbols-outlined">notifications</span>
+                                <span class="seller-notification-badge" id="sellerNotificationBadge" hidden>0</span>
                             </button>
+                            <section class="seller-notification-panel" id="sellerNotificationPanel" aria-label="Seller notifications" hidden>
+                                <div class="seller-notification-head">
+                                    <h2>Notifications</h2>
+                                    <button type="button" id="sellerNotificationMarkAll">Mark all read</button>
+                                </div>
+                                <div id="sellerNotificationList" aria-live="polite">
+                                    <p class="seller-notification-state">Loading notifications…</p>
+                                </div>
+                            </section>
                         </div>
                     </div>
 
@@ -938,7 +951,7 @@
 <script>
 var SERVER_STATUS = "<%= h(rawStatus) %>"; // "pending" | "approved" | "rejected"
 </script>
-<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=8"></script>
+<script src="${pageContext.request.contextPath}/css/seller/SellerDashboard.js?v=9"></script>
 <script>
 (function () {
     var changeBtn = document.getElementById('changeBankBtn');

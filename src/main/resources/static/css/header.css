@@ -284,6 +284,141 @@ button, input {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.notification-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.notification-trigger {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.notification-badge[hidden],
+.notification-panel[hidden] {
+    display: none;
+}
+
+.notification-panel {
+    position: absolute;
+    top: calc(100% + 18px);
+    right: -54px;
+    z-index: 1020;
+    width: min(390px, calc(100vw - 24px));
+    overflow: hidden;
+    color: #242424;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+}
+
+.notification-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #eee;
+}
+
+.notification-panel-head h2 {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.notification-mark-all {
+    padding: 6px 0;
+    color: #a64b00;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.notification-mark-all:disabled {
+    color: #999;
+    cursor: default;
+}
+
+.notification-list {
+    max-height: min(65vh, 420px);
+    overflow-y: auto;
+}
+
+.notification-item {
+    display: block;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s var(--ease);
+}
+
+.notification-item:hover,
+.notification-item:focus-visible {
+    background: #fff7f0;
+}
+
+.notification-item.is-unread {
+    background: #fffaf5;
+}
+
+.notification-item-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: #222;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.notification-item-title::before {
+    content: "";
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.notification-item.is-unread .notification-item-title::before {
+    background: #ef7c25;
+}
+
+.notification-item-message {
+    margin: 5px 0 0 17px;
+    color: #555;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.notification-item-time {
+    display: block;
+    margin: 7px 0 0 17px;
+    color: #858585;
+    font-size: 11px;
+}
+
+.notification-state {
+    padding: 22px 18px;
+    color: #666;
+    font-size: 13px;
+    text-align: center;
+}
+
+.notification-retry {
+    margin-left: 5px;
+    color: #a64b00;
+    text-decoration: underline;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
 /* ===== ACCOUNT SECTION & DROPDOWN (DESKTOP) ===== */
 .account-dropdown-container {
     position: relative;
@@ -747,6 +882,11 @@ button, input {
 
     .account-dropdown-menu {
         display: none; /* Uses Mobile Slideout Menu instead on narrow phones */
+    }
+
+    .notification-panel {
+        right: -72px;
+        top: calc(100% + 14px);
     }
 
     /* Search suggestions on phones */
