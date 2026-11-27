@@ -9,6 +9,9 @@ import com.example.aalmari.service.WishlistService;
 import com.example.aalmari.service.impl.S3Service;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,7 +40,11 @@ public class MyProfileController {
     private OrderService orderService;
 
     @GetMapping("/myprofile")
-    public String showMyProfile(HttpSession session, Model model) {
+    public String showMyProfile(HttpSession session, Model model,
+                                @RequestParam(name = "wishlistPage", defaultValue = "1") int wishlistPage,
+                                @RequestParam(name = "orderPage", defaultValue = "1") int orderPage,
+                                @RequestParam(name = "orderStatus", defaultValue = "all") String orderStatus,
+                                @RequestParam(name = "size", defaultValue = "12") int size) {
         Object sessionUserId = session.getAttribute("userId");
         Long userId = sessionUserId instanceof Number n ? n.longValue() : null;
         if (userId == null) {
@@ -61,22 +68,52 @@ public class MyProfileController {
                 }
             });
 
-            // Wishlist tab, sidebar count and overview stat
-            List<WishlistCard> wishlist = wishlistService.cards(userId);
-            model.addAttribute("wishlistItems", wishlist);
-            model.addAttribute("wishlistCount", wishlist.size());
-            model.addAttribute("wishlistSaleCount", wishlist.stream().filter(WishlistCard::isOnSale).count());
+            int pageSize = Math.max(6, Math.min(48, size));
 
-            // Orders: My Orders tab, Recent Purchases, Total Orders stat and sidebar count
-            List<OrderCard> orders = orderService.listForUser(userId);
+            var wishlistItemsPage = wishlistService.pageItems(
+                    userId,
+                    PageRequest.of(Math.max(1, wishlistPage) - 1, pageSize, Sort.by(Sort.Order.desc("id"))));
+            int wishlistTotalPages = wishlistItemsPage.getTotalPages();
+            int wishlistCurrentPage = wishlistTotalPages == 0 ? 1
+                    : Math.min(Math.max(1, wishlistPage), wishlistTotalPages);
+            if (wishlistCurrentPage != Math.max(1, wishlistPage) && wishlistTotalPages > 0) {
+                wishlistItemsPage = wishlistService.pageItems(
+                        userId,
+                        PageRequest.of(wishlistCurrentPage - 1, pageSize, Sort.by(Sort.Order.desc("id"))));
+            }
+
+            List<WishlistCard> wishlist = wishlistService.cards(wishlistItemsPage.getContent());
+            model.addAttribute("wishlistItems", wishlist);
+            model.addAttribute("wishlistCount", wishlistService.count(userId));
+            model.addAttribute("wishlistSaleCount", wishlist.stream().filter(WishlistCard::isOnSale).count());
+            model.addAttribute("wishlistCurrentPage", wishlistCurrentPage);
+            model.addAttribute("wishlistTotalPages", wishlistItemsPage.getTotalPages());
+
+            Page<OrderCard> ordersPage = orderService.listForUser(
+                    userId, orderStatus,
+                    PageRequest.of(Math.max(1, orderPage) - 1, pageSize, Sort.by(Sort.Order.desc("id"))));
+            int orderTotalPages = ordersPage.getTotalPages();
+            int orderCurrentPage = orderTotalPages == 0 ? 1
+                    : Math.min(Math.max(1, orderPage), orderTotalPages);
+            if (orderCurrentPage != Math.max(1, orderPage) && orderTotalPages > 0) {
+                ordersPage = orderService.listForUser(
+                        userId,
+                        orderStatus,
+                        PageRequest.of(orderCurrentPage - 1, pageSize, Sort.by(Sort.Order.desc("id"))));
+            }
+
+            List<OrderCard> orders = ordersPage.getContent();
             long active = orders.stream()
                     .filter(o -> "processing".equals(o.getStatusGroup()) || "shipped".equals(o.getStatusGroup()))
                     .count();
 
             model.addAttribute("orders", orders);
             model.addAttribute("recentOrders", orders.stream().limit(3).toList());
-            model.addAttribute("orderCount", orders.size());
+            model.addAttribute("orderCount", ordersPage.getTotalElements());
             model.addAttribute("activeOrderCount", active);
+            model.addAttribute("orderCurrentPage", orderCurrentPage);
+            model.addAttribute("orderTotalPages", ordersPage.getTotalPages());
+            model.addAttribute("profilePageSize", pageSize);
         }
 
         return "myprofile";

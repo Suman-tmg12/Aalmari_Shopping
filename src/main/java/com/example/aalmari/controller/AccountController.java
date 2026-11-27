@@ -172,4 +172,11 @@ public class AccountController {
         session.invalidate();
         return "redirect:/login";
     }
+
+    // ---------- FAVICON ----------
+
+    @GetMapping("/favicon.ico")
+    public String favicon() {
+        return "redirect:/HomePageImages/logoImages/logo.png";
+    }
 }

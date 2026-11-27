@@ -9,6 +9,8 @@ import com.example.aalmari.repository.WishlistItemRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -149,5 +151,41 @@ public class WishlistService {
     private String toUrl(String path) {
         if (path == null || path.isEmpty()) return null;
         return path.startsWith("http") ? path : S3_BUCKET_URL + path;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WishlistItem> pageItems(Long userId, Pageable pageable) {
+        return wishlistRepo.findPageForUser(userId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WishlistCard> cards(List<WishlistItem> items) {
+        List<WishlistCard> out = new ArrayList<>();
+        for (WishlistItem w : items) {
+            SellerProduct p = w.getProduct();
+            int regular = p.getPrice() == null ? 0 : p.getPrice();
+            int discount = p.getDiscount() == null ? 0 : p.getDiscount();
+            int current = Math.max(0, (int) (regular * (100 - discount) / 100.0));
+            int old = discount > 0 && discount < 100 ? regular : 0;
+            boolean active = Boolean.TRUE.equals(p.getActive())
+                    && productRepo.findPublicActiveById(p.getId()).isPresent();
+            int stock = p.getStock() == null ? 0 : p.getStock();
+
+            WishlistCard c = new WishlistCard();
+            c.setProductId(p.getId());
+            c.setName(p.getName());
+            c.setCategory(p.getCategory());
+            c.setSubCategory(p.getSubCategory() == null ? "" : p.getSubCategory());
+            c.setImageUrl(firstImage(p));
+            c.setSold(p.getSold() == null ? 0 : p.getSold());
+            c.setActive(active);
+            c.setAvailable(active && stock > 0);
+            c.setLink("/product/" + p.getId());
+            c.setPrice(current);
+            c.setOldPrice(old);
+            c.setDiscount(discount);
+            out.add(c);
+        }
+        return out;
     }
 }

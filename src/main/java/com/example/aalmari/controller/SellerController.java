@@ -14,6 +14,9 @@ import com.example.aalmari.service.FlashSaleService;
 import com.example.aalmari.service.impl.S3Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -172,7 +175,12 @@ public class SellerController {
     }
 
     @GetMapping("/SellerDashboard")
-    public String showSellerDashboard(HttpSession session, Model model) {
+    public String showSellerDashboard(HttpSession session, Model model,
+                                      @RequestParam(value = "page", defaultValue = "1") int page,
+                                      @RequestParam(value = "size", defaultValue = "10") int size,
+                                      @RequestParam(value = "q", defaultValue = "") String q,
+                                      @RequestParam(value = "filter", defaultValue = "all") String filter,
+                                      @RequestParam(value = "sort", required = false) String sort) {
         Object userIdAttr = session.getAttribute("userId");
         if (userIdAttr == null) {
             return "redirect:/login";
@@ -215,41 +223,71 @@ public class SellerController {
         model.addAttribute("bankName", doc.getBankName());
         model.addAttribute("accountIbanMasked", doc.getAccountIbanMasked());
 
-        // --- Filter products by user and convert image paths to URLs ---
-        List<SellerProduct> allProducts = sellerProductRepository.findAll();
-        List<SellerProduct> myProducts = new ArrayList<>();
+        // --- Seller products: one server-side page, with search, filters and sorting ---
+        int requestedPage = Math.max(1, page);
+        int pageSize = Math.max(5, Math.min(50, size));
+        String search = q == null ? "" : q.trim().toLowerCase(java.util.Locale.ROOT);
+        if (search.length() > 100) search = search.substring(0, 100);
+        String statusFilter = switch (filter == null ? "all" : filter.toLowerCase(java.util.Locale.ROOT)) {
+            case "active", "inactive", "low", "out" -> filter.toLowerCase(java.util.Locale.ROOT);
+            default -> "all";
+        };
 
-        for (SellerProduct p : allProducts) {
-            if (p.getSeller() != null && p.getSeller().getId().equals(userId)) {
-                // Convert relative S3 paths to full URLs for product images
-                if (p.getInfoImageUrl() != null && !p.getInfoImageUrl().isEmpty()) {
-                    if (!p.getInfoImageUrl().startsWith("http")) {
-                        p.setInfoImageUrl(S3_BUCKET_URL + p.getInfoImageUrl());
-                    }
-                }
+        Sort sortSpec;
+        if ("name".equalsIgnoreCase(sort)) {
+            sortSpec = Sort.by(Sort.Order.asc("name"), Sort.Order.desc("id"));
+        } else if ("price-asc".equalsIgnoreCase(sort)) {
+            sortSpec = Sort.by(Sort.Order.asc("price"), Sort.Order.desc("id"));
+        } else if ("price-desc".equalsIgnoreCase(sort)) {
+            sortSpec = Sort.by(Sort.Order.desc("price"), Sort.Order.desc("id"));
+        } else if ("stock".equalsIgnoreCase(sort)) {
+            sortSpec = Sort.by(Sort.Order.asc("stock"), Sort.Order.desc("id"));
+        } else if ("sold".equalsIgnoreCase(sort)) {
+            sortSpec = Sort.by(Sort.Order.desc("sold"), Sort.Order.desc("id"));
+        } else {
+            sortSpec = Sort.by(Sort.Order.desc("id"));
+        }
 
-                if (p.getImageUrlsJson() != null && !p.getImageUrlsJson().isEmpty()) {
-                    try {
-                        ObjectMapper mapper = new ObjectMapper();
-                        List<String> urls = mapper.readValue(p.getImageUrlsJson(), List.class);
-                        List<String> fullUrls = new ArrayList<>();
-                        for (String url : urls) {
-                            if (url != null && !url.isEmpty() && !url.startsWith("http")) {
-                                fullUrls.add(S3_BUCKET_URL + url);
-                            } else {
-                                fullUrls.add(url);
-                            }
-                        }
-                        p.setImageUrlsJson(mapper.writeValueAsString(fullUrls));
-                    } catch (Exception e) {
-                        e.printStackTrace();
+        Page<SellerProduct> productsPage = sellerProductRepository.pageBySellerFiltered(
+                userId, search, statusFilter,
+                PageRequest.of(requestedPage - 1, pageSize, sortSpec));
+        int totalPages = productsPage.getTotalPages();
+        int currentPage = totalPages == 0 ? 1 : Math.min(requestedPage, totalPages);
+        if (currentPage != requestedPage && totalPages > 0) {
+            productsPage = sellerProductRepository.pageBySellerFiltered(
+                    userId, search, statusFilter,
+                    PageRequest.of(currentPage - 1, pageSize, sortSpec));
+        }
+
+        List<SellerProduct> myProducts = new ArrayList<>(productsPage.getContent());
+        for (SellerProduct p : myProducts) {
+            if (p.getInfoImageUrl() != null && !p.getInfoImageUrl().isEmpty()
+                    && !p.getInfoImageUrl().startsWith("http")) {
+                p.setInfoImageUrl(S3_BUCKET_URL + p.getInfoImageUrl());
+            }
+            if (p.getImageUrlsJson() != null && !p.getImageUrlsJson().isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    List<String> urls = mapper.readValue(p.getImageUrlsJson(), List.class);
+                    List<String> fullUrls = new ArrayList<>();
+                    for (String url : urls) {
+                        fullUrls.add(url != null && url.startsWith("http") ? url : S3_BUCKET_URL + url);
                     }
+                    p.setImageUrlsJson(mapper.writeValueAsString(fullUrls));
+                } catch (Exception e) {
+                    logger.warn("Could not convert product image URLs", e);
                 }
-                myProducts.add(p);
             }
         }
 
         model.addAttribute("products", myProducts);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", productsPage.getTotalPages());
+        model.addAttribute("totalItems", productsPage.getTotalElements());
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("productQuery", q == null ? "" : q);
+        model.addAttribute("productFilter", statusFilter);
+        model.addAttribute("productSort", sort == null ? "newest" : sort);
 
         // --- Flash sales for the Flash Sale tab (JSON read by SellerDashboard.js) ---
         model.addAttribute("flashSalesJson", flashSaleService.sellerJson(userId));

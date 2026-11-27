@@ -526,7 +526,7 @@
                 <div class="toolbar">
                     <div class="search-box">
                         <span class="material-symbols-outlined">search</span>
-                        <input type="text" id="productSearch" placeholder="Search products...">
+                        <input type="text" id="productSearch" placeholder="Search products..." value="<%= h(nz((String) request.getAttribute("productQuery"))) %>">
                     </div>
                     <button class="btn-filter" type="button">
                         <span class="material-symbols-outlined">filter_alt</span> Filter
@@ -585,7 +585,11 @@
                         </tbody>
                     </table>
 
-                    <div class="pagination" id="productsPagination" style="display:none;"></div>
+                    <div class="pagination" id="productsPagination"
+                         data-page-size="<%= request.getAttribute("pageSize") %>"
+                         data-current="<%= request.getAttribute("currentPage") %>"
+                         data-pages="<%= request.getAttribute("totalPages") %>"
+                         data-total="<%= request.getAttribute("totalItems") %>"></div>
                 </div>
             </div>
             <!-- ============ END VIEW: PRODUCTS ============ -->

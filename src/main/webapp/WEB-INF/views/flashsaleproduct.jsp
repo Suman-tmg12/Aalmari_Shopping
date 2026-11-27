@@ -349,85 +349,38 @@
            }, true);
        })();
 
-        // ===== Related deals: pagination, 8 per page =====
+        // ===== Related deals: server-side pagination =====
         (function () {
-            var PER_PAGE = 8;
-            var HEADER_OFFSET = 100;
             var grid = document.getElementById('flashRelatedGrid');
             var nav  = document.getElementById('flashRelatedPagination');
             if (!grid || !nav) return;
 
-            var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
-            var total = Math.ceil(cards.length / PER_PAGE);
-            var current = 1;
+            var current = parseInt('${relatedCurrentPage}', 10) || 1;
+            var total = parseInt('${relatedTotalPages}', 10) || 0;
             if (total <= 1) { nav.style.display = 'none'; return; }
 
-            function getPageFromUrl() {
-                var p = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
-                return (p >= 1 && p <= total) ? p : 1;
-            }
-            function pageItems() {
-                if (total <= 7) return Array.from({ length: total }, function (_, i) { return i + 1; });
-                var items = [1];
-                var start = Math.max(2, current - 1), end = Math.min(total - 1, current + 1);
-                if (start > 2) items.push('...');
-                for (var i = start; i <= end; i++) items.push(i);
-                if (end < total - 1) items.push('...');
-                items.push(total);
-                return items;
-            }
-            function makeItem(label, page, opts) {
-                opts = opts || {};
-                var s = document.createElement('span');
-                s.innerHTML = label;
-                if (opts.active) { s.className = 'active'; s.setAttribute('aria-current', 'page'); }
-                else if (opts.disabled) { s.className = 'disabled'; s.setAttribute('aria-disabled', 'true'); }
+            function makeItem(label, page, active, disabled) {
+                var el = document.createElement(disabled ? 'span' : 'a');
+                el.innerHTML = label;
+                if (disabled) el.className = 'disabled';
+                else if (active) { el.className = 'active'; el.setAttribute('aria-current', 'page'); }
                 else {
-                    s.setAttribute('role', 'button');
-                    s.tabIndex = 0;
-                    s.addEventListener('click', function () { goTo(page, true); });
-                    s.addEventListener('keydown', function (e) {
-                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(page, true); }
-                    });
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('page', page);
+                    u.searchParams.set('size', '${relatedPageSize}');
+                    el.href = u.pathname + u.search;
                 }
-                return s;
+                return el;
             }
-            function renderNav() {
-                nav.innerHTML = '';
-                nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
-                pageItems().forEach(function (item) {
-                    if (item === '...') {
-                        var dots = document.createElement('span');
-                        dots.className = 'pg-dots';
-                        dots.textContent = '...';
-                        nav.appendChild(dots);
-                    } else {
-                        nav.appendChild(makeItem(item, item, { active: item === current }));
-                    }
-                });
-                nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
-            }
-            function showPage(page) {
-                current = page;
-                var start = (page - 1) * PER_PAGE, end = start + PER_PAGE;
-                cards.forEach(function (card, i) { card.style.display = (i >= start && i < end) ? '' : 'none'; });
-                renderNav();
-            }
-            function goTo(page, userClicked) {
-                if (page < 1 || page > total) return;
-                showPage(page);
-                if (userClicked) {
-                    var url = new URL(window.location);
-                    url.searchParams.set('page', page);
-                    history.pushState({ page: page }, '', url);
-                    var top = grid.getBoundingClientRect().top;
-                    if (top < HEADER_OFFSET) {
-                        window.scrollTo({ top: top + window.pageYOffset - HEADER_OFFSET, behavior: 'smooth' });
-                    }
-                }
-            }
-            window.addEventListener('popstate', function () { showPage(getPageFromUrl()); });
-            showPage(getPageFromUrl());
+
+            nav.appendChild(makeItem('&lt; Previous', current - 1, false, current === 1));
+            var start = Math.max(1, current - 2), end = Math.min(total, current + 2);
+            if (start > 1) nav.appendChild(makeItem('1', 1, current === 1, false));
+            if (start > 2) { var dots = document.createElement('span'); dots.className = 'pg-dots'; dots.textContent = '...'; nav.appendChild(dots); }
+            for (var p = start; p <= end; p++) nav.appendChild(makeItem(String(p), p, p === current, false));
+            if (end < total - 1) { var dots2 = document.createElement('span'); dots2.className = 'pg-dots'; dots2.textContent = '...'; nav.appendChild(dots2); }
+            if (end < total) nav.appendChild(makeItem(String(total), total, current === total, false));
+            nav.appendChild(makeItem('Next &gt;', current + 1, false, current === total));
         })();
 
         // ===== VIEW MORE / VIEW LESS =====

@@ -337,6 +337,7 @@
                         <a href="${pageContext.request.contextPath}/" class="btn btn-primary" style="display:inline-flex;margin-top:12px;">Start shopping</a>
                     </div>
                     <p id="ordersFilterEmpty" class="order-empty" style="display:none;">No orders in this group.</p>
+                    <div class="pagination" id="orderPagination"></div>
                 </div>
 
                 <!-- ===== 3. WISHLIST (real data, same .ar-card design as the product grids) ===== -->
@@ -406,7 +407,7 @@
                         </div>
                     </div>
 
-                    <!-- Pagination (built by JavaScript, matching the product grid) -->
+                    <!-- Wishlist is already paginated server-side; server controls are rendered below. -->
                     <div class="pagination wishlist-pagination" id="wishlistPagination"></div>
                 </div>
 
@@ -728,17 +729,11 @@
         function filterOrders(group, btnElement) {
             document.querySelectorAll('.filter-btn').forEach(function (btn) { btn.classList.remove('active'); });
             btnElement.classList.add('active');
-
-            var shown = 0;
-            document.querySelectorAll('#orderList .order-card').forEach(function (card) {
-                var match = group === 'all' || card.dataset.group === group;
-                card.style.display = match ? 'block' : 'none';
-                if (match) shown++;
-            });
-
-            var total = document.querySelectorAll('#orderList .order-card').length;
-            var filterEmpty = document.getElementById('ordersFilterEmpty');
-            if (filterEmpty) filterEmpty.style.display = (total > 0 && shown === 0) ? '' : 'none';
+            var u = new URL(window.location.href);
+            u.searchParams.set('orderStatus', group);
+            u.searchParams.set('orderPage', '1');
+            u.searchParams.set('tab', 'orders');
+            window.location.assign(u.pathname + u.search + '#orders');
         }
 
         function refreshOrderFilterCounts() {
@@ -923,100 +918,69 @@
             }, 3000);
         }
 
-        // ===== Wishlist pagination (matches product.jsp) =====
+        // ===== Wishlist server pagination =====
         (function () {
-            var PER_PAGE = 6;
-            var grid = document.getElementById('wishlistGrid');
             var nav = document.getElementById('wishlistPagination');
-            if (!grid || !nav) return;
+            if (!nav) return;
+            var current = parseInt('${wishlistCurrentPage}', 10) || 1;
+            var total = parseInt('${wishlistTotalPages}', 10) || 0;
+            if (total <= 1) { nav.style.display = 'none'; return; }
 
-            var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
-            var total = Math.ceil(cards.length / PER_PAGE);
-            var current = 1;
-
-            if (total <= 1) {
-                cards.forEach(function (card) { card.style.display = ''; });
-                nav.style.display = 'none';
-                return;
-            }
-
-            function pageItems() {
-                if (total <= 7) return Array.from({ length: total }, function (_, i) { return i + 1; });
-                var items = [1];
-                var start = Math.max(2, current - 1);
-                var end = Math.min(total - 1, current + 1);
-                if (start > 2) items.push('...');
-                for (var i = start; i <= end; i++) items.push(i);
-                if (end < total - 1) items.push('...');
-                items.push(total);
-                return items;
-            }
-
-            function makeItem(label, page, options) {
-                options = options || {};
-                var item = document.createElement('span');
-                item.innerHTML = label;
-                if (options.active) {
-                    item.className = 'active';
-                    item.setAttribute('aria-current', 'page');
-                } else if (options.disabled) {
-                    item.className = 'disabled';
-                    item.setAttribute('aria-disabled', 'true');
-                } else {
-                    item.setAttribute('role', 'button');
-                    item.tabIndex = 0;
-                    item.addEventListener('click', function () { showPage(page); });
-                    item.addEventListener('keydown', function (event) {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            showPage(page);
-                        }
-                    });
+            function makeItem(label, page, active, disabled) {
+                var el = document.createElement(disabled ? 'span' : 'a');
+                el.innerHTML = label;
+                if (disabled) el.className = 'disabled';
+                else if (active) { el.className = 'active'; el.setAttribute('aria-current', 'page'); }
+                else {
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('wishlistPage', page);
+                    u.hash = 'wishlist';
+                    el.href = u.pathname + u.search + u.hash;
                 }
-                return item;
+                return el;
             }
 
-            function renderNav() {
-                nav.innerHTML = '';
-                nav.appendChild(makeItem('&lt; Previous', current - 1, { disabled: current === 1 }));
-                pageItems().forEach(function (item) {
-                    if (item === '...') {
-                        var dots = document.createElement('span');
-                        dots.className = 'pg-dots';
-                        dots.textContent = '...';
-                        nav.appendChild(dots);
-                    } else {
-                        nav.appendChild(makeItem(item, item, { active: item === current }));
-                    }
-                });
-                nav.appendChild(makeItem('Next &gt;', current + 1, { disabled: current === total }));
-            }
+            nav.appendChild(makeItem('&lt; Previous', current - 1, false, current === 1));
+            var start = Math.max(1, current - 2), end = Math.min(total, current + 2);
+            if (start > 1) nav.appendChild(makeItem('1', 1, current === 1, false));
+            if (start > 2) { var dots = document.createElement('span'); dots.className = 'pg-dots'; dots.textContent = '...'; nav.appendChild(dots); }
+            for (var p = start; p <= end; p++) nav.appendChild(makeItem(String(p), p, p === current, false));
+            if (end < total - 1) { var dots2 = document.createElement('span'); dots2.className = 'pg-dots'; dots2.textContent = '...'; nav.appendChild(dots2); }
+            if (end < total) nav.appendChild(makeItem(String(total), total, current === total, false));
+            nav.appendChild(makeItem('Next &gt;', current + 1, false, current === total));
+        })();
 
-            function showPage(page) {
-                if (page < 1 || page > total) return;
-                current = page;
-                var start = (page - 1) * PER_PAGE;
-                var end = start + PER_PAGE;
-                cards.forEach(function (card, index) {
-                    card.style.display = (index >= start && index < end) ? '' : 'none';
-                });
-                renderNav();
-                var top = grid.getBoundingClientRect().top;
-                if (top < 100) window.scrollTo({ top: top + window.pageYOffset - 100, behavior: 'smooth' });
-            }
+        // ===== Orders: pagination =====
+        (function () {
+            var nav = document.getElementById('orderPagination');
+            if (!nav) return;
+            var current = parseInt('${orderCurrentPage}', 10) || 1;
+            var total = parseInt('${orderTotalPages}', 10) || 0;
+            if (total <= 1) { nav.style.display = 'none'; return; }
 
-            window.updateWishlistPagination = function () {
-                cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
-                total = Math.ceil(cards.length / PER_PAGE);
-                if (total <= 1) {
-                    cards.forEach(function (card) { card.style.display = ''; });
-                    nav.style.display = 'none';
-                    return;
+            function makeItem(label, page, active, disabled) {
+                var el = document.createElement(disabled ? 'span' : 'a');
+                el.innerHTML = label;
+                if (disabled) el.className = 'disabled';
+                else if (active) { el.className = 'active'; el.setAttribute('aria-current', 'page'); }
+                else {
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('orderPage', page);
+                    u.searchParams.set('tab', 'orders');
+                    u.searchParams.set('size', '${profilePageSize}');
+                    el.href = u.pathname + u.search + '#orders';
                 }
-                if (current > total) current = total;
-                showPage(current);
-            };
-            showPage(1);
+                return el;
+            }
+
+            nav.appendChild(makeItem('&lt; Previous', current - 1, false, current === 1));
+            var start = Math.max(1, current - 2), end = Math.min(total, current + 2);
+            if (start > 1) nav.appendChild(makeItem('1', 1, false, false));
+            if (start > 2) { var dots = document.createElement('span'); dots.className = 'pg-dots'; dots.textContent = '...'; nav.appendChild(dots); }
+            for (var p = start; p <= end; p++) nav.appendChild(makeItem(String(p), p, p === current, false));
+            if (end < total - 1) { var dots2 = document.createElement('span'); dots2.className = 'pg-dots'; dots2.textContent = '...'; nav.appendChild(dots2); }
+            if (end < total) nav.appendChild(makeItem(String(total), total, false, false));
+            nav.appendChild(makeItem('Next &gt;', current + 1, false, current === total));
         })();
     </script>
 </body>

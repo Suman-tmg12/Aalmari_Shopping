@@ -1,6 +1,8 @@
 package com.example.aalmari.repository;
 
 import com.example.aalmari.model.WishlistItem;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -26,4 +28,8 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     @Modifying
     @Query("delete from WishlistItem w where w.user.id = :uid and w.product.id = :pid")
     int deleteByUserAndProduct(@Param("uid") Long userId, @Param("pid") Long productId);
+
+    /** Paginated wishlist for a user. */
+    @Query("select w from WishlistItem w join fetch w.product p where w.user.id = :uid order by w.id desc")
+    Page<WishlistItem> findPageForUser(@Param("uid") Long userId, Pageable pageable);
 }

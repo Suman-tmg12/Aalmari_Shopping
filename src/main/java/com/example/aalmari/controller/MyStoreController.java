@@ -9,12 +9,16 @@ import com.example.aalmari.repository.SellerProductRepository;
 import com.example.aalmari.repository.StoreFollowRepository;
 import com.example.aalmari.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 import java.util.Optional;
@@ -57,11 +61,21 @@ public class MyStoreController {
         model.addAttribute("storeReviewCount", 0L);
         model.addAttribute("followerCount", 0L);
         model.addAttribute("isFollowing", false);
+        model.addAttribute("currentPage", 1);
+        model.addAttribute("totalPages", 0);
+        model.addAttribute("totalProducts", 0L);
+        model.addAttribute("pageSize", 12);
+        model.addAttribute("sort", "best");
         return "mystore";
     }
 
     @GetMapping("/store/{sellerId}")
-    public String showStore(@PathVariable Long sellerId, Model model, HttpSession session) {
+    public String showStore(@PathVariable Long sellerId,
+                            @RequestParam(name = "page", defaultValue = "1") int page,
+                            @RequestParam(name = "size", defaultValue = "12") int size,
+                            @RequestParam(name = "sort", defaultValue = "best") String sort,
+                            Model model, HttpSession session) {
+
         Optional<SellerDocumentation> storeOpt = storeRepository.findByUserId(sellerId);
         if (storeOpt.isEmpty()) return "redirect:/";
 
@@ -77,16 +91,38 @@ public class MyStoreController {
             isFollowing = followRepository.findByFollower_IdAndSeller_Id(number.longValue(), sellerId).isPresent();
         }
 
+        int requestedPage = Math.max(1, page);
+        int pageSize = Math.max(6, Math.min(48, size));
+        Sort sortSpec = switch (sort) {
+            case "low-high" -> Sort.by(Sort.Order.asc("price"), Sort.Order.desc("id"));
+            case "high-low" -> Sort.by(Sort.Order.desc("price"), Sort.Order.desc("id"));
+            case "popular" -> Sort.by(Sort.Order.desc("sold"), Sort.Order.desc("id"));
+            default -> Sort.by(Sort.Order.desc("id"));
+        };
+        Page<com.example.aalmari.model.SellerProduct> productsPage = productRepository.pageStoreProducts(
+                sellerId, PageRequest.of(requestedPage - 1, pageSize, sortSpec));
+        int totalPages = productsPage.getTotalPages();
+        int currentPage = totalPages == 0 ? 1 : Math.min(requestedPage, totalPages);
+        if (currentPage != requestedPage && totalPages > 0) {
+            productsPage = productRepository.pageStoreProducts(
+                    sellerId, PageRequest.of(currentPage - 1, pageSize, sortSpec));
+        }
+
         model.addAttribute("store", store);
         model.addAttribute("logoUrl", toUrl(store.getStoreLogoPath()));
         model.addAttribute("bannerUrl", toUrl(store.getStoreBannerPath()));
-        model.addAttribute("sellerProducts", productRepository.findBySeller_IdAndActiveTrue(sellerId));
+        model.addAttribute("sellerProducts", productsPage.getContent());
         model.addAttribute("storeReviews", reviewRepository.findForSellerNewest(sellerId));
         model.addAttribute("storeRating", reviewRepository.averageForSeller(sellerId));
         model.addAttribute("storeReviewCount", reviewRepository.countForSeller(sellerId));
         model.addAttribute("followerCount", followerCount);
         model.addAttribute("isFollowing", isFollowing);
         model.addAttribute("sellerId", sellerId);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", productsPage.getTotalPages());
+        model.addAttribute("totalProducts", productsPage.getTotalElements());
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("sort", sort);
         return "mystore";
     }
 

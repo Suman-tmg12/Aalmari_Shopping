@@ -264,8 +264,11 @@
         let revenue = num($('.stat-value', dashCards[0]).textContent);
         let orderCount = num($('.stat-value', dashCards[1]).textContent);
 
-        const PAGE_SIZE = 5;
-        const ui = { pq: '', pf: 'all', sort: null, dir: 1, oq: '', of: 'all', mq: '', page: 1 };
+        const PAGE_SIZE = Number(document.querySelector('#productsPagination')?.dataset.pageSize || 10);
+        const SERVER_TOTAL = Number(document.querySelector('#productsPagination')?.dataset.total || 0);
+        const SERVER_PAGE = Number(document.querySelector('#productsPagination')?.dataset.current || 1);
+        const SERVER_PAGES = Number(document.querySelector('#productsPagination')?.dataset.pages || 1);
+        const ui = { pq: '', pf: 'all', sort: null, dir: 1, oq: '', of: 'all', mq: '', page: SERVER_PAGE };
         const FILTERS = { all: 'All products', active: 'Active', inactive: 'Inactive', low: 'Low stock (≤5)', out: 'Out of stock' };
 
         /* ============ Alerts (also feed the bell) ============ */
@@ -425,39 +428,30 @@
         function renderPager(total, pages, start, shown) {
             const box = $('#productsPagination');
             if (!box) return;
-            if (total <= PAGE_SIZE) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const serverPages = Number(box.dataset.pages || pages);
+            const serverTotal = Number(box.dataset.total || total);
+            if (serverPages <= 1) { box.style.display = 'none'; box.innerHTML = ''; return; }
             box.style.display = 'flex';
             box.innerHTML =
-                '<div class="pg-info">Showing <strong>' + (start + 1) + '–' + (start + shown) + '</strong> of <strong>' + total + '</strong> products</div>' +
+                '<div class="pg-info">Showing <strong>' + (start + 1) + '–' + (start + shown) + '</strong> of <strong>' + serverTotal + '</strong> products</div>' +
                 '<div class="pg-controls">' +
                 '<button type="button" class="pg-btn pg-nav" data-page="' + (ui.page - 1) + '"' + (ui.page === 1 ? ' disabled' : '') + ' aria-label="Previous page"><span class="material-symbols-outlined">chevron_left</span></button>' +
-                pageNumbers(ui.page, pages).map(n => n === '…'
+                pageNumbers(ui.page, serverPages).map(n => n === '…'
                     ? '<span class="pg-dots">…</span>'
                     : '<button type="button" class="pg-btn' + (n === ui.page ? ' active' : '') + '" data-page="' + n + '"' + (n === ui.page ? ' aria-current="page"' : '') + '>' + n + '</button>').join('') +
-                '<button type="button" class="pg-btn pg-nav" data-page="' + (ui.page + 1) + '"' + (ui.page === pages ? ' disabled' : '') + ' aria-label="Next page"><span class="material-symbols-outlined">chevron_right</span></button>' +
+                '<button type="button" class="pg-btn pg-nav" data-page="' + (ui.page + 1) + '"' + (ui.page === serverPages ? ' disabled' : '') + ' aria-label="Next page"><span class="material-symbols-outlined">chevron_right</span></button>' +
                 '</div>';
         }
 
         /* ============ Renderers ============ */
         function renderProducts() {
-            const q = ui.pq.toLowerCase();
-            let list = P.filter(function (p) {
-                const f = ui.pf;
-                const okF = f === 'all' || (f === 'active' && p.active) || (f === 'inactive' && !p.active) ||
-                    (f === 'low' && p.stock > 0 && p.stock <= 5) || (f === 'out' && p.stock === 0);
-                const hay = (p.name + ' ' + p.sku + ' ' + p.cat + ' ' + (p.sub || '') + ' ' + Object.values(p.attrs || {}).join(' ')).toLowerCase();
-                return okF && (!q || hay.includes(q));
-            });
-            if (ui.sort) list.sort(function (a, b) {
-                const x = a[ui.sort], y = b[ui.sort];
-                return (typeof x === 'string' ? x.localeCompare(y) : x - y) * ui.dir;
-            });
+            const list = P;
 
-            const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+            const totalPages = SERVER_PAGES;
             if (ui.page > totalPages) ui.page = totalPages;
             if (ui.page < 1) ui.page = 1;
             const start = (ui.page - 1) * PAGE_SIZE;
-            const pageList = list.slice(start, start + PAGE_SIZE);
+            const pageList = list;
 
             $('#productsTable tbody').innerHTML = pageList.map(function (p) {
                 const attrTxt = Object.keys(p.attrs || {}).map(k => p.attrs[k]).join(' · ');
@@ -474,8 +468,7 @@
                     '<td><button type="button" class="pill ' + (p.active ? 'pill-active' : 'pill-inactive') + '" data-act="toggle" title="Click to change status">' + (p.active ? 'Active' : 'Inactive') + '</button></td>' +
                     '<td class="actions"><span class="material-symbols-outlined" data-act="edit" title="Edit">edit</span><span class="material-symbols-outlined" data-act="del" title="Delete">delete</span></td></tr>';
             }).join('') || '<tr><td colspan="7" class="empty-note">No products match your search or filter.</td></tr>';
-            $('#view-products .page-subtitle').textContent = P.length + ' listing' + (P.length === 1 ? '' : 's') +
-                (list.length !== P.length ? ' · ' + list.length + ' shown' : '');
+            $('#view-products .page-subtitle').textContent = SERVER_TOTAL + ' listing' + (SERVER_TOTAL === 1 ? '' : 's');
             $$('#productsTable thead th').forEach(function (th, i) {
                 const k = ['name', 'cat', 'price', 'stock', 'sold'][i]; if (!k) return;
                 th.dataset.key = k; th.classList.add('sortable');
@@ -587,23 +580,51 @@
 
         /* ============ Products ============ */
         const pTable = $('#productsTable');
-        $('#productSearch').addEventListener('input', function () { ui.pq = this.value; ui.page = 1; renderProducts(); });
+        let productSearchTimer;
+        $('#productSearch').addEventListener('input', function () {
+            clearTimeout(productSearchTimer);
+            const query = this.value;
+            productSearchTimer = setTimeout(function () {
+                const url = new URL(window.location.href);
+                url.searchParams.set('page', '1');
+                if (query) url.searchParams.set('q', query); else url.searchParams.delete('q');
+                window.location.assign(url.toString());
+            }, 350);
+        });
         $('#view-products .btn-filter').addEventListener('click', function (e) {
             const p = popover(this, Object.keys(FILTERS).map(k => '<button type="button" data-f="' + k + '" class="' + (ui.pf === k ? 'on' : '') + '">' + FILTERS[k] + '</button>').join(''));
-            if (p) p.onclick = ev => { const b = ev.target.closest('[data-f]'); if (b) { ui.pf = b.dataset.f; ui.page = 1; closePop(); renderProducts(); } };
+            if (p) p.onclick = ev => {
+                const b = ev.target.closest('[data-f]');
+                if (!b) return;
+                const url = new URL(window.location.href);
+                url.searchParams.set('page', '1');
+                if (b.dataset.f === 'all') url.searchParams.delete('filter');
+                else url.searchParams.set('filter', b.dataset.f);
+                window.location.assign(url.toString());
+            };
         });
         $('#view-products .btn-primary').addEventListener('click', () => productForm(null));
         $('#productsTable thead').addEventListener('click', function (e) {
             const th = e.target.closest('th[data-key]'); if (!th) return;
-            ui.dir = ui.sort === th.dataset.key ? -ui.dir : 1; ui.sort = th.dataset.key; ui.page = 1; renderProducts();
+            const sortMap = { name: 'name', cat: 'name', price: 'price-asc', stock: 'stock', sold: 'sold' };
+            let sort = sortMap[th.dataset.key] || 'newest';
+            if (th.dataset.key === 'price') {
+                const urlCheck = new URL(window.location.href);
+                sort = urlCheck.searchParams.get('sort') === 'price-asc' ? 'price-desc' : 'price-asc';
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', '1');
+            url.searchParams.set('sort', sort);
+            window.location.assign(url.toString());
         });
 
         const pager = $('#productsPagination');
         if (pager) pager.addEventListener('click', function (e) {
             const b = e.target.closest('[data-page]');
             if (!b || b.disabled) return;
-            ui.page = Number(b.dataset.page);
-            renderProducts();
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', b.dataset.page);
+            window.location.assign(url.toString());
             const tb = $('#view-products .toolbar');
             if (tb) tb.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });

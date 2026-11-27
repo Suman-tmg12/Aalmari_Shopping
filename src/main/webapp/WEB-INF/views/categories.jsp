@@ -40,8 +40,18 @@
     List<com.example.aalmari.model.SellerProduct> products =
             (List<com.example.aalmari.model.SellerProduct>) request.getAttribute("sellerProducts");
 
+    Integer currentPageAttr = (Integer) request.getAttribute("currentPage");
+    Integer totalPagesAttr = (Integer) request.getAttribute("totalPages");
+    Long totalItemsAttr = (Long) request.getAttribute("totalItems");
+    String sortParam = (String) request.getAttribute("sort");
+    int currentPage = currentPageAttr == null ? 1 : currentPageAttr;
+    int totalPages = totalPagesAttr == null ? 0 : totalPagesAttr;
+    long totalItems = totalItemsAttr == null ? 0L : totalItemsAttr;
+    if (sortParam == null) sortParam = "best";
+
     String pageTitle = escapeHtml(category);
-    String pageSubtitle = "Showing results for " + pageTitle + (sub != null ? " › " + escapeHtml(sub) : "");
+    String pageSubtitle = "Showing " + totalItems + " result" + (totalItems == 1 ? "" : "s")
+            + " for " + pageTitle + (sub != null ? " › " + escapeHtml(sub) : "");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -90,10 +100,10 @@
                     <div class="sort-row">
                         <label class="sort-label" for="sortBy">Sort By:</label>
                         <select id="sortBy" class="sort-select" aria-label="Sort products">
-                            <option value="best">Best Match</option>
-                            <option value="low-high">Price: Low to High</option>
-                            <option value="high-low">Price: High to Low</option>
-                            <option value="popular">Most Popular</option>
+                            <option value="best"<%= sortParam.equals("best") ? " selected" : "" %>>Best Match</option>
+                            <option value="low-high"<%= sortParam.equals("low-high") ? " selected" : "" %>>Price: Low to High</option>
+                            <option value="high-low"<%= sortParam.equals("high-low") ? " selected" : "" %>>Price: High to Low</option>
+                            <option value="popular"<%= sortParam.equals("popular") ? " selected" : "" %>>Most Popular</option>
                         </select>
                     </div>
                 </div>
@@ -121,7 +131,7 @@
                                  data-index="<%= idx %>"
                                  data-price="<%= price %>"
                                  data-sold="<%= p.getSold() %>"
-                                 data-name="<%= escapeHtml(p.getName()) %>"<%= idx >= 8 ? " style=\"display:none\"" : "" %>>
+                                 data-name="<%= escapeHtml(p.getName()) %>">
                             <button type="button" class="ar-wish" aria-label="Save to wishlist">
                                 <span class="material-symbols-outlined ar-ic-sm">favorite</span>
                             </button>
@@ -164,8 +174,32 @@
                     </div>
                 </div>
 
-                <!-- Pagination (built by JavaScript) -->
-                <div class="pagination" id="pagination"></div>
+                <!-- Server-side pagination -->
+                <% if (totalPages > 1) { %>
+                <nav class="pagination" id="pagination" aria-label="Pagination">
+                    <% if (currentPage > 1) { %>
+                        <a href="<%= request.getContextPath() %>/category?name=<%= java.net.URLEncoder.encode(category, "UTF-8") %><%= sub != null ? "&sub=" + java.net.URLEncoder.encode(sub, "UTF-8") : "" %>&sort=<%= sortParam %>&page=<%= currentPage - 1 %>">&lt; Previous</a>
+                    <% } else { %>
+                        <span class="disabled" aria-disabled="true">&lt; Previous</span>
+                    <% } %>
+                    <%
+                        int pageStart = Math.max(1, currentPage - 2);
+                        int pageEnd = Math.min(totalPages, currentPage + 2);
+                        if (pageStart > 1) {
+                    %><a href="<%= request.getContextPath() %>/category?name=<%= java.net.URLEncoder.encode(category, "UTF-8") %><%= sub != null ? "&sub=" + java.net.URLEncoder.encode(sub, "UTF-8") : "" %>&sort=<%= sortParam %>&page=1">1</a><span class="pg-dots">...</span><% } %>
+                    <% for (int p = pageStart; p <= pageEnd; p++) { %>
+                        <% if (p == currentPage) { %><span class="active" aria-current="page"><%= p %></span><% } else { %>
+                        <a href="<%= request.getContextPath() %>/category?name=<%= java.net.URLEncoder.encode(category, "UTF-8") %><%= sub != null ? "&sub=" + java.net.URLEncoder.encode(sub, "UTF-8") : "" %>&sort=<%= sortParam %>&page=<%= p %>"><%= p %></a>
+                        <% } %>
+                    <% } %>
+                    <% if (pageEnd < totalPages) { %><span class="pg-dots">...</span><a href="<%= request.getContextPath() %>/category?name=<%= java.net.URLEncoder.encode(category, "UTF-8") %><%= sub != null ? "&sub=" + java.net.URLEncoder.encode(sub, "UTF-8") : "" %>&sort=<%= sortParam %>&page=<%= totalPages %>"><%= totalPages %></a><% } %>
+                    <% if (currentPage < totalPages) { %>
+                        <a href="<%= request.getContextPath() %>/category?name=<%= java.net.URLEncoder.encode(category, "UTF-8") %><%= sub != null ? "&sub=" + java.net.URLEncoder.encode(sub, "UTF-8") : "" %>&sort=<%= sortParam %>&page=<%= currentPage + 1 %>">Next &gt;</a>
+                    <% } else { %>
+                        <span class="disabled" aria-disabled="true">Next &gt;</span>
+                    <% } %>
+                </nav>
+                <% } %>
             </section>
         </div>
     </div>
@@ -267,6 +301,9 @@
                     accordion.appendChild(fragment);
                 }
 
+                /* Legacy client-side pagination/sorting is intentionally disabled:
+                   category data is paginated in the controller and database. */
+                if (false) {
                 // ---------- Pagination (8 per page) ----------
                 const PER_PAGE = 6;
                 const HEADER_OFFSET = 100; // change to your sticky header height in px
@@ -399,13 +436,23 @@
 
                         cards.forEach(card => grid.appendChild(card));
 
-                        // Sorting changes the order, so go back to page 1
                         if (paginationOn) {
                             const url = new URL(window.location);
                             url.searchParams.delete('page');
                             history.replaceState(null, '', url);
                             showPage(1);
                         }
+                    });
+                }
+                }
+
+                const sortSelect = document.getElementById('sortBy');
+                if (sortSelect) {
+                    sortSelect.addEventListener('change', function () {
+                        const url = new URL(window.location);
+                        url.searchParams.set('sort', this.value);
+                        url.searchParams.set('page', '1');
+                        window.location.assign(url.toString());
                     });
                 }
             });

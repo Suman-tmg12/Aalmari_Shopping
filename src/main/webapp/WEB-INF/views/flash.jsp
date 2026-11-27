@@ -58,11 +58,11 @@
                     <div class="sort-row">
                         <label class="sort-label" for="sortBy">Sort By:</label>
                         <select id="sortBy" class="sort-select">
-                            <option>Best Match</option>
-                            <option>Price: Low to High</option>
-                            <option>Price: High to Low</option>
-                            <option>Newest</option>
-                            <option>Most Popular</option>
+                            <option value="best"<%= "best".equals(request.getAttribute("flashSort")) ? " selected" : "" %>>Best Match</option>
+                            <option value="low-high"<%= "low-high".equals(request.getAttribute("flashSort")) ? " selected" : "" %>>Price: Low to High</option>
+                            <option value="high-low"<%= "high-low".equals(request.getAttribute("flashSort")) ? " selected" : "" %>>Price: High to Low</option>
+                            <option value="newest"<%= "newest".equals(request.getAttribute("flashSort")) ? " selected" : "" %>>Newest</option>
+                            <option value="popular"<%= "popular".equals(request.getAttribute("flashSort")) ? " selected" : "" %>>Most Popular</option>
                         </select>
                     </div>
                 </div>
@@ -113,6 +113,36 @@
                     </div>
                 </div>
 
+                <%
+                    Integer flashCurrentAttr = (Integer) request.getAttribute("flashCurrentPage");
+                    Integer flashTotalAttr = (Integer) request.getAttribute("flashTotalPages");
+                    Integer flashSizeAttr = (Integer) request.getAttribute("flashPageSize");
+                    String flashSortAttr = (String) request.getAttribute("flashSort");
+                    int flashCurrent = flashCurrentAttr == null ? 1 : flashCurrentAttr;
+                    int flashTotal = flashTotalAttr == null ? 0 : flashTotalAttr;
+                    int flashSize = flashSizeAttr == null ? 12 : flashSizeAttr;
+                    if (flashSortAttr == null) flashSortAttr = "best";
+                    String nameParam = curCat == null ? "" : "&name=" + java.net.URLEncoder.encode(curCat, "UTF-8");
+                    String subParam = curSub == null ? "" : "&sub=" + java.net.URLEncoder.encode(curSub, "UTF-8");
+                %>
+                <% if (flashTotal > 1) { %>
+                <nav class="pagination" aria-label="Flash deal pagination">
+                    <% if (flashCurrent > 1) { %>
+                    <a href="${pageContext.request.contextPath}/flash?page=<%= flashCurrent - 1 %>&size=<%= flashSize %>&sort=<%= flashSortAttr %><%= nameParam %><%= subParam %>">&lt; Previous</a>
+                    <% } else { %><span class="disabled">&lt; Previous</span><% } %>
+                    <% int fs = Math.max(1, flashCurrent - 2); int fe = Math.min(flashTotal, flashCurrent + 2); %>
+                    <% if (fs > 1) { %><a href="${pageContext.request.contextPath}/flash?page=1&size=<%= flashSize %>&sort=<%= flashSortAttr %><%= nameParam %><%= subParam %>">1</a><span class="pg-dots">...</span><% } %>
+                    <% for (int p = fs; p <= fe; p++) { %>
+                        <% if (p == flashCurrent) { %><span class="active" aria-current="page"><%= p %></span><% } else { %>
+                        <a href="${pageContext.request.contextPath}/flash?page=<%= p %>&size=<%= flashSize %>&sort=<%= flashSortAttr %><%= nameParam %><%= subParam %>"><%= p %></a>
+                        <% } %>
+                    <% } %>
+                    <% if (fe < flashTotal) { %><span class="pg-dots">...</span><a href="${pageContext.request.contextPath}/flash?page=<%= flashTotal %>&size=<%= flashSize %>&sort=<%= flashSortAttr %><%= nameParam %><%= subParam %>"><%= flashTotal %></a><% } %>
+                    <% if (flashCurrent < flashTotal) { %>
+                    <a href="${pageContext.request.contextPath}/flash?page=<%= flashCurrent + 1 %>&size=<%= flashSize %>&sort=<%= flashSortAttr %><%= nameParam %><%= subParam %>">Next &gt;</a>
+                    <% } else { %><span class="disabled">Next &gt;</span><% } %>
+                </nav>
+                <% } %>
             </section>
         </div>
     </div>
@@ -154,6 +184,16 @@
             document.addEventListener('DOMContentLoaded', function () {
                 tickEnds();
                 setInterval(tickEnds, 1000);
+
+                const sortSelect = document.getElementById('sortBy');
+                if (sortSelect) {
+                    sortSelect.addEventListener('change', function () {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('sort', this.value);
+                        url.searchParams.set('page', '1');
+                        window.location.assign(url.toString());
+                    });
+                }
 
 
 

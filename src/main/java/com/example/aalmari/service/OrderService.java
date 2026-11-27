@@ -18,6 +18,8 @@ import com.example.aalmari.repository.UserRepository;
 import com.example.aalmari.repository.PayoutSettlementRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -243,6 +245,22 @@ public class OrderService {
             out.add(toCard(o));
         }
         return out;
+    }
+
+    /** The user's orders, paged, newest first, ready for the My Profile page. */
+    @Transactional(readOnly = true)
+    public Page<OrderCard> listForUser(Long userId, Pageable pageable) {
+        return orderRepository.findByUser_Id(userId, pageable)
+                .map(o -> toCard(o));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderCard> listForUser(Long userId, String status, Pageable pageable) {
+        String normalized = status == null ? "all" : status.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!java.util.Set.of("all", "processing", "shipped", "delivered", "cancelled").contains(normalized)) {
+            normalized = "all";
+        }
+        return orderRepository.findByUserAndStatus(userId, normalized, pageable).map(o -> toCard(o));
     }
 
     /* ====================================================================== */

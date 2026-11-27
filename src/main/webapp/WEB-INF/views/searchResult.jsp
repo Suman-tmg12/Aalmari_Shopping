@@ -79,9 +79,18 @@
     String qEnc = java.net.URLEncoder.encode(searchQuery, "UTF-8");
 
     // Pagination: products per page (the browser reads this value from data-page-size)
-    final int PAGE_SIZE = 9;
-    int firstShown = matchingProducts.isEmpty() ? 0 : 1;
-    int lastShown = Math.min(PAGE_SIZE, matchingProducts.size());
+    Integer currentPageAttr = (Integer) request.getAttribute("currentPage");
+    Integer totalPagesAttr = (Integer) request.getAttribute("totalPages");
+    Integer pageSizeAttr = (Integer) request.getAttribute("pageSize");
+    Long totalItemsAttr = (Long) request.getAttribute("totalItems");
+    String sortParam = (String) request.getAttribute("sort");
+    int currentPage = currentPageAttr == null ? 1 : currentPageAttr;
+    int totalPages = totalPagesAttr == null ? 0 : totalPagesAttr;
+    int pageSize = pageSizeAttr == null ? 12 : pageSizeAttr;
+    long totalItems = totalItemsAttr == null ? matchingProducts.size() : totalItemsAttr;
+    if (sortParam == null) sortParam = "best";
+    int firstShown = matchingProducts.isEmpty() ? 0 : ((currentPage - 1) * pageSize + 1);
+    int lastShown = matchingProducts.isEmpty() ? 0 : ((currentPage - 1) * pageSize + matchingProducts.size());
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -186,11 +195,10 @@
                                 <div class="ar-sort">
                                     <label for="sortBy">Sort by:</label>
                                     <select id="sortBy" aria-label="Sort search results">
-                                        <option value="best">Relevance / Best Match</option>
-                                        <option value="low-high">Price: Low to High</option>
-                                        <option value="high-low">Price: High to Low</option>
-                                        <option value="popular">Most Popular</option>
-                                        <option value="stock">In Stock First</option>
+                                        <option value="best"<%= "best".equals(sortParam) ? " selected" : "" %>>Relevance / Best Match</option>
+                                        <option value="low-high"<%= "low-high".equals(sortParam) ? " selected" : "" %>>Price: Low to High</option>
+                                        <option value="high-low"<%= "high-low".equals(sortParam) ? " selected" : "" %>>Price: High to Low</option>
+                                        <option value="popular"<%= "popular".equals(sortParam) ? " selected" : "" %>>Most Popular</option>
                                     </select>
                                 </div>
                                 <div class="ar-view-switch">
@@ -326,7 +334,7 @@
                 <div class="ar-backdrop" id="arBackdrop"></div>
 
                 <!-- Results -->
-                <section class="ar-results" tabindex="-1" data-page-size="<%= PAGE_SIZE %>">
+                <section class="ar-results" tabindex="-1" data-page-size="<%= request.getAttribute("pageSize") %>">
                     <% if (matchingProducts.isEmpty()) { %>
                     <div class="ar-empty">
                         <div class="ar-empty-icon"><span class="material-symbols-outlined ar-ic-lg">search_off</span></div>
@@ -410,7 +418,7 @@
                     </div>
 
                     <p class="ar-footer-count" id="arFooterCount">
-                        Showing <b id="arShownCount"><%= firstShown %>–<%= lastShown %></b> of <b id="arTotalCount"><%= matchingProducts.size() %></b> items
+                        Showing <b id="arShownCount"><%= firstShown %>–<%= lastShown %></b> of <b id="arTotalCount"><%= totalItems %></b> items
                     </p>
 
                     <!-- Pagination (built by JavaScript, only shown when there are more than 8 products) -->
@@ -466,7 +474,7 @@
 
                 /* ---------- State ---------- */
                 var results = document.querySelector('.ar-results');
-                var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 8;
+                var PAGE_SIZE = parseInt(results.getAttribute('data-page-size'), 10) || 12;
                 var cards = Array.prototype.slice.call(grid.querySelectorAll('.ar-card'));
                 var CEILING = parseFloat($('arPriceRange').max) || 0;
                 var state = { min: 0, max: CEILING, types: [], discount: 0, inStockOnly: false, sort: 'best', page: 1 };
@@ -528,29 +536,20 @@
                     });
 
                     var visible = matches.length;
-                    var pages = Math.max(1, Math.ceil(visible / PAGE_SIZE));
-                    if (state.page > pages) state.page = pages;
-                    if (state.page < 1) state.page = 1;
-                    var start = (state.page - 1) * PAGE_SIZE;
-                    var end = Math.min(start + PAGE_SIZE, visible);
-
-                    matches.forEach(function (card, i) {
-                        card.hidden = !(i >= start && i < end);
+                    matches.forEach(function (card) {
+                        card.hidden = false;
                         grid.appendChild(card);
                     });
-                    rest.forEach(function (card) {
-                        card.hidden = true;
-                        grid.appendChild(card);
-                    });
+                    rest.forEach(function (card) { card.hidden = true; grid.appendChild(card); });
 
                     $('arMatchCount').textContent = visible;
-                    $('arShownCount').textContent = visible === 0 ? '0' : (start + 1) + '\u2013' + end;
-                    $('arTotalCount').textContent = visible;
+                    $('arShownCount').textContent = visible === 0 ? '0' : '<%= firstShown %>–<%= lastShown %>';
+                    $('arTotalCount').textContent = '<%= totalItems %>';
                     $('arEmptyClient').classList.toggle('ar-hidden', visible !== 0);
                     $('arFooterCount').classList.toggle('ar-hidden', visible === 0);
                     grid.classList.toggle('ar-hidden', visible === 0);
 
-                    renderPagination(pages);
+                    renderPagination('<%= totalPages %>' * 1);
                     renderChips();
                 }
 
@@ -613,41 +612,41 @@
                 function renderPagination(pages) {
                     var nav = $('pagination');
                     nav.innerHTML = '';
-
-                    // Hide pagination when everything fits on one page
-                    if (pages <= 1) { nav.style.display = 'none'; return; }
+                    var current = parseInt('<%= request.getAttribute("currentPage") %>', 10) || 1;
+                    var serverPages = parseInt('<%= request.getAttribute("totalPages") %>', 10) || 0;
+                    if (serverPages <= 1) { nav.style.display = 'none'; return; }
                     nav.style.display = '';
 
-                    nav.appendChild(makeItem('&lt; Previous', state.page - 1,
-                        { disabled: state.page === 1, aria: 'Previous page' }));
-
-                    pageItems(state.page, pages).forEach(function (item) {
-                        if (item === '...') {
-                            var dots = document.createElement('span');
-                            dots.className = 'pg-dots';
-                            dots.textContent = '...';
-                            nav.appendChild(dots);
-                        } else {
-                            nav.appendChild(makeItem(String(item), item, { active: item === state.page }));
+                    function serverLink(label, page, active, disabled) {
+                        var el = document.createElement(disabled ? 'span' : 'a');
+                        el.innerHTML = label;
+                        if (disabled) el.className = 'disabled';
+                        else if (active) { el.className = 'active'; el.setAttribute('aria-current', 'page'); }
+                        else {
+                            var u = new URL(window.location.href);
+                            u.searchParams.set('page', page);
+                            u.searchParams.set('size', '<%= request.getAttribute("pageSize") %>');
+                            el.href = u.pathname + u.search;
                         }
-                    });
+                        return el;
+                    }
 
-                    nav.appendChild(makeItem('Next &gt;', state.page + 1,
-                        { disabled: state.page === pages, aria: 'Next page' }));
+                    nav.appendChild(serverLink('&lt; Previous', current - 1, false, current === 1));
+                    var start = Math.max(1, current - 2), end = Math.min(serverPages, current + 2);
+                    if (start > 1) nav.appendChild(serverLink('1', 1, current === 1, false));
+                    if (start > 2) { var dots = document.createElement('span'); dots.className = 'pg-dots'; dots.textContent = '...'; nav.appendChild(dots); }
+                    for (var p = start; p <= end; p++) nav.appendChild(serverLink(String(p), p, p === current, false));
+                    if (end < serverPages - 1) { var dots2 = document.createElement('span'); dots2.className = 'pg-dots'; dots2.textContent = '...'; nav.appendChild(dots2); }
+                    if (end < serverPages) nav.appendChild(serverLink(String(serverPages), serverPages, current === serverPages, false));
+                    nav.appendChild(serverLink('Next &gt;', current + 1, false, current === serverPages));
                 }
 
                 function goTo(target) {
                     if (target < 1) return;
-                    state.page = target;
-                    render(true);       // render() clamps the page if it is too high
-                    syncUrl(true);      // adds ?page=N so Back/Forward work
-
-                    // Scroll only if the top of the results is out of view
-                    var top = results.getBoundingClientRect().top;
-                    if (top < 100) {
-                        results.scrollIntoView({ behavior: mqMotion.matches ? 'auto' : 'smooth', block: 'start' });
-                    }
-                    results.focus({ preventScroll: true });
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('page', target);
+                    u.searchParams.set('size', '<%= request.getAttribute("pageSize") %>');
+                    window.location.assign(u.pathname + u.search);
                 }
 
                 // Browser Back / Forward buttons
@@ -788,7 +787,13 @@
                     r.addEventListener('change', function () { state.discount = parseInt(r.value, 10) || 0; change(); });
                 });
 
-                $('sortBy').addEventListener('change', function () { state.sort = this.value; change(); });
+                $('sortBy').addEventListener('change', function () {
+                    var u = new URL(window.location.href);
+                    u.searchParams.set('sort', this.value);
+                    u.searchParams.set('page', '1');
+                    u.searchParams.set('size', '<%= pageSize %>');
+                    window.location.assign(u.pathname + u.search);
+                });
 
                 var gridBtn = $('arGridView'), listBtn = $('arListView');
                 gridBtn.addEventListener('click', function () {
