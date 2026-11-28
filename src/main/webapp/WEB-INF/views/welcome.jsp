@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aalmari Full Width E-commerce Design</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/welcome.css?v=4">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/welcome.css?v=14">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>

@@ -30,13 +30,13 @@
     }
 %>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=13">
 
 <div class="section-header">
     <span class="section-title">Products</span>
 </div>
 
-<div class="ar-page">
+<div class="ar-page home-products">
     <div class="ar-grid" id="productGrid">
     <%
         // Get the list from Model (passed by HomeController)

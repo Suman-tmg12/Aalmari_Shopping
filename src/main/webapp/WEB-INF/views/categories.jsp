@@ -60,7 +60,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %> — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=6">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/category.css?v=11">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>

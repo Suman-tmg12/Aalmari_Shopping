@@ -860,6 +860,28 @@ button, input {
     .user-name, .dropdown-arrow {
         display: none;
     }
+
+    /* ===== Mobile notification dropdown ===== */
+    .notification-panel {
+        position: fixed;
+        top: 122px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+    }
+
+    .notification-list {
+        max-height: calc(100dvh - 196px);
+    }
+
+    .notification-panel-head {
+        padding: 12px 14px;
+    }
+
+    .notification-item {
+        padding: 12px 14px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -885,11 +907,23 @@ button, input {
     }
 
     .notification-panel {
-        right: -72px;
-        top: calc(100% + 14px);
+        position: fixed;
+        top: 122px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
     }
 
     /* Search suggestions on phones */
     .search-input { font-size: 16px; }          /* stops iOS zoom on focus */
     .suggestion-item { padding: 12px 16px; }
+}
+
+@media (max-width: 360px) {
+    .notification-panel {
+        top: 118px;
+        left: 8px;
+        right: 8px;
+    }
 }

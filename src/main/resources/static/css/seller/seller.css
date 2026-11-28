@@ -762,7 +762,7 @@ label .required,
 /* ===== RESPONSIVE ===== */
 @media (max-width: 700px) {
     .main-content {
-        padding: 20px 16px;
+        padding: 60px 16px;
     }
 
     .form-card {

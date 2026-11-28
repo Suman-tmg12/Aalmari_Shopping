@@ -489,3 +489,377 @@ main { flex: 1; min-width: 0; width: 100%; }
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .product-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ===== Mobile profile layout ===== */
+@media (max-width: 767px) {
+    body {
+        margin-top: 122px;
+        overflow-x: hidden;
+    }
+
+    .page {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .layout {
+        width: 100%;
+        gap: 12px;
+    }
+
+    main {
+        width: 100%;
+    }
+
+    .tab-content {
+        gap: 14px;
+    }
+
+    /* Keep profile navigation visible and easy to tap on phones */
+    .sidebar,
+    .sidebar.open {
+        display: block;
+        width: 100%;
+    }
+
+    .sidebar-card {
+        padding: 8px;
+        border-radius: 16px;
+    }
+
+    .profile-badge {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+    }
+
+    .profile-avatar img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .profile-name {
+        font-size: 13px;
+    }
+
+    .sidebar nav {
+        flex-direction: row;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+    }
+
+    .sidebar nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-btn {
+        width: auto;
+        min-width: max-content;
+        flex: 1 0 auto;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+    }
+
+    .nav-btn svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    .nav-count {
+        margin-left: 2px;
+        padding: 1px 6px;
+        font-size: 10px;
+    }
+
+    .sidebar-foot {
+        display: none;
+    }
+
+    .card,
+    .settings-card,
+    .danger {
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .page-title {
+        font-size: 21px;
+    }
+
+    .page-sub {
+        line-height: 1.35;
+    }
+
+    .stat-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .stat {
+        min-height: 92px;
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+    }
+
+    .table-head-row {
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .table-wrap {
+        border-radius: 12px;
+    }
+
+    .data-table {
+        min-width: 620px;
+    }
+
+    .head-stack {
+        gap: 10px;
+    }
+
+    .filters {
+        width: 100%;
+        margin: 0 -12px;
+        padding: 4px 12px 8px;
+    }
+
+    .filter-btn {
+        padding: 8px 12px;
+    }
+
+    .order-card {
+        border-radius: 14px;
+    }
+
+    .oc-head,
+    .oc-status,
+    .oc-body,
+    .oc-foot {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .oc-meta {
+        width: 100%;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+    }
+
+    .oc-ship {
+        grid-column: 1 / -1;
+    }
+
+    .oc-status {
+        gap: 12px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .oc-track {
+        max-width: none;
+    }
+
+    .oc-step {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+
+    .oc-body {
+        gap: 10px;
+        padding-top: 6px;
+        padding-bottom: 12px;
+    }
+
+    .oc-item {
+        gap: 9px;
+        padding: 10px 0;
+    }
+
+    .oc-thumb {
+        width: 58px;
+        height: 58px;
+    }
+
+    .oc-name {
+        font-size: 12px;
+    }
+
+    .oc-sub {
+        font-size: 10px;
+    }
+
+    .oc-line-total {
+        font-size: 12px;
+    }
+
+    .oc-actions {
+        gap: 6px;
+    }
+
+    .oc-actions .btn {
+        min-height: 42px;
+    }
+
+    .oc-foot {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    #tab-wishlist .ar-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+    }
+
+    #tab-wishlist .ar-card {
+        min-width: 0;
+        border-radius: 14px;
+    }
+
+    #tab-wishlist .ar-card-body {
+        padding: 10px 8px 8px;
+    }
+
+    #tab-wishlist .ar-p-title {
+        font-size: 12px;
+    }
+
+    #tab-wishlist .ar-price {
+        font-size: 14px;
+    }
+
+    #tab-wishlist .ar-brand,
+    #tab-wishlist .ar-sold,
+    #tab-wishlist .ar-sub-muted {
+        font-size: 9px;
+    }
+
+    #tab-wishlist .ar-view {
+        padding: 7px 8px;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+
+    .settings-head {
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+    }
+
+    .avatar-upload {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .avatar-upload img {
+        width: 56px;
+        height: 56px;
+    }
+
+    .avatar-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .form-foot {
+        justify-content: stretch;
+    }
+
+    .form-foot .btn {
+        width: 100%;
+    }
+
+    .phone-row {
+        width: 100%;
+    }
+
+    .twofa {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pref-row {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .modal,
+    .modal.sm {
+        max-height: 90dvh;
+        padding: 18px;
+        border-radius: 16px;
+    }
+
+    .modal-close {
+        top: 12px;
+        right: 12px;
+    }
+
+    .modal-foot {
+        flex-direction: column;
+    }
+
+    .modal-foot .btn {
+        width: 100%;
+    }
+
+    #toast-container {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .toast {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    body {
+        margin-top: 118px;
+    }
+
+    .page {
+        padding: 8px;
+    }
+
+    .profile-badge {
+        display: none;
+    }
+
+    .nav-btn {
+        flex-direction: column;
+        gap: 3px;
+        min-width: 72px;
+    }
+
+    #tab-wishlist .ar-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .oc-track {
+        padding: 0 2px;
+    }
+
+    .oc-step {
+        font-size: 8px;
+    }
+}

@@ -1,9 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <!-- REQUIRED for mobile: without this, phones render a ~980px page and the mobile CSS never applies -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - Aalmari Store</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=7">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=12">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -24,17 +27,12 @@
 
             <h2>Create Account</h2>
 
-            <!-- Mobile Login Link (Visible only on mobile via CSS) -->
-            <div class="mobile-login-link">
-                Already have an account? <a href="login">Log in</a>
-            </div>
-
             <% if (request.getAttribute("error") != null) { %>
                 <p class="error"><%= request.getAttribute("error") %></p>
             <% } %>
 
             <form action="register" method="post" id="registerForm" novalidate>
-                <div class="form-group" style="display: flex; gap: 10px">
+                <div class="form-group form-row">
                     <input type="text" name="firstName" placeholder="First name" required>
                     <input type="text" name="lastName" placeholder="Last name" required>
                 </div>
@@ -43,7 +41,7 @@
                     <input type="email" name="email" placeholder="Email address" required>
                 </div>
 
-                <div class="form-group" style="display: flex; gap: 10px">
+                <div class="form-group form-row">
                     <input type="text" name="country" placeholder="Country" required>
                     <input type="tel" name="phone" placeholder="Phone" required>
                 </div>
@@ -69,7 +67,7 @@
                 </div>
 
                 <!-- Confirm Password (name changed so it no longer clashes with "password") -->
-                <div class="form-group" style="margin-bottom: -20px">
+                <div class="form-group confirm-password-group">
                     <div class="password-wrapper">
                         <input type="password" name="confirmPassword" id="confirmPassword" placeholder="Confirm Password" required>
                         <button type="button" class="toggle-password" data-target="confirmPassword"
@@ -99,6 +97,10 @@
 
                 <button type="submit" class="submit-btn">Sign up</button>
             </form>
+
+            <div class="mobile-login-link auth-switch">
+                Already have an account? <a href="login">Log in</a>
+            </div>
         </div>
     </div>
 
@@ -110,6 +112,21 @@
     var pass     = document.getElementById('password');
     var confirm  = document.getElementById('confirmPassword');
     var msg      = document.getElementById('matchMsg');
+
+    // ---- Mobile: keep the card below the fixed header (uses the header's real height) ----
+    var header = document.querySelector('.top-nav');
+    function fitHeader() {
+        if (!header) return;
+        var pos = getComputedStyle(header).position;
+        if (window.innerWidth <= 768 && (pos === 'fixed' || pos === 'absolute')) {
+            document.body.style.paddingTop = (header.offsetHeight + 16) + 'px';
+        } else {
+            document.body.style.paddingTop = '';
+        }
+    }
+    fitHeader();
+    window.addEventListener('resize', fitHeader);
+    window.addEventListener('load', fitHeader);
 
     // ---- Show / hide password ----
     document.querySelectorAll('.toggle-password').forEach(function (btn) {

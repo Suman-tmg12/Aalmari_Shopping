@@ -22,6 +22,7 @@ body {
     background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-warm) 100%);
     color: var(--color-text);
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 .product-page {
@@ -56,13 +57,18 @@ body {
 
 .product-main {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 40px;
     background: var(--color-white);
     border-radius: 16px;
     padding: 30px;
     margin-bottom: 30px;
     box-shadow: var(--shadow-sm);
+}
+
+.product-main > *,
+.product-info {
+    min-width: 0;
 }
 
 /* Gallery Styles */
@@ -106,6 +112,7 @@ body {
 
 .gallery-main {
     flex: 1;
+    min-width: 0;
     position: relative;
     border-radius: 12px;
     overflow: hidden;
@@ -155,11 +162,13 @@ body {
     font-weight: 600;
     margin-bottom: 12px;
     line-height: 1.3;
+    overflow-wrap: anywhere;
 }
 
 .product-rating {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -190,6 +199,7 @@ body {
 .product-price {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 24px;
 }
@@ -420,6 +430,7 @@ body {
     overflow: hidden;
     position: relative;
     padding: 20px 0;
+    overflow-wrap: anywhere;
 }
 
 .restriction-overlay-ui {
@@ -492,6 +503,7 @@ body {
     margin-bottom: 16px;
     color: var(--color-text-muted);
     line-height: 1.7;
+    overflow-wrap: anywhere;
 }
 
 .specs-list {
@@ -507,6 +519,7 @@ body {
     display: flex;
     justify-content: space-between;
     font-size: 14px;
+    overflow-wrap: anywhere;
 }
 
 .specs-list li:last-child {
@@ -525,7 +538,7 @@ body {
 /* Responsive */
 @media (max-width: 1024px) {
     .product-main {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .product-gallery {
         height: auto;
@@ -535,25 +548,120 @@ body {
         flex-direction: row;
         width: 100%;
         height: auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
     }
     .gallery-main {
+        flex: none;
+        width: 100%;
         height: 380px;
     }
 }
 
 @media (max-width: 768px) {
+    .product-page {
+        margin: 145px auto 24px; /* mobile header is ~128px tall (logo row + search bar) */
+        padding: 12px;
+    }
+
+    .product-main {
+        padding: 16px;
+        gap: 20px;
+        margin-bottom: 16px;
+        border-radius: 12px;
+    }
+
+    /* Gallery: square image, no cropping, smaller thumbnails */
+    .product-gallery {
+        gap: 10px;
+        height: auto;
+    }
+    .gallery-main {
+        flex: none;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+    }
+    .gallery-main img {
+        position: absolute;
+        inset: 0;
+        object-fit: contain;
+        background: #fff;
+    }
+    .gallery-thumbs {
+        gap: 8px;
+    }
+    .thumb {
+        width: 60px;
+        height: 60px;
+    }
+    .wishlist-btn {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+    }
+
+    /* Info */
+    .product-title {
+        font-size: 22px;
+        margin-bottom: 8px;
+    }
+    .stars .material-symbols-outlined {
+        font-size: 18px;
+    }
+    .current-price {
+        font-size: 26px;
+    }
+    .original-price {
+        font-size: 15px;
+    }
+    .product-price {
+        margin-bottom: 16px;
+    }
+    .quantity-selector {
+        height: 44px;
+    }
+
     .product-actions {
         flex-direction: column;
         align-items: stretch;
     }
     .action-buttons {
         flex-direction: column;
+        gap: 10px;
         min-width: 0;
         width: 100%;
     }
     .add-to-cart-btn,
     .buy-now-btn {
         width: 100%;
+    }
+
+    /* Tabs / details */
+    .product-tabs {
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 12px;
+    }
+    .tab-headers {
+        gap: 20px;
+    }
+    .specs-list {
+        max-width: 100%;
+    }
+    .specs-list li {
+        flex-wrap: wrap;
+        gap: 4px 12px;
+    }
+    #detailsMainImage {
+        margin: 12px auto;
+        border-radius: 8px;
+    }
+    .restriction-overlay-ui {
+        height: 120px;
     }
     .view-more-action-btn,
     .view-less-action-btn {
@@ -562,6 +670,26 @@ body {
         max-width: none;
     }
 }
+
+@media (max-width: 400px) {
+    .product-page {
+        padding: 8px;
+    }
+    .product-main {
+        padding: 12px;
+    }
+    .product-title {
+        font-size: 20px;
+    }
+    .current-price {
+        font-size: 24px;
+    }
+    .thumb {
+        width: 52px;
+        height: 52px;
+    }
+}
+
 .go-to-store-btn {
     width: 100%;
     height: 48px;
@@ -589,7 +717,7 @@ body {
 .ask-seller-btn:hover { background:#e86f00; }
 .message-modal { position:fixed; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.55); }
 .message-modal.open { display:flex; }
-.message-modal-card { position:relative; width:min(520px,100%); border-radius:16px; background:#fff; padding:28px; box-shadow:0 24px 60px rgba(15,23,42,.24); }
+.message-modal-card { position:relative; width:min(520px,100%); border-radius:16px; background:#fff; padding:28px; box-shadow:0 24px 60px rgba(15,23,42,.24); max-height:92vh; overflow-y:auto; }
 .message-modal-close { position:absolute; top:12px; right:14px; border:0; background:none; font-size:28px; cursor:pointer; color:#64748b; }
 .message-modal-icon { width:44px; height:44px; border-radius:50%; display:inline-flex!important; align-items:center; justify-content:center; background:#fff2e6; color:#ff7b00; }
 .message-modal-card h2 { margin:12px 0 6px; }
@@ -613,3 +741,36 @@ body {
 .customer-message-bubble.customer-message { align-self:flex-end; background:#fff0e0; color:#9a4d00; }
 .customer-message-bubble.seller-reply { align-self:flex-start; background:#ff7b00; color:#fff; }
 @keyframes replyPulse { 50% { box-shadow:0 0 0 8px rgba(255,123,0,.08); } }
+
+/* ===== Mobile overrides that must come AFTER the base button/modal rules above ===== */
+@media (max-width: 768px) {
+    .go-to-store-btn,
+    .ask-seller-btn {
+        height: 46px;
+        width: 100%;
+    }
+    /* Root cause of the squashed buttons: base rule has flex:1 on the buttons.
+       Inside a column container that sets flex-basis to 0, so height collapses. */
+    .action-buttons {
+        flex: none;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    .add-to-cart-btn,
+    .buy-now-btn {
+        flex: 0 0 auto;
+        width: 100%;
+        height: 46px;
+        min-height: 46px;
+        font-size: 15px;
+    }
+    .message-modal {
+        padding: 12px;
+        align-items: flex-end;
+    }
+    .message-modal-card {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+}

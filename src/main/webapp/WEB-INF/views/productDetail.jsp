@@ -37,7 +37,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${product.name} — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=13">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/product.css?v=14">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 
     <!-- Same card styles as product.jsp (used by the "You May Also Like" section) -->
@@ -86,18 +86,18 @@
         .review-list { display:grid; gap:12px; }
         .review-card { border:1px solid #e5e7eb; border-radius:14px; padding:16px; }
         .review-card-head { display:flex; align-items:center; gap:10px; }
-        .review-avatar { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:#fff7ed; color:#c95700; font-weight:800; }
+        .review-avatar { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:#fff7ed; color:#c95700; font-weight:800; flex-shrink:0; }
         .review-user { font-size:14px; font-weight:800; color:#111827; }
         .review-meta { margin-top:2px; }
         .verified-badge { color:#059669; font-size:11px; font-weight:700; }
         .review-stars { margin-left:auto; color:#ff7b00; }
         .review-stars-value { color:#111827; }
-        .review-comment { color:#4b5563; font-size:13px; line-height:1.7; margin:12px 0 0 50px; white-space:pre-wrap; }
+        .review-comment { color:#4b5563; font-size:13px; line-height:1.7; margin:12px 0 0 50px; white-space:pre-wrap; overflow-wrap:anywhere; }
         .review-empty { text-align:center; padding:28px; color:#6b7280; border:1px dashed #d1d5db; border-radius:14px; }
         .review-empty .material-symbols-outlined { color:#ff7b00; font-size:36px; }
         .review-modal { display:none; position:fixed; inset:0; z-index:4000; background:rgba(17,24,39,.55); backdrop-filter:blur(3px); align-items:center; justify-content:center; padding:16px; }
         .review-modal.open { display:flex; }
-        .review-modal-card { position:relative; width:min(520px,100%); background:#fff; border-radius:18px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,.22); }
+        .review-modal-card { position:relative; width:min(520px,100%); background:#fff; border-radius:18px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,.22); max-height:92vh; overflow-y:auto; }
         .review-modal-close { position:absolute; top:12px; right:14px; font-size:24px; color:#6b7280; border: none; background: none; cursor: pointer; }
         .review-modal-card h2 { font-size:20px; color:#111827; }
         .review-modal-subtitle { color:#6b7280; font-size:13px; margin:4px 0 16px; }
@@ -110,7 +110,7 @@
         .review-submit-btn { width:100%; margin-top:10px; border-radius:10px; background:#ff7b00; color:#fff; padding:11px; font-weight:800; border: none; cursor: pointer; }
         .review-error { min-height:18px; color:#e11d48; font-size:12px; margin-top:8px; }
         .product-price { margin-bottom: 10px; }
-        .stock-status { display:inline-flex; align-items:center; width:max-content; margin:0 0 12px; border-radius:999px; padding:7px 11px; background:#ecfdf5; color:#047857; font-size:13px; font-weight:800; }
+        .stock-status { display:inline-flex; align-items:center; width:max-content; max-width:100%; margin:0 0 12px; border-radius:999px; padding:7px 11px; background:#ecfdf5; color:#047857; font-size:13px; font-weight:800; }
         .stock-status.low { background:#fff7ed; color:#c2410c; }
         .stock-status.out { background:#fef2f2; color:#b91c1c; }
         .quantity-wrapper { margin:2px 0 0; }
@@ -118,7 +118,54 @@
         .action-buttons { margin-bottom:10px; }
         .go-to-store-btn { margin-bottom:10px; }
 
-        @media(max-width:640px){ .review-section{margin:24px 16px;padding:20px 16px}.review-heading{align-items:flex-start}.review-heading h2{font-size:19px}.review-comment{margin-left:0}.review-modal-card{padding:20px}.review-eligible-note{max-width:180px;text-align:center} }
+        /* ===== MOBILE RESPONSIVE (phones) ===== */
+        @media (max-width: 640px) {
+            .review-section { margin: 16px 0; padding: 16px 14px; border-radius: 14px; }
+            .review-heading { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+            .review-heading h2 { font-size: 18px; }
+            .review-write-btn, .review-login-link { width: 100%; justify-content: center; }
+            .review-eligible-note { max-width: none; width: 100%; text-align: center; }
+            .review-card { padding: 12px; }
+            .review-card-head { flex-wrap: wrap; }
+            .review-comment { margin-left: 0; }
+
+            .review-modal { padding: 12px; align-items: flex-end; }
+            .review-modal-card { padding: 20px 16px; }
+            .review-star-picker button { font-size: 30px; }
+
+            /* "You May Also Like": 2 columns on phones */
+            .ar-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+            /* Compact cards: shorter image, tighter body, smaller text */
+            .ar-card { height: auto !important; min-height: 0 !important; border-radius: 14px !important; }
+            .ar-card-img { height: 88px !important; min-height: 0 !important; aspect-ratio: auto !important; }
+            .ar-card-img img { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+            .ar-badge { font-size: 10px !important; padding: 2px 6px !important; top: 6px !important; left: 6px !important; }
+            .ar-wish { width: 28px !important; height: 28px !important; top: 6px !important; right: 6px !important; }
+            .ar-wish .material-symbols-outlined { font-size: 16px !important; }
+            .ar-card-body { padding: 6px 8px 8px !important; gap: 3px !important; min-height: 0 !important; }
+            .ar-card-top { font-size: 10px !important; gap: 4px; margin: 0 !important; }
+            .ar-p-title {
+                font-size: 13px !important; line-height: 1.25 !important; margin: 2px 0 0 !important; min-height: 0 !important;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            }
+            .ar-price-row { flex-direction: column !important; align-items: stretch !important; gap: 4px !important; margin: 0 !important; }
+            /* price + old price on ONE line (saves a row) */
+            .ar-price-row > div:first-child { display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+            /* hide the sub-category line (category is already shown at the top of the card). Delete this line to show it again. */
+            .ar-sub-muted { display: none !important; }
+            .ar-price { font-size: 15px !important; line-height: 1.2 !important; }
+            .ar-old { font-size: 11px !important; line-height: 1.2 !important; }
+            .ar-sub-muted { font-size: 11px !important; line-height: 1.2 !important; margin: 0 !important; }
+            .ar-view {
+                display: block !important; width: 100% !important; text-align: center;
+                padding: 5px 8px !important; font-size: 12px !important; line-height: 1.2 !important;
+            }
+            .pagination { gap: 4px; font-size: 12px; }
+            .pagination span { padding: 5px 8px; }
+        }
     </style>
 </head>
 <body>
@@ -447,6 +494,24 @@
     <jsp:include page="/WEB-INF/components/footer.jsp" />
 
     <script>
+        // Mobile: keep page content below the fixed header (measures its real height)
+        (function () {
+            var page = document.querySelector('.product-page');
+            var header = document.querySelector('.top-nav');
+            if (!page || !header) return;
+            function fitHeader() {
+                var pos = getComputedStyle(header).position;
+                if (window.innerWidth <= 768 && (pos === 'fixed' || pos === 'absolute')) {
+                    page.style.marginTop = (header.offsetHeight + 16) + 'px';
+                } else {
+                    page.style.marginTop = '';
+                }
+            }
+            fitHeader();
+            window.addEventListener('resize', fitHeader);
+            window.addEventListener('load', fitHeader);
+        })();
+
         // Gallery Logic
         const mainImage = document.getElementById('mainImage');
         const detailsMainImage = document.getElementById('detailsMainImage');

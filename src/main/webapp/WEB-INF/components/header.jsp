@@ -3,7 +3,7 @@
 <%-- Include fragment: no <html>/<head>/<body> here. The including page provides <title> and viewport meta. --%>
 <!-- Google Material Symbols for Icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=15">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/header.css?v=16">
 <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/HomePageImages/logoImages/logo.png">
 
     <div id="marketplace-platform-brand" data-platform-name="<c:out value='${marketplacePlatformName}'/>" hidden></div>

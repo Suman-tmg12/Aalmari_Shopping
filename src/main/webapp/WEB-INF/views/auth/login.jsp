@@ -1,10 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <!-- REQUIRED for mobile: without this, phones render a ~980px page and the mobile CSS never applies -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Aalmari Store</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=4">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/signin.css?v=12">
 </head>
 <body>
 <jsp:include page="/WEB-INF/components/header.jsp" />
@@ -24,11 +27,6 @@
             </div>
 
             <h2>Login Account</h2>
-
-            <!-- Mobile Signup Link (Visible only on mobile via CSS) -->
-            <div class="mobile-login-link">
-                Don't have an account? <a href="${pageContext.request.contextPath}/signin">Sign up</a>
-            </div>
 
             <c:if test="${not empty error}">
                 <p class="error" role="alert"><c:out value="${error}"/></p>
@@ -73,6 +71,10 @@
 
                 <button type="submit" class="submit-btn">Login</button>
             </form>
+
+            <div class="mobile-login-link auth-switch">
+                Don't have an account? <a href="${pageContext.request.contextPath}/signin">Sign up</a>
+            </div>
         </div>
     </div>
 
@@ -80,6 +82,21 @@
 
     <script>
  (function () {
+
+     // ---- Mobile: keep the card below the fixed header (uses the header's real height) ----
+     var header = document.querySelector('.top-nav');
+     function fitHeader() {
+         if (!header) return;
+         var pos = getComputedStyle(header).position;
+         if (window.innerWidth <= 768 && (pos === 'fixed' || pos === 'absolute')) {
+             document.body.style.paddingTop = (header.offsetHeight + 16) + 'px';
+         } else {
+             document.body.style.paddingTop = '';
+         }
+     }
+     fitHeader();
+     window.addEventListener('resize', fitHeader);
+     window.addEventListener('load', fitHeader);
 
      // ---- Show / hide password ----
      document.querySelectorAll('.toggle-password').forEach(function (btn) {

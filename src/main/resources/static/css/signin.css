@@ -144,6 +144,17 @@ body {
     margin-bottom: 9px;
 }
 
+/* Two inputs side by side (first/last name, country/phone) */
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.form-row input {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 .form-group input {
     width: 100%;
     padding: 11px 16px;
@@ -295,145 +306,153 @@ body {
 }
 
 /* =================================================================
-   MOBILE RESPONSIVE STYLES (Supports iPhone SE up to Pro Max)
+   MOBILE (phones + small tablets) - single consolidated block
+   NOTE: needs <meta name="viewport" ...> in the JSP, otherwise phones
+   render a ~980px wide page and this block never applies.
    ================================================================= */
 @media (max-width: 768px) {
     body {
-        /* Keep vertical column layout so footer stays at bottom */
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        padding: 0;
-        min-height: 100vh;
+        height: auto;
+        margin: 0;
+        /* space for the fixed header (~128px); the JSP script refines this to the real height */
+        padding: 145px 0 0;
     }
 
     .container {
         flex-direction: column;
-        width: 90%; /* Use percentage instead of hardcoded max-width alone */
-        max-width: 400px;
-        min-height: 530px;
-        background: white;
-        padding: 24px 18px; /* Slightly tighter padding for tiny screens */
-        border-radius: 20px;
+        width: calc(100% - 24px);
+        max-width: 420px;
+        min-height: 0;
+        margin: 12px auto 24px;
+        padding: 20px 16px 22px;
+        border-radius: 18px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-        margin: 20px auto 40px auto; /* Fluid margin instead of static 110px */
     }
 
-    /* Hide Left Panel on Mobile */
+    /* Desktop-only gradient panel */
     .left-panel {
-        display: none;
+        display: none !important;
     }
 
     .right-panel {
         width: 100%;
         padding: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .logo {
-        margin-top: 0;
-        margin-bottom: 10px;
-        justify-content: center;
+        margin: 0 0 2px;
     }
 
     .logo img {
-        height: 38px;
-        width: auto;
+        height: 58px;
     }
 
     .right-panel h2 {
-        text-align: center;
-        font-size: 22px; /* Scales down cleaner on smaller viewports */
+        margin: 0 0 14px;
+        font-size: 22px;
         font-weight: 700;
-        color: var(--color-text-dark);
-        margin-top: 0;
-        margin-bottom: 5px;
     }
 
-    .mobile-login-link {
-        display: block;
-        text-align: center;
-        font-size: 13px;
-        color: var(--color-text-dark);
-        margin-bottom: 20px;
-        font-weight: 500;
-    }
-
-    .mobile-login-link a {
-        color: var(--color-primary-black);
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    /* Form Inputs Fluid Sizing */
+    /* Inputs: 16px font stops iOS Safari from zooming in on focus */
     .form-group {
         margin-bottom: 10px;
     }
 
     .form-group input {
-        width: 100%;
-        padding: 12px 14px;
-        border: none;
-        border-radius: 10px;
-        background-color: #f5f5f5;
-        font-size: 14px;
-        color: var(--color-text-dark);
+        padding: 13px 14px;
+        font-size: 16px;
     }
 
-    /* Keep room for the eye button on mobile */
     .form-group .password-wrapper input {
-        padding-right: 44px;
+        padding-right: 48px;
     }
 
     .toggle-password {
-        right: 10px;
+        right: 6px;
+        padding: 10px; /* bigger tap target */
+    }
+
+    .confirm-password-group {
+        margin-bottom: 4px;
     }
 
     .checkbox-group {
-        display: flex;
-        align-items: flex-start; /* Aligns checkbox with multi-line label on tiny screens */
-        margin: 15px 0;
+        align-items: flex-start;
+        margin: 14px 0;
     }
 
     .checkbox-group input {
-        width: 18px;
-        height: 18px;
         margin-right: 10px;
         margin-top: 2px;
-        flex-shrink: 0; /* Prevents checkbox from squishing */
+        flex-shrink: 0;
     }
 
     .checkbox-group label {
-        font-size: 12px;
-        color: var(--color-text-dark);
-        line-height: 1.4;
+        font-size: 13px;
+        line-height: 1.45;
     }
+
     .checkbox-group label a {
-        color: var(--color-primary-black);
+        color: #e2691b;
         font-weight: 700;
-        text-decoration: underline;
-        text-decoration-thickness: 1.5px;
-        text-underline-offset: 3px;
     }
 
     .submit-btn {
-        width: 100%;
-        padding: 13px;
-        background: var(--color-primary-black);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-size: 15px;
+        padding: 14px;
+        font-size: 16px;
         font-weight: 600;
-        cursor: pointer;
     }
 
-    .form-group input[aria-invalid="true"],
-    .password-wrapper input[aria-invalid="true"] {
-        border: 1px solid var(--color-error);
-        background-color: #fff4f4;
+    .error,
+    .success {
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    /* "Don't have an account? [Sign up]" */
+    .mobile-login-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 14px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text-dark);
+    }
+
+    .mobile-login-link a {
+        color: #fff;
+        background: #000;
+        padding: 8px 18px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .footer {
+        width: 100%;
+        margin-top: auto;
+        flex-shrink: 0;
+    }
+}
+
+/* Small phones: stack the paired inputs (first/last name, country/phone) */
+@media (max-width: 480px) {
+    .form-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .container {
+        margin-top: 8px;
+        margin-bottom: 20px;
     }
 }

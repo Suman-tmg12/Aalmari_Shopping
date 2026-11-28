@@ -201,7 +201,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller Hub - Dashboard</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=18">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/seller/SellerDashboard.css?v=28">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
 </head>
 <body>

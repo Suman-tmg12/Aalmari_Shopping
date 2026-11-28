@@ -236,3 +236,389 @@
     .ar-backdrop { display: block; position: fixed; inset: 0; z-index: 3000; background: rgba(15, 23, 42, .45); backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .3s; }
     .ar-backdrop.ar-open { opacity: 1; pointer-events: auto; }
 }
+
+/* ===== Search page: complete mobile layout ===== */
+@media (max-width: 767px) {
+    :root {
+        --ar-header-offset: 112px;
+        overflow-x: hidden;
+    }
+
+    .ar-page {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .ar-container {
+        width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .ar-main {
+        padding-top: 25px;
+        padding-bottom: 20px;
+    }
+
+    .ar-summary {
+        margin-top: -6px;
+    }
+
+    .ar-summary .ar-container {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .ar-crumbs {
+        display: none;
+    }
+
+    .ar-title-row {
+        gap: 10px;
+    }
+
+    .ar-h1 {
+        font-size: 20px;
+        line-height: 1.25;
+    }
+
+    .ar-sub {
+        font-size: 12px;
+    }
+
+    .ar-controls {
+        width: 100%;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .ar-controls-right {
+        min-width: 0;
+        flex: 1;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .ar-filter-btn {
+        min-height: 42px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+
+    .ar-sort {
+        min-width: 0;
+        flex: 1;
+        margin-left: 0;
+    }
+
+    .ar-sort select {
+        width: 100%;
+        max-width: 210px;
+        min-height: 42px;
+        margin-left: 0;
+        padding: 8px 30px 8px 10px;
+        font-size: 12px;
+        border-radius: 10px;
+    }
+
+    .ar-view-switch {
+        flex-shrink: 0;
+        min-height: 42px;
+    }
+
+    .ar-view-switch button {
+        min-width: 36px;
+        min-height: 34px;
+        justify-content: center;
+    }
+
+    .ar-active-filters {
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    .ar-af-label {
+        width: 100%;
+    }
+
+    .ar-layout {
+        width: 100%;
+        gap: 0;
+    }
+
+    .ar-results {
+        width: 100%;
+    }
+
+    .ar-grid {
+        grid-template-columns: 1fr;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .ar-card {
+        width: 100%;
+        min-width: 0;
+        border-radius: 14px;
+        padding: 10px;
+    }
+
+    .ar-card-img {
+        aspect-ratio: 1.35;
+        border-radius: 12px;
+    }
+
+    .ar-wish {
+        top: 18px;
+        right: 18px;
+        width: 38px;
+        height: 38px;
+    }
+
+    .ar-card-body {
+        gap: 8px;
+        padding: 10px 2px 2px;
+    }
+
+    .ar-brand,
+    .ar-sold,
+    .ar-sub-muted {
+        font-size: 11px;
+    }
+
+    .ar-p-title {
+        font-size: 14px;
+    }
+
+    .ar-price {
+        font-size: 20px;
+    }
+
+    .ar-view {
+        min-height: 38px;
+        padding: 8px 14px;
+    }
+
+    .ar-grid.ar-list {
+        gap: 10px;
+    }
+
+    .ar-grid.ar-list {
+        --ar-list-img: 92px;
+    }
+
+    .ar-grid.ar-list .ar-card {
+        padding: 8px;
+    }
+
+    .ar-grid.ar-list .ar-card-link {
+        gap: 10px;
+    }
+
+    .ar-grid.ar-list .ar-card-body {
+        gap: 6px;
+        padding: 2px 2px 2px 0;
+    }
+
+    .ar-grid.ar-list .ar-price-row {
+        flex-wrap: nowrap;
+        align-items: flex-end;
+    }
+
+    .ar-grid.ar-list .ar-view {
+        padding: 7px 10px;
+        font-size: 11px;
+    }
+
+    .ar-sidebar {
+        width: min(88vw, 340px);
+    }
+
+    .ar-panel {
+        padding: 16px;
+    }
+
+    .ar-panel-head {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #fff;
+        padding-top: 4px;
+    }
+
+    .ar-check-list {
+        max-height: 180px;
+    }
+
+    .ar-apply-wrap {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        padding-bottom: 4px;
+    }
+
+    .pagination {
+        gap: 5px;
+        margin-top: 18px;
+        margin-bottom: 24px;
+    }
+
+    .pagination span {
+        min-width: 34px;
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 8px;
+    }
+
+    .ar-toast {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+@media (min-width: 480px) and (max-width: 767px) {
+    .ar-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .ar-card-img {
+        aspect-ratio: 1.08;
+    }
+
+    .ar-card-body {
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .ar-price-row {
+        align-items: center;
+    }
+
+    .ar-view {
+        padding: 7px 10px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 479px) {
+    .ar-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .ar-card-img {
+        aspect-ratio: 1 / 1;
+    }
+
+    .ar-card-body {
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .ar-brand,
+    .ar-sold,
+    .ar-sub-muted {
+        font-size: 9px;
+    }
+
+    .ar-p-title {
+        font-size: 12px;
+    }
+
+    .ar-price {
+        font-size: 16px;
+    }
+
+    .ar-view {
+        min-height: 34px;
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+
+    .ar-controls {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .ar-filter-btn {
+        flex: 0 0 auto;
+    }
+
+    .ar-controls-right {
+        flex: 1 1 calc(100% - 90px);
+    }
+
+    .ar-sort {
+        max-width: calc(100% - 84px);
+    }
+
+    .ar-sort select {
+        max-width: 100%;
+        text-overflow: ellipsis;
+    }
+
+    .ar-view-switch {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 360px) {
+    :root {
+        --ar-header-offset: 118px;
+    }
+
+    .ar-container {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .ar-h1 {
+        font-size: 18px;
+    }
+
+    .ar-filter-btn {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .ar-filter-btn > span:nth-child(2) {
+        display: none;
+    }
+
+    .ar-controls-right {
+        min-width: 0;
+    }
+
+    .ar-sort {
+        max-width: calc(100% - 78px);
+    }
+
+    .ar-card {
+        padding: 8px;
+    }
+
+    .ar-grid.ar-list {
+        --ar-list-img: 76px;
+    }
+
+    .ar-grid.ar-list .ar-p-title {
+        font-size: 12px;
+    }
+
+    .ar-grid.ar-list .ar-price {
+        font-size: 16px;
+    }
+
+    .ar-grid.ar-list .ar-old,
+    .ar-grid.ar-list .ar-sub-muted {
+        display: none;
+    }
+}
