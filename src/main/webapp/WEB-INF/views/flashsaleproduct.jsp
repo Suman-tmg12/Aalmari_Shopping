@@ -7,16 +7,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚡ Flash Sale: <c:out value="${product.title}"/> — Aalmari Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/flashsaleproduct.css?v=2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/flashsaleproduct.css?v=4">
     <!-- Card styles (.ar-card ...) shared with productDetails.jsp -->
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/produc.css?v=11">
     <jsp:include page="/WEB-INF/components/tabbarlogoimages.jsp" />
+
+    <%-- Mobile overrides for the "More Live Flash Deals" cards. Kept inline so they load AFTER produc.css. --%>
+    <style>
+        @media (max-width: 768px) {
+            /* exactly 2 products per row */
+            .ar-page { padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+            .ar-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+            .ar-card {
+                width: 100% !important; min-width: 0 !important; max-width: 100% !important;
+                height: auto !important; min-height: 0 !important; border-radius: 14px !important;
+                margin: 0 !important;
+            }
+            .ar-card-link { display: block !important; width: 100% !important; }
+            .ar-card-img { height: 110px !important; min-height: 0 !important; aspect-ratio: auto !important; }
+            .ar-card-img img { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+            .ar-badge { font-size: 10px !important; padding: 2px 6px !important; top: 6px !important; left: 6px !important; }
+            .ar-wish { width: 28px !important; height: 28px !important; top: 6px !important; right: 6px !important; }
+            .ar-wish .material-symbols-outlined { font-size: 16px !important; }
+            .ar-card-body { padding: 6px 8px 8px !important; gap: 3px !important; min-height: 0 !important; }
+            .ar-card-top { font-size: 10px !important; gap: 4px; margin: 0 !important; }
+            .ar-p-title {
+                font-size: 13px !important; line-height: 1.25 !important; margin: 2px 0 0 !important; min-height: 0 !important;
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                overflow-wrap: anywhere;
+            }
+            .ar-price-row { flex-direction: column !important; align-items: stretch !important; gap: 4px !important; margin: 0 !important; }
+            /* price + old price on ONE line */
+            .ar-price-row > div:first-child { display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+            .ar-price { font-size: 15px !important; line-height: 1.2 !important; }
+            .ar-old { font-size: 11px !important; line-height: 1.2 !important; }
+            .ar-view {
+                display: block !important; width: 100% !important; text-align: center;
+                padding: 6px 8px !important; font-size: 12px !important; line-height: 1.2 !important;
+                box-sizing: border-box;
+            }
+        }
+    </style>
 </head>
 <body>
     <jsp:include page="/WEB-INF/components/header.jsp" />
 
     <c:if test="${product == null}">
-        <div style="padding:50px;text-align:center;background:#fff;margin:90px 20px;">
+        <div class="flash-notfound">
             <h1>Flash deal not found</h1>
             <p>This deal may have ended.</p>
             <p><a href="${pageContext.request.contextPath}/">Return to Home</a></p>
@@ -204,6 +246,24 @@
     <jsp:include page="/WEB-INF/components/footer.jsp" />
 
     <script>
+        // ===== Mobile: keep the page below the fixed header (uses the header's real height) =====
+        (function () {
+            var page = document.querySelector('.product-page');
+            var header = document.querySelector('.top-nav');
+            if (!page || !header) return;
+            function fitHeader() {
+                var pos = getComputedStyle(header).position;
+                if (window.innerWidth <= 768 && (pos === 'fixed' || pos === 'absolute')) {
+                    page.style.marginTop = (header.offsetHeight + 36) + 'px';
+                } else {
+                    page.style.marginTop = '';
+                }
+            }
+            fitHeader();
+            window.addEventListener('resize', fitHeader);
+            window.addEventListener('load', fitHeader);
+        })();
+
         // ===== Gallery =====
         const mainImage = document.getElementById('mainImage');
         const detailsMainImage = document.getElementById('detailsMainImage');

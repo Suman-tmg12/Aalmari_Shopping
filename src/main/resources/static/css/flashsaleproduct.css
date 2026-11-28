@@ -20,9 +20,13 @@ body {
     background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-warm) 100%);
     color: var(--color-text);
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 .product-page { max-width: 1400px; margin: 70px auto; padding: 20px; }
+
+/* "Deal not found" box */
+.flash-notfound { padding: 50px; text-align: center; background: #fff; margin: 90px 20px; }
 
 /* ---------- Breadcrumb ---------- */
 .breadcrumb {
@@ -31,15 +35,16 @@ body {
 }
 .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
 .breadcrumb a:hover { color: var(--color-accent); }
-.breadcrumb .current { color: var(--color-text); font-weight: 500; }
+.breadcrumb .current { color: var(--color-text); font-weight: 500; overflow-wrap: anywhere; }
 .flash-tag { color: var(--color-flash); font-weight: 600; }
 
 /* ---------- Main card ---------- */
 .product-main {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px;
     background: var(--color-white); border-radius: 16px;
     padding: 30px; margin-bottom: 30px; box-shadow: var(--shadow-sm);
 }
+.product-main > *, .product-info { min-width: 0; }
 
 /* ---------- Gallery ---------- */
 .product-gallery { display: flex; gap: 16px; height: 520px; }
@@ -55,7 +60,7 @@ body {
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .gallery-main {
-    flex: 1; position: relative; border-radius: 12px; overflow: hidden;
+    flex: 1; min-width: 0; position: relative; border-radius: 12px; overflow: hidden;
     background: #fafafa; height: 100%;
 }
 .gallery-main img {
@@ -86,7 +91,7 @@ body {
     font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 
-.product-title { font-size: 28px; font-weight: 600; margin-bottom: 12px; line-height: 1.3; }
+.product-title { font-size: 28px; font-weight: 600; margin-bottom: 12px; line-height: 1.3; overflow-wrap: anywhere; }
 
 .product-price { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
 .current-price { font-size: 32px; font-weight: 700; color: var(--color-flash); }
@@ -162,11 +167,12 @@ body {
 .tab-panel.active { display: block; }
 
 .content-restriction-wrapper { position: relative; }
-.restricted-content-body { max-height: 400px; overflow: hidden; position: relative; padding: 20px 0; }
+.restricted-content-body { max-height: 400px; overflow: hidden; position: relative; padding: 20px 0; overflow-wrap: anywhere; }
 .restricted-content-body h4 { margin: 16px 0 8px; }
 .product-desc { color: var(--color-text-muted); line-height: 1.7; margin-bottom: 16px; }
 .product-desc p { margin-bottom: 16px; }
-.product-desc img { max-width: 100%; height: auto; }
+.product-desc img, .product-desc video, .product-desc iframe { max-width: 100%; height: auto; }
+.product-desc table { display: block; max-width: 100%; overflow-x: auto; }
 
 .restriction-overlay-ui {
     position: absolute; bottom: 0; left: 0; right: 0; height: 160px;
@@ -199,6 +205,7 @@ body {
 .specs-list li {
     padding: 10px 0; border-bottom: 1px solid #eee;
     display: flex; justify-content: space-between; gap: 16px; font-size: 14px;
+    overflow-wrap: anywhere;
 }
 .specs-list li:last-child { border-bottom: none; }
 
@@ -215,28 +222,98 @@ body {
 .related-more { font-size: 14px; color: var(--color-flash); text-decoration: none; font-weight: 600; }
 .related-more:hover { text-decoration: underline; }
 
+/* Pagination items are <a> (links) or <span> (current / disabled / dots) */
 .pagination {
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px;
     margin: 24px 0 8px; font-size: 13px; color: var(--color-text-muted);
 }
-.pagination span { cursor: pointer; padding: 6px 10px; border-radius: 8px; transition: background .15s ease, color .15s ease; }
-.pagination span:hover { background: rgba(255,255,255,.6); }
-.pagination span.active { font-weight: bold; color: #fff; background: var(--color-accent); }
+.pagination span, .pagination a {
+    cursor: pointer; padding: 6px 10px; border-radius: 8px; text-decoration: none;
+    color: inherit; transition: background .15s ease, color .15s ease;
+}
+.pagination span:hover, .pagination a:hover { background: rgba(255,255,255,.6); }
+.pagination span.active, .pagination a.active { font-weight: bold; color: #fff; background: var(--color-accent); }
 .pagination span.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
 .pagination span.pg-dots { cursor: default; }
 .pagination span.pg-dots:hover { background: none; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
-    .product-main { grid-template-columns: 1fr; }
+    .product-main { grid-template-columns: minmax(0, 1fr); }
     .product-gallery { height: auto; flex-direction: column-reverse; }
-    .gallery-thumbs { flex-direction: row; width: 100%; height: auto; }
-    .gallery-main { height: 380px; }
+    .gallery-thumbs {
+        flex-direction: row; width: 100%; height: auto;
+        overflow-x: auto; overflow-y: hidden; padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .gallery-main { flex: none; width: 100%; height: 380px; }
 }
+
 @media (max-width: 768px) {
-    .action-buttons { flex-direction: column; }
-    .add-to-cart-btn, .buy-now-btn { width: 100%; }
-    .view-more-action-btn, .view-less-action-btn { padding: 14px 20px; width: 100%; }
-    .product-title { font-size: 22px; }
+    /* the fixed mobile header is ~128px tall; the JSP script refines this to its real height (+36px) */
+    .product-page { margin: 130px auto 24px; padding: 12px; }
+    .flash-notfound { margin: 130px 12px 24px; padding: 32px 16px; }
+
+    .product-main { padding: 16px; gap: 20px; margin-bottom: 16px; border-radius: 12px; }
+
+    /* Gallery: 4:3 box, image never cropped, smaller thumbs */
+    .product-gallery { gap: 10px; height: auto; }
+    .gallery-main { flex: none; width: 100%; height: auto; aspect-ratio: 4 / 3; }
+    .gallery-main img { position: absolute; inset: 0; object-fit: contain; background: #fff; }
+    .gallery-thumbs { gap: 8px; }
+    .thumb { width: 60px; height: 60px; }
+    .wishlist-btn { top: 10px; right: 10px; width: 40px; height: 40px; }
+
+    /* Flash banner + info */
+    .flash-banner-alert { padding: 10px 12px; margin-bottom: 14px; font-size: 13px; gap: 8px; }
+    .flash-banner-text .material-symbols-outlined { font-size: 18px; }
+    .timer-badge { font-size: 12px; padding: 4px 8px; }
+    .product-title { font-size: 22px; margin-bottom: 8px; }
+    .product-price { margin-bottom: 14px; gap: 8px 12px; }
     .current-price { font-size: 26px; }
+    .original-price { font-size: 15px; }
+    .stock-container { margin-bottom: 18px; }
+    .stock-label { font-size: 13px; }
+
+    /* Quantity + buttons.
+       Buttons have flex:1 in the base rule; inside a column container that collapses their height,
+       so they get flex:0 0 auto + a fixed height here. */
+    .product-actions { gap: 12px; }
+    .quantity-selector { height: 44px; }
+    .action-buttons { flex: none; flex-direction: column; gap: 10px; width: 100%; }
+    .add-to-cart-btn, .buy-now-btn {
+        flex: 0 0 auto; width: 100%; height: 46px; min-height: 46px; font-size: 15px;
+    }
+
+    /* Details */
+    .product-tabs { padding: 16px; margin-bottom: 16px; border-radius: 12px; }
+    .tab-headers { gap: 20px; }
+    .specs-list { max-width: 100%; }
+    .specs-list li { flex-wrap: wrap; gap: 4px 12px; }
+    #detailsMainImage { margin: 12px auto; border-radius: 8px; }
+    .restriction-overlay-ui { height: 120px; }
+    .view-more-action-btn, .view-less-action-btn { padding: 14px 20px; width: 100%; max-width: none; }
+
+    /* Related deals: 2 products per row (card details are styled in the JSP inline <style>) */
+    .ar-page { width: 100%; max-width: 100%; padding: 0; }
+    .ar-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    /* Related deals header + pagination */
+    .related-title { font-size: 18px; }
+    .related-more { font-size: 13px; }
+    .pagination { gap: 4px; font-size: 12px; }
+    .pagination span, .pagination a { padding: 5px 8px; }
+}
+
+@media (max-width: 400px) {
+    .product-page { padding: 8px; }
+    .product-main { padding: 12px; }
+    .product-title { font-size: 20px; }
+    .current-price { font-size: 24px; }
+    .thumb { width: 52px; height: 52px; }
+    .ar-grid { gap: 8px; }
 }

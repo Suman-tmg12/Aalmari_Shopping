@@ -276,10 +276,12 @@
                         <span class="material-symbols-outlined">storefront</span>
                         Go to Store
                     </a>
-                    <button type="button" class="ask-seller-btn" id="openMessageModal">
-                        <span class="material-symbols-outlined">chat</span>
-                        Ask Seller
-                    </button>
+                    <c:if test="${not isOwnProduct}">
+                        <button type="button" class="ask-seller-btn" id="openMessageModal">
+                            <span class="material-symbols-outlined">chat</span>
+                            Ask Seller
+                        </button>
+                    </c:if>
                 </div>
             </div>
 
@@ -325,6 +327,7 @@
             </div>
 
             <!-- ============ MESSAGE THE SELLER ============ -->
+            <c:if test="${not isOwnProduct}">
             <div class="message-modal" id="messageModal" aria-hidden="true">
                 <div class="message-modal-card" role="dialog" aria-modal="true" aria-labelledby="messageModalTitle">
                     <button type="button" class="message-modal-close" id="closeMessageModal" aria-label="Close">×</button>
@@ -343,6 +346,7 @@
                     <p class="message-error" id="messageError"></p>
                 </div>
             </div>
+            </c:if>
 
             <!-- ============ CUSTOMER REVIEWS ============ -->
             <section class="review-section" id="customerReviews">
